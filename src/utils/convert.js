@@ -1,58 +1,14 @@
 // src/utils/convert.js
-// ─────────────────────────────────────────────────────────────────
 // Conversiones reales 100% en el navegador. Sin servidor, sin APIs de pago.
-//
-// Librerías usadas (cargadas dinámicamente desde CDN):
-//   · pdf-lib  v1.17  → merge, split, imágenes→PDF, comprimir
-//   · mammoth  v1.6   → Word (DOCX) → PDF  (vía HTML + impresión)
-//   · pdf.js   v3.11  → PDF → texto extraído → RTF (abre en Word)
-// ─────────────────────────────────────────────────────────────────
+// Librerías: pdf-lib, mammoth (instaladas vía npm)
 
-/* ── Cargador de scripts CDN ── */
-function loadScript(src) {
-  return new Promise((resolve, reject) => {
-    const existing = document.querySelector(`script[src="${src}"]`);
-    if (existing) {
-      if (existing._ready) { resolve(); return; }
-      existing.addEventListener('load',  resolve);
-      existing.addEventListener('error', reject);
-      return;
-    }
-    const s = document.createElement('script');
-    s.src = src;
-    s.onload  = () => { s._ready = true; resolve(); };
-    s.onerror = reject;
-    document.head.appendChild(s);
-  });
-}
-
-async function getPdfLib() {
-  if (!window.PDFLib) {
-    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js');
-  }
-  return window.PDFLib;
-}
-
-async function getMammoth() {
-  if (!window.mammoth) {
-    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js');
-  }
-  return window.mammoth;
-}
-
-async function getPdfJs() {
-  if (!window.pdfjsLib) {
-    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
-    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-  }
-  return window.pdfjsLib;
-}
+import { PDFDocument } from "pdf-lib";
+import mammoth from "mammoth";
 
 /* ── Descarga un Blob como fichero ── */
 function download(blob, filename) {
   const url = URL.createObjectURL(blob);
-  const a   = document.createElement('a');
+  const a   = document.createElement("a");
   a.href     = url;
   a.download = filename;
   document.body.appendChild(a);
@@ -61,14 +17,13 @@ function download(blob, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
-/* ── Nombre limpio sin extensión ── */
-const basename = (f) => f.name.replace(/\.[^.]+$/, '');
+/* ── Nombre sin extensión ── */
+const basename = (f) => f.name.replace(/\.[^.]+$/, "");
 
 // ─────────────────────────────────────────────────────────────────
-// 1. UNIR PDFs  →  un solo PDF en el orden dado
+// 1. UNIR PDFs
 // ─────────────────────────────────────────────────────────────────
 export async function mergePdfs(files) {
-  const { PDFDocument } = await getPdfLib();
   const merged = await PDFDocument.create();
 
   for (const file of files) {
@@ -79,23 +34,22 @@ export async function mergePdfs(files) {
   }
 
   const out = await merged.save();
-  download(new Blob([out], { type: 'application/pdf' }), 'merged.pdf');
+  download(new Blob([out], { type: "application/pdf" }), "merged.pdf");
 }
 
 // ─────────────────────────────────────────────────────────────────
-// 2. DIVIDIR PDF  →  un PDF por página (o por rango)
+// 2. DIVIDIR PDF
 // ─────────────────────────────────────────────────────────────────
 export async function splitPdf(file, rangeStr) {
-  const { PDFDocument } = await getPdfLib();
   const bytes = await file.arrayBuffer();
   const doc   = await PDFDocument.load(bytes, { ignoreEncryption: true });
   const total = doc.getPageCount();
 
-  // Parsear rango  "1-3, 5, 7-9"  →  [0,1,2,4,6,7,8]
+  // Parsear rango "1-3, 5, 7-9" → [0,1,2,4,6,7,8]
   let indices = [];
   if (rangeStr.trim()) {
-    for (const part of rangeStr.split(',')) {
-      const [a, b] = part.trim().split('-').map(n => parseInt(n.trim()) - 1);
+    for (const part of rangeStr.split(",")) {
+      const [a, b] = part.trim().split("-").map(n => parseInt(n.trim()) - 1);
       if (!isNaN(b)) {
         for (let i = a; i <= Math.min(b, total - 1); i++) indices.push(i);
       } else if (!isNaN(a) && a >= 0 && a < total) {
@@ -107,57 +61,60 @@ export async function splitPdf(file, rangeStr) {
     indices = Array.from({ length: total }, (_, i) => i);
   }
 
-  if (indices.length === 0) throw new Error('Rango de páginas inválido');
+  if (indices.length === 0) throw new Error("Rango de páginas inválido");
 
   for (const idx of indices) {
     const newDoc  = await PDFDocument.create();
     const [page]  = await newDoc.copyPages(doc, [idx]);
     newDoc.addPage(page);
     const out = await newDoc.save();
-    download(new Blob([out], { type: 'application/pdf' }), `${basename(file)}-p${idx + 1}.pdf`);
-    // Pequeña pausa para no saturar descargas simultáneas
+    download(
+      new Blob([out], { type: "application/pdf" }),
+      `${basename(file)}-p${idx + 1}.pdf`
+    );
     await new Promise(r => setTimeout(r, 120));
   }
 }
 
 // ─────────────────────────────────────────────────────────────────
-// 3. IMÁGENES → PDF  (JPG, PNG, WEBP)
+// 3. IMÁGENES → PDF
 // ─────────────────────────────────────────────────────────────────
 export async function imagesToPdf(files) {
-  const { PDFDocument } = await getPdfLib();
   const doc = await PDFDocument.create();
 
   for (const file of files) {
     const bytes = await file.arrayBuffer();
-    const ext   = file.name.split('.').pop().toLowerCase();
+    const ext   = file.name.split(".").pop().toLowerCase();
     let image;
 
-    if (ext === 'jpg' || ext === 'jpeg') {
+    if (ext === "jpg" || ext === "jpeg") {
       image = await doc.embedJpg(bytes);
-    } else if (ext === 'png') {
+    } else if (ext === "png") {
       image = await doc.embedPng(bytes);
-    } else if (ext === 'webp') {
+    } else if (ext === "webp") {
       // WEBP → PNG via Canvas (pdf-lib no soporta WEBP directamente)
-      const blob  = new Blob([bytes], { type: 'image/webp' });
+      const blob  = new Blob([bytes], { type: "image/webp" });
       const url   = URL.createObjectURL(blob);
       const img   = new Image();
-      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
-      const cv    = document.createElement('canvas');
+      await new Promise((res, rej) => {
+        img.onload = res; img.onerror = rej; img.src = url;
+      });
+      const cv = document.createElement("canvas");
       cv.width = img.naturalWidth; cv.height = img.naturalHeight;
-      cv.getContext('2d').drawImage(img, 0, 0);
+      cv.getContext("2d").drawImage(img, 0, 0);
       URL.revokeObjectURL(url);
-      const pngBlob  = await new Promise(r => cv.toBlob(r, 'image/png'));
+      const pngBlob  = await new Promise(r => cv.toBlob(r, "image/png"));
       const pngBytes = await pngBlob.arrayBuffer();
       image = await doc.embedPng(pngBytes);
     }
 
     if (image) {
-      // Ajustar al tamaño de la imagen; máx A4
-      const maxW = 595, maxH = 842;
+      const maxW = 595, maxH = 842; // A4 en puntos
       let w = image.width, h = image.height;
       if (w > maxW || h > maxH) {
         const scale = Math.min(maxW / w, maxH / h);
-        w = Math.round(w * scale); h = Math.round(h * scale);
+        w = Math.round(w * scale);
+        h = Math.round(h * scale);
       }
       const page = doc.addPage([w, h]);
       page.drawImage(image, { x: 0, y: 0, width: w, height: h });
@@ -165,50 +122,45 @@ export async function imagesToPdf(files) {
   }
 
   const out = await doc.save();
-  download(new Blob([out], { type: 'application/pdf' }), 'imagenes.pdf');
+  download(new Blob([out], { type: "application/pdf" }), "imagenes.pdf");
 }
 
 // ─────────────────────────────────────────────────────────────────
 // 4. COMPRIMIR PDF
 // ─────────────────────────────────────────────────────────────────
 export async function compressPdf(file, level) {
-  const { PDFDocument } = await getPdfLib();
   const bytes = await file.arrayBuffer();
   const doc   = await PDFDocument.load(bytes, { ignoreEncryption: true });
 
   const out = await doc.save({
-    useObjectStreams: level !== 'low',     // streams comprimidos
+    useObjectStreams: level !== "low",
     addDefaultPage:  false,
-    objectsPerTick:  level === 'high' ? 100 : level === 'medium' ? 50 : 20,
+    objectsPerTick:  level === "high" ? 100 : level === "medium" ? 50 : 20,
   });
 
-  const original = file.size;
-  const result   = out.byteLength;
-  const saving   = Math.round((1 - result / original) * 100);
-  console.info(`[morf] Compresión: ${(original/1024).toFixed(0)} KB → ${(result/1024).toFixed(0)} KB (${saving}% menos)`);
+  const saving = Math.round((1 - out.byteLength / file.size) * 100);
+  console.info(
+    `[morf] ${(file.size/1024).toFixed(0)} KB → ${(out.byteLength/1024).toFixed(0)} KB (${saving}% menos)`
+  );
 
   download(
-    new Blob([out], { type: 'application/pdf' }),
+    new Blob([out], { type: "application/pdf" }),
     `${basename(file)}-comprimido.pdf`
   );
 }
 
 // ─────────────────────────────────────────────────────────────────
-// 5. WORD → PDF  (DOCX → HTML con mammoth → impresión del navegador)
-//
-//    Calidad: muy buena para texto y tablas básicas.
-//    Imágenes dentro del DOCX: incluidas si mammoth las extrae.
-//    El usuario ve el diálogo "Imprimir" del navegador → "Guardar como PDF"
+// 5. WORD → PDF
+// Convierte DOCX a HTML con mammoth → abre diálogo de impresión
+// El usuario selecciona "Guardar como PDF" en el diálogo
 // ─────────────────────────────────────────────────────────────────
 export async function wordToPdf(file) {
-  const mammoth = await getMammoth();
-  const bytes   = await file.arrayBuffer();
+  const bytes  = await file.arrayBuffer();
 
-  // Convertir imágenes incrustadas a base64 para que aparezcan en la vista previa
-  const result  = await mammoth.convertToHtml({
+  const result = await mammoth.convertToHtml({
     arrayBuffer: bytes,
     convertImage: mammoth.images.imgElement(img =>
-      img.read('base64').then(data => ({
+      img.read("base64").then(data => ({
         src: `data:${img.contentType};base64,${data}`,
       }))
     ),
@@ -223,8 +175,8 @@ export async function wordToPdf(file) {
     * { box-sizing: border-box; }
     body {
       font-family: Calibri, 'Segoe UI', Arial, sans-serif;
-      font-size: 11pt; line-height: 1.6;
-      color: #111; margin: 0; padding: 0;
+      font-size: 11pt; line-height: 1.6; color: #111;
+      margin: 0; padding: 0;
     }
     .page { max-width: 21cm; margin: 0 auto; padding: 2.5cm; }
     h1 { font-size: 18pt; margin: 0 0 .5em; }
@@ -238,7 +190,6 @@ export async function wordToPdf(file) {
     ul, ol { margin: .5em 0 .8em 1.5em; }
     li { margin-bottom: .25em; }
     @media print {
-      body { padding: 0; }
       .page { max-width: 100%; padding: 0; }
       @page { margin: 2.5cm; size: A4; }
     }
@@ -247,46 +198,50 @@ export async function wordToPdf(file) {
 <body>
   <div class="page">${result.value}</div>
   <script>
-    window.addEventListener('load', () => {
-      setTimeout(() => { window.print(); }, 400);
-    });
+    window.addEventListener("load", () => setTimeout(() => window.print(), 400));
   </script>
 </body>
 </html>`;
 
-  const win = window.open('', '_blank', 'width=900,height=700');
+  const win = window.open("", "_blank", "width=900,height=700");
   if (!win) {
-    // El navegador bloqueó el pop-up: descargar como HTML (fallback)
+    // Navegador bloqueó el popup → descargar como HTML
     download(
-      new Blob([html], { type: 'text/html;charset=utf-8' }),
+      new Blob([html], { type: "text/html;charset=utf-8" }),
       `${basename(file)}.html`
     );
-    return 'popup-blocked';
+    return "popup-blocked";
   }
   win.document.open();
   win.document.write(html);
   win.document.close();
-  return 'print-dialog';
+  return "print-dialog";
 }
 
 // ─────────────────────────────────────────────────────────────────
-// 6. PDF → WORD  (extrae texto con pdf.js → genera RTF)
-//
-//    RTF es un formato que Word, LibreOffice y Pages abren sin problema.
-//    Limitación: no conserva el layout exacto, solo el texto estructurado.
+// 6. PDF → WORD  (extrae texto → genera RTF que Word abre directamente)
 // ─────────────────────────────────────────────────────────────────
 export async function pdfToWord(file) {
-  const pdfjsLib = await getPdfJs();
-  const bytes    = await file.arrayBuffer();
-  const pdf      = await pdfjsLib.getDocument({ data: bytes }).promise;
+  // Cargamos pdf.js desde CDN solo para esta función (es muy pesado para instalar)
+  if (!window.pdfjsLib) {
+    await new Promise((res, rej) => {
+      const s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  }
 
-  // Extraer texto página a página
+  const bytes = await file.arrayBuffer();
+  const pdf   = await window.pdfjsLib.getDocument({ data: bytes }).promise;
   const pages = [];
+
   for (let i = 1; i <= pdf.numPages; i++) {
     const page    = await pdf.getPage(i);
     const content = await page.getTextContent();
 
-    // Reconstruir líneas agrupando por posición Y
     const lines = {};
     for (const item of content.items) {
       if (!item.str.trim()) continue;
@@ -296,37 +251,34 @@ export async function pdfToWord(file) {
     }
 
     const text = Object.keys(lines)
-      .sort((a, b) => b - a)                    // mayor Y = arriba
-      .map(y => lines[y].join(' '))
-      .join('\n');
+      .sort((a, b) => b - a)
+      .map(y => lines[y].join(" "))
+      .join("\n");
 
     pages.push(text);
   }
 
-  // Escapar caracteres especiales RTF
-  const esc = (s) => s
-    .replace(/\\/g, '\\\\')
-    .replace(/\{/g,  '\\{')
-    .replace(/\}/g,  '\\}')
+  const esc = s => s
+    .replace(/\\/g, "\\\\")
+    .replace(/\{/g,  "\\{")
+    .replace(/\}/g,  "\\}")
     .replace(/[^\x00-\x7F]/g, c => `\\u${c.charCodeAt(0)}?`);
 
   const rtfBody = pages
     .map((p, i) => {
-      const lines = p.split('\n').map(l => esc(l) + '\\par').join('\n');
+      const lines = p.split("\n").map(l => esc(l) + "\\par").join("\n");
       return i > 0 ? `\\page\n${lines}` : lines;
     })
-    .join('\n');
+    .join("\n");
 
-  const rtf = `{\\rtf1\\ansi\\ansicpg1252\\deff0\\deflang1034
-{\\fonttbl{\\f0\\froman\\fcharset0 Times New Roman;}{\\f1\\fswiss\\fcharset0 Calibri;}}
-{\\colortbl ;\\red0\\green0\\blue0;}
-\\widowctrl\\hyphauto
-\\f1\\fs22\\cf1
+  const rtf = `{\\rtf1\\ansi\\ansicpg1252\\deff0
+{\\fonttbl{\\f0\\fswiss\\fcharset0 Calibri;}}
+\\f0\\fs22
 ${rtfBody}
 }`;
 
   download(
-    new Blob([rtf], { type: 'application/rtf' }),
+    new Blob([rtf], { type: "application/rtf" }),
     `${basename(file)}.rtf`
   );
 }

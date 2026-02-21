@@ -767,25 +767,51 @@ function Panel({ tool, onClose, showToast }) {
           </div>
         ):(
           <>
-            <div className={`dz ${drag?"ov":""}`}
-              style={{padding:"28px 18px",textAlign:"center",marginBottom:12}}
-              onDragOver={e=>{e.preventDefault();setDrag(true)}}
-              onDragLeave={()=>setDrag(false)}
-              onDrop={e=>{e.preventDefault();setDrag(false);addFiles(e.dataTransfer.files)}}
-              onClick={()=>ref.current?.click()}>
-              <input ref={ref} type="file" accept={tool.accepts.join(",")} multiple={!!tool.multi}
-                style={{display:"none"}} onChange={e=>addFiles(e.target.files)}/>
-              <div style={{display:"flex",justifyContent:"center",marginBottom:8}}>
-                <Ic n="upload" s={22} c={drag?"var(--ac)":"var(--tm)"}/>
+            {/* Input oculto — se resetea tras cada selección para poder añadir el mismo archivo */}
+            <input ref={ref} type="file" accept={tool.accepts.join(",")} multiple={!!tool.multi}
+              style={{display:"none"}}
+              onChange={e=>{ addFiles(e.target.files); e.target.value=""; }}/>
+
+            {/* Zona drop — solo se muestra si no hay archivos o la herramienta no es multi */}
+            {(!tool.multi || files.length===0) && (
+              <div className={`dz ${drag?"ov":""}`}
+                style={{padding:"28px 18px",textAlign:"center",marginBottom:12}}
+                onDragOver={e=>{e.preventDefault();setDrag(true)}}
+                onDragLeave={()=>setDrag(false)}
+                onDrop={e=>{e.preventDefault();setDrag(false);addFiles(e.dataTransfer.files)}}
+                onClick={()=>ref.current?.click()}>
+                <div style={{display:"flex",justifyContent:"center",marginBottom:8}}>
+                  <Ic n="upload" s={22} c={drag?"var(--ac)":"var(--tm)"}/>
+                </div>
+                <div style={{fontWeight:500,fontSize:13,marginBottom:2,color:drag?"var(--ac)":"var(--t1)"}}>
+                  {tool.multi?T.drag_multi:T.drag_single}
+                </div>
+                <div style={{fontSize:11,color:"var(--tm)"}}>{T.click_hint} · {tool.accepts.join(", ")}</div>
               </div>
-              <div style={{fontWeight:500,fontSize:13,marginBottom:2,color:drag?"var(--ac)":"var(--t1)"}}>
-                {tool.multi?T.drag_multi:T.drag_single}
-              </div>
-              <div style={{fontSize:11,color:"var(--tm)"}}>{T.click_hint} · {tool.accepts.join(", ")}</div>
-            </div>
+            )}
+
+            {/* Lista de archivos + botón añadir más (solo herramientas multi) */}
             {files.length>0&&(
-              <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:12}}>
-                {files.map((f,i)=><FileRow key={i} file={f} onRemove={()=>setFiles(p=>p.filter((_,j)=>j!==i))}/>)}
+              <div style={{marginBottom:12}}>
+                <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:tool.multi?8:0}}>
+                  {files.map((f,i)=>(
+                    <FileRow key={i} file={f} onRemove={()=>setFiles(p=>p.filter((_,j)=>j!==i))}/>
+                  ))}
+                </div>
+                {tool.multi&&(
+                  <div
+                    className={`dz ${drag?"ov":""}`}
+                    style={{padding:"12px",textAlign:"center",cursor:"pointer",borderStyle:"dashed"}}
+                    onDragOver={e=>{e.preventDefault();setDrag(true)}}
+                    onDragLeave={()=>setDrag(false)}
+                    onDrop={e=>{e.preventDefault();setDrag(false);addFiles(e.dataTransfer.files)}}
+                    onClick={()=>ref.current?.click()}>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,fontSize:12,color:"var(--t2)"}}>
+                      <Ic n="upload" s={13} c="var(--t2)"/>
+                      Añadir más archivos
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             {tool.id==="split"&&files.length>0&&(
