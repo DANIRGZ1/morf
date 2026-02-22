@@ -34,6 +34,7 @@ const LANGS = {
            ["Sin límites","Archivos de hasta 200 MB."] ],
     max_size:"máx. 200 MB",
     counter:"archivos convertidos",
+    step_read:"Leyendo archivo…", step_proc:"Procesando…", step_done:"¡Listo!",
     nav_privacy:"Privacidad", nav_api:"API", nav_help:"Ayuda",
     footer_copy:"morf · © 2025",
     modal_privacy:"Política de Privacidad", modal_terms:"Términos de Uso",
@@ -104,6 +105,7 @@ const LANGS = {
            ["No limits","Files up to 200 MB."] ],
     max_size:"max. 200 MB",
     counter:"files converted",
+    step_read:"Reading file…", step_proc:"Processing…", step_done:"Done!",
     nav_privacy:"Privacy", nav_api:"API", nav_help:"Help",
     footer_copy:"morf · © 2025",
     modal_privacy:"Privacy Policy", modal_terms:"Terms of Use",
@@ -170,6 +172,7 @@ const LANGS = {
            ["Sans limite","Fichiers jusqu'à 200 Mo."] ],
     max_size:"max. 200 Mo",
     counter:"fichiers convertis",
+    step_read:"Lecture du fichier…", step_proc:"Traitement…", step_done:"Terminé !",
     nav_privacy:"Confidentialité", nav_api:"API", nav_help:"Aide",
     footer_copy:"morf · © 2025",
     modal_privacy:"Politique de confidentialité", modal_terms:"Conditions d'utilisation",
@@ -236,6 +239,7 @@ const LANGS = {
            ["Keine Limits","Dateien bis zu 200 MB."] ],
     max_size:"max. 200 MB",
     counter:"Dateien konvertiert",
+    step_read:"Datei lesen…", step_proc:"Verarbeitung…", step_done:"Fertig!",
     nav_privacy:"Datenschutz", nav_api:"API", nav_help:"Hilfe",
     footer_copy:"morf · © 2025",
     modal_privacy:"Datenschutzerklärung", modal_terms:"Nutzungsbedingungen",
@@ -302,6 +306,7 @@ const LANGS = {
            ["Sem limites","Ficheiros até 200 MB."] ],
     max_size:"máx. 200 MB",
     counter:"ficheiros convertidos",
+    step_read:"A ler ficheiro…", step_proc:"A processar…", step_done:"Pronto!",
     nav_privacy:"Privacidade", nav_api:"API", nav_help:"Ajuda",
     footer_copy:"morf · © 2025",
     modal_privacy:"Política de Privacidade", modal_terms:"Termos de Utilização",
@@ -402,6 +407,10 @@ const css = `
 
   .tr{height:3px;background:var(--bd);border-radius:2px;overflow:hidden}
   .fill{height:100%;background:var(--ac);border-radius:2px;animation:pr 2.4s cubic-bezier(.4,0,.2,1) forwards}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .step-dot{width:8px;height:8px;border-radius:50%;background:var(--bd);transition:all .3s}
+  .step-dot.active{background:var(--ac);animation:pulse 1.2s ease infinite}
+  .step-dot.done{background:var(--ok)}
   .spn{width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite}
 
   .fr{display:flex;align-items:center;gap:9px;padding:9px 12px;background:#F5F5F3;
@@ -769,6 +778,7 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{} }) {
   const [range,setRange]     = useState("");
   const [quality,setQuality] = useState("medium");
   const [errMsg,setErrMsg]   = useState("");
+  const [step,setStep]       = useState(0); // 0=idle 1=read 2=proc 3=done
   const ref = useRef();
 
   const addFiles = l => {
@@ -807,7 +817,10 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{} }) {
       return;
     }
     setStatus("proc");
+    setStep(1); // leyendo
     setErrMsg("");
+    await new Promise(r => setTimeout(r, 350)); // pequeña pausa para que se vea el paso 1
+    setStep(2); // procesando
     try {
       if (tool.id==="merge")         { await mergePdfs(files); }
       else if (tool.id==="split")    { await splitPdf(files[0], range); }
@@ -826,11 +839,13 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{} }) {
         setStatus("idle"); setFiles([]); return;
       }
       else if (tool.id==="pdf-word") { await pdfToWord(files[0]); }
+      setStep(3);
       setStatus("done");
       showToast(T.conv_done);
       bumpCount();
     } catch(e) {
       console.error(e);
+      setStep(0);
       setErrMsg(getErrMsg(e));
       setStatus("error");
     }
@@ -951,9 +966,30 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{} }) {
               </div>
             )}
             {status==="proc"&&(
-              <div style={{marginBottom:12}}>
-                <div style={{fontSize:11,color:"var(--tm)",marginBottom:5}}>{T.processing}</div>
-                <div className="tr"><div className="fill"/></div>
+              <div style={{marginBottom:16,padding:"16px",background:"var(--al)",borderRadius:10,textAlign:"center"}}>
+                {/* Pasos */}
+                <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:0,marginBottom:12}}>
+                  {[T.step_read, T.step_proc].map((label,i)=>{
+                    const idx = i+1;
+                    const isDone = step > idx;
+                    const isActive = step === idx;
+                    return (
+                      <div key={i} style={{display:"flex",alignItems:"center"}}>
+                        <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
+                          <div className={`step-dot ${isActive?"active":isDone?"done":""}`}/>
+                          <span style={{fontSize:10,color:isActive?"var(--ac)":isDone?"var(--ok)":"var(--tm)",fontWeight:isActive?500:400,transition:"color .3s",whiteSpace:"nowrap"}}>
+                            {label}
+                          </span>
+                        </div>
+                        {i<1&&<div style={{width:48,height:1,background:step>idx?"var(--ok)":"var(--bd)",margin:"0 8px",marginBottom:14,transition:"background .3s"}}/>}
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Barra */}
+                <div className="tr" style={{maxWidth:200,margin:"0 auto"}}>
+                  <div className="fill" style={{animationDuration: step===1?"0.8s":"2s"}}/>
+                </div>
               </div>
             )}
             <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
