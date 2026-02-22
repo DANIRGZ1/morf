@@ -6,8 +6,9 @@ const LANGS = {
   es: {
     code:"es", flag:"🇪🇸", name:"Español",
     tagline:"Sin registro · Sin marcas de agua · 100% privado",
-    hero_h1a:"Convierte tus archivos", hero_h1b:"en segundos.",
-    hero_sub:"PDF, Word, imágenes. Sin instalar nada, directo en el navegador.",
+    hero_h1a:"La forma más rápida de", hero_h1b:"convertir tus archivos.",
+    hero_sub:"PDF, Word, Excel, imágenes. Todo gratis, sin registro y sin que tus archivos salgan de tu navegador.",
+    hero_cta:"Empezar ahora — es gratis",
     hero_drop:"Arrastra cualquier archivo aquí",
     hero_drop_sub:"Selección automática de herramienta",
     tools_title:"Herramientas", tools_count:"disponibles",
@@ -82,8 +83,9 @@ const LANGS = {
   en: {
     code:"en", flag:"🇬🇧", name:"English",
     tagline:"No signup · No watermarks · 100% private",
-    hero_h1a:"Convert your files", hero_h1b:"in seconds.",
-    hero_sub:"PDF, Word, images. No install needed, straight in the browser.",
+    hero_h1a:"The fastest way to", hero_h1b:"convert your files.",
+    hero_sub:"PDF, Word, Excel, images. All free, no sign-up, and your files never leave your browser.",
+    hero_cta:"Start now — it's free",
     hero_drop:"Drop any file here",
     hero_drop_sub:"Automatic tool detection",
     tools_title:"Tools", tools_count:"available",
@@ -154,8 +156,9 @@ const LANGS = {
   fr: {
     code:"fr", flag:"🇫🇷", name:"Français",
     tagline:"Sans inscription · Sans filigrane · 100% privé",
-    hero_h1a:"Convertissez vos fichiers", hero_h1b:"en quelques secondes.",
-    hero_sub:"PDF, Word, images. Sans rien installer, directement dans le navigateur.",
+    hero_h1a:"La façon la plus rapide de", hero_h1b:"convertir vos fichiers.",
+    hero_sub:"PDF, Word, Excel, images. Tout gratuit, sans inscription, vos fichiers restent dans votre navigateur.",
+    hero_cta:"Commencer — c'est gratuit",
     hero_drop:"Déposez n'importe quel fichier ici",
     hero_drop_sub:"Détection automatique de l'outil",
     tools_title:"Outils", tools_count:"disponibles",
@@ -226,8 +229,9 @@ const LANGS = {
   de: {
     code:"de", flag:"🇩🇪", name:"Deutsch",
     tagline:"Ohne Anmeldung · Ohne Wasserzeichen · 100% privat",
-    hero_h1a:"Konvertiere deine Dateien", hero_h1b:"in Sekunden.",
-    hero_sub:"PDF, Word, Bilder. Ohne Installation, direkt im Browser.",
+    hero_h1a:"Der schnellste Weg,", hero_h1b:"deine Dateien zu konvertieren.",
+    hero_sub:"PDF, Word, Excel, Bilder. Alles kostenlos, ohne Anmeldung, deine Dateien verlassen den Browser nicht.",
+    hero_cta:"Jetzt starten — kostenlos",
     hero_drop:"Datei hier ablegen",
     hero_drop_sub:"Automatische Tool-Erkennung",
     tools_title:"Werkzeuge", tools_count:"verfügbar",
@@ -298,8 +302,9 @@ const LANGS = {
   pt: {
     code:"pt", flag:"🇵🇹", name:"Português",
     tagline:"Sem registo · Sem marcas de água · 100% privado",
-    hero_h1a:"Converte os teus ficheiros", hero_h1b:"em segundos.",
-    hero_sub:"PDF, Word, imagens. Sem instalar nada, diretamente no browser.",
+    hero_h1a:"A forma mais rápida de", hero_h1b:"converter os teus ficheiros.",
+    hero_sub:"PDF, Word, Excel, imagens. Tudo grátis, sem registo e os ficheiros ficam no teu browser.",
+    hero_cta:"Começar agora — é grátis",
     hero_drop:"Arrasta qualquer ficheiro para aqui",
     hero_drop_sub:"Deteção automática da ferramenta",
     tools_title:"Ferramentas", tools_count:"disponíveis",
@@ -1209,45 +1214,69 @@ export default function App() {
         <div className="m-hero" style={{maxWidth:960,margin:"0 auto",padding:"48px 20px 64px"}}>
           {/* Hero */}
           <div className="fu" style={{textAlign:"center",marginBottom:44}}>
-            <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"var(--sf)",border:"1px solid var(--bd)",borderRadius:20,padding:"3px 11px 3px 7px",fontSize:11,color:"var(--tm)",marginBottom:20,fontFamily:"'DM Mono',monospace"}}>
+            {/* Badge */}
+            <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"var(--sf)",border:"1px solid var(--bd)",borderRadius:20,padding:"3px 11px 3px 7px",fontSize:11,color:"var(--tm)",marginBottom:24,fontFamily:"'DM Mono',monospace"}}>
               <span style={{width:6,height:6,borderRadius:"50%",background:"#22C55E",display:"inline-block"}}/>
               {T.tagline}
             </div>
-            <h1 style={{fontSize:"clamp(26px,4.5vw,44px)",fontWeight:300,letterSpacing:"-.03em",lineHeight:1.18,marginBottom:14}}>
-              {T.hero_h1a}<br/><span style={{fontWeight:600}}>{T.hero_h1b}</span>
+
+            {/* Título */}
+            <h1 style={{fontSize:"clamp(30px,5vw,52px)",fontWeight:300,letterSpacing:"-.03em",lineHeight:1.14,marginBottom:18,maxWidth:640,margin:"0 auto 18px"}}>
+              {T.hero_h1a}<br/>
+              <span style={{fontWeight:700,background:"linear-gradient(135deg,var(--ac),var(--ah))",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>
+                {T.hero_h1b}
+              </span>
             </h1>
-            <p style={{fontSize:14,color:"var(--t2)",maxWidth:420,margin:"0 auto",lineHeight:1.7,fontWeight:300}}>
+
+            {/* Subtítulo */}
+            <p style={{fontSize:15,color:"var(--t2)",maxWidth:480,margin:"0 auto 24px",lineHeight:1.75,fontWeight:300}}>
               {T.hero_sub}
             </p>
+
+            {/* CTA */}
+            <button className="bp" onClick={()=>document.getElementById("tools")?.scrollIntoView({behavior:"smooth"})}
+              style={{fontSize:14,padding:"12px 28px",borderRadius:8,gap:8,marginBottom:20}}>
+              <Ic n="zap" s={15} c="#fff"/>
+              {T.hero_cta}
+            </button>
+
+            {/* Contador */}
             {count>0&&(
-              <div style={{display:"inline-flex",alignItems:"center",gap:6,marginTop:14,
-                background:"var(--al)",borderRadius:20,padding:"5px 14px"}}>
-                <span style={{fontSize:13,fontFamily:"'DM Mono',monospace",fontWeight:500,color:"var(--ac)"}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,marginTop:4}}>
+                <span style={{fontSize:13,fontFamily:"'DM Mono',monospace",fontWeight:600,color:"var(--ac)"}}>
                   {count.toLocaleString()}
                 </span>
-                <span style={{fontSize:12,color:"var(--t2)"}}>{T.counter}</span>
+                <span style={{fontSize:12,color:"var(--tm)"}}>{T.counter}</span>
               </div>
             )}
           </div>
 
           {/* Hero drop */}
           <div className={`dz fu fu1 m-hero-drop ${heroDrag?"ov":""}`}
-            style={{padding:"44px 24px",textAlign:"center",maxWidth:560,margin:"0 auto 48px"}}
+            style={{padding:"40px 32px",textAlign:"center",maxWidth:580,margin:"0 auto 48px",
+              background:heroDrag?"var(--al)":"var(--sf)",transition:"all .2s",cursor:"pointer",
+              boxShadow:heroDrag?"0 0 0 3px var(--ac)":"0 1px 3px rgba(0,0,0,.06)"}}
             onDragOver={e=>{e.preventDefault();setHeroDrag(true)}}
             onDragLeave={()=>setHeroDrag(false)}
             onDrop={heroDrop}
             onClick={()=>document.getElementById("tools")?.scrollIntoView({behavior:"smooth"})}>
-            <div style={{display:"flex",justifyContent:"center",marginBottom:12}}>
-              <div style={{width:52,height:52,borderRadius:12,background:heroDrag?"var(--al)":"#F5F5F3",display:"flex",alignItems:"center",justifyContent:"center",transition:"background .16s"}}>
-                <Ic n="upload" s={22} c={heroDrag?"var(--ac)":"var(--tm)"}/>
+            {/* Icono animado */}
+            <div style={{display:"flex",justifyContent:"center",marginBottom:14}}>
+              <div style={{width:60,height:60,borderRadius:14,
+                background:heroDrag?"var(--ac)":"linear-gradient(135deg,#E8EDF2,#F5F5F3)",
+                display:"flex",alignItems:"center",justifyContent:"center",transition:"all .2s",
+                boxShadow:heroDrag?"0 4px 16px rgba(28,48,66,.3)":"0 2px 8px rgba(0,0,0,.08)"}}>
+                <Ic n="upload" s={24} c={heroDrag?"#fff":"var(--ac)"}/>
               </div>
             </div>
-            <div style={{fontWeight:500,marginBottom:4,fontSize:14}}>{T.hero_drop}</div>
-            <div style={{fontSize:12,color:"var(--tm)",marginBottom:6}}>{T.hero_drop_sub}</div>
-            <div style={{fontSize:10,color:"var(--tm)",fontFamily:"'DM Mono',monospace",marginBottom:14,opacity:.7}}>{T.max_size}</div>
-            <div style={{display:"flex",gap:5,justifyContent:"center"}}>
+            <div style={{fontWeight:600,marginBottom:6,fontSize:15,color:heroDrag?"var(--ac)":"var(--t1)",transition:"color .2s"}}>
+              {T.hero_drop}
+            </div>
+            <div style={{fontSize:13,color:"var(--t2)",marginBottom:10,lineHeight:1.5}}>{T.hero_drop_sub}</div>
+            <div style={{display:"flex",gap:5,justifyContent:"center",marginBottom:10}}>
               <Tag type="pdf"/><Tag type="docx"/><Tag type="img"/>
             </div>
+            <div style={{fontSize:10,color:"var(--tm)",fontFamily:"'DM Mono',monospace",opacity:.7}}>{T.max_size}</div>
           </div>
 
           {/* Tools */}
