@@ -33,6 +33,7 @@ const LANGS = {
            ["Descarga inmediata","Resultado listo en segundos."],
            ["Sin límites","Archivos de hasta 200 MB."] ],
     max_size:"máx. 200 MB",
+    counter:"archivos convertidos",
     nav_privacy:"Privacidad", nav_api:"API", nav_help:"Ayuda",
     footer_copy:"morf · © 2025",
     modal_privacy:"Política de Privacidad", modal_terms:"Términos de Uso",
@@ -102,6 +103,7 @@ const LANGS = {
            ["Instant download","Result ready in seconds."],
            ["No limits","Files up to 200 MB."] ],
     max_size:"max. 200 MB",
+    counter:"files converted",
     nav_privacy:"Privacy", nav_api:"API", nav_help:"Help",
     footer_copy:"morf · © 2025",
     modal_privacy:"Privacy Policy", modal_terms:"Terms of Use",
@@ -167,6 +169,7 @@ const LANGS = {
            ["Téléchargement immédiat","Résultat prêt en quelques secondes."],
            ["Sans limite","Fichiers jusqu'à 200 Mo."] ],
     max_size:"max. 200 Mo",
+    counter:"fichiers convertis",
     nav_privacy:"Confidentialité", nav_api:"API", nav_help:"Aide",
     footer_copy:"morf · © 2025",
     modal_privacy:"Politique de confidentialité", modal_terms:"Conditions d'utilisation",
@@ -232,6 +235,7 @@ const LANGS = {
            ["Sofort-Download","Ergebnis in Sekunden bereit."],
            ["Keine Limits","Dateien bis zu 200 MB."] ],
     max_size:"max. 200 MB",
+    counter:"Dateien konvertiert",
     nav_privacy:"Datenschutz", nav_api:"API", nav_help:"Hilfe",
     footer_copy:"morf · © 2025",
     modal_privacy:"Datenschutzerklärung", modal_terms:"Nutzungsbedingungen",
@@ -297,6 +301,7 @@ const LANGS = {
            ["Download imediato","Resultado pronto em segundos."],
            ["Sem limites","Ficheiros até 200 MB."] ],
     max_size:"máx. 200 MB",
+    counter:"ficheiros convertidos",
     nav_privacy:"Privacidade", nav_api:"API", nav_help:"Ajuda",
     footer_copy:"morf · © 2025",
     modal_privacy:"Política de Privacidade", modal_terms:"Termos de Utilização",
@@ -756,7 +761,7 @@ function FileRow({ file, onRemove }) {
   );
 }
 
-function Panel({ tool, onClose, showToast }) {
+function Panel({ tool, onClose, showToast, bumpCount=()=>{} }) {
   const T = useLang();
   const [files,setFiles]     = useState([]);
   const [drag,setDrag]       = useState(false);
@@ -817,11 +822,13 @@ function Panel({ tool, onClose, showToast }) {
           return;
         }
         showToast(T.conv_done);
+        bumpCount();
         setStatus("idle"); setFiles([]); return;
       }
       else if (tool.id==="pdf-word") { await pdfToWord(files[0]); }
       setStatus("done");
       showToast(T.conv_done);
+      bumpCount();
     } catch(e) {
       console.error(e);
       setErrMsg(getErrMsg(e));
@@ -980,6 +987,15 @@ export default function App() {
   const [toast, setToast]     = useState(null);
   const [heroDrag, setHeroDrag] = useState(false);
   const [dark, setDark] = useState(() => window.matchMedia?.('(prefers-color-scheme: dark)').matches);
+  const [count, setCount] = useState(() => parseInt(localStorage.getItem('morf_count')||'0'));
+
+  const bumpCount = () => {
+    setCount(c => {
+      const n = c + 1;
+      localStorage.setItem('morf_count', n);
+      return n;
+    });
+  };
   useEffect(() => {
     document.body.style.background = dark ? '#0F1117' : '#F9F9F8';
   }, [dark]);
@@ -1057,6 +1073,15 @@ export default function App() {
             <p style={{fontSize:14,color:"var(--t2)",maxWidth:420,margin:"0 auto",lineHeight:1.7,fontWeight:300}}>
               {T.hero_sub}
             </p>
+            {count>0&&(
+              <div style={{display:"inline-flex",alignItems:"center",gap:6,marginTop:14,
+                background:"var(--al)",borderRadius:20,padding:"5px 14px"}}>
+                <span style={{fontSize:13,fontFamily:"'DM Mono',monospace",fontWeight:500,color:"var(--ac)"}}>
+                  {count.toLocaleString()}
+                </span>
+                <span style={{fontSize:12,color:"var(--t2)"}}>{T.counter}</span>
+              </div>
+            )}
           </div>
 
           {/* Hero drop */}
@@ -1102,7 +1127,7 @@ export default function App() {
                 </div>
               ))}
             </div>
-            {active&&<Panel tool={active} onClose={()=>setActive(null)} showToast={showToast}/>}
+            {active&&<Panel tool={active} onClose={()=>setActive(null)} showToast={showToast} bumpCount={bumpCount}/>}
           </div>
 
           {/* Features */}
