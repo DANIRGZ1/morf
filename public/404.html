@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>404 · Página no encontrada — morf</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: #F9F9F8;
+      color: #111110;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body { background: #0F1117; color: #F0F0EE; }
+      .card { background: #1A1D27; border-color: #2A2D3A; }
+      .code { background: #1A2535; color: #7BA7C4; }
+      .btn-sec { border-color: #2A2D3A; color: #9A9AA8; }
+      .btn-sec:hover { background: #2A2D3A; color: #F0F0EE; }
+    }
+
+    .card {
+      background: #FFF;
+      border: 1px solid #E3E3E0;
+      border-radius: 14px;
+      padding: 48px 40px;
+      max-width: 440px;
+      width: 100%;
+      text-align: center;
+      animation: up .4s ease both;
+    }
+
+    @keyframes up {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 32px;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .logo span {
+      font-weight: 600;
+      font-size: 16px;
+      letter-spacing: -.02em;
+    }
+
+    .code {
+      font-family: 'DM Mono', monospace;
+      font-size: 72px;
+      font-weight: 500;
+      color: #1C3042;
+      line-height: 1;
+      margin-bottom: 12px;
+      background: #E8EDF2;
+      padding: 16px 24px;
+      border-radius: 10px;
+      display: inline-block;
+    }
+
+    h1 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      letter-spacing: -.02em;
+    }
+
+    p {
+      font-size: 14px;
+      color: #6B6B68;
+      line-height: 1.6;
+      margin-bottom: 28px;
+    }
+
+    .btns {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn-pri {
+      background: #1C3042;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 20px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background .16s;
+    }
+    .btn-pri:hover { background: #142435; }
+
+    .btn-sec {
+      background: transparent;
+      color: #6B6B68;
+      border: 1px solid #E3E3E0;
+      border-radius: 6px;
+      padding: 9px 18px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all .16s;
+    }
+    .btn-sec:hover { border-color: #C4C4C0; color: #111110; background: #F5F5F3; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <a href="/" class="logo">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1C3042" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="2" width="9" height="9" rx="2"/>
+        <rect x="13" y="2" width="9" height="9" rx="2"/>
+        <rect x="2" y="13" width="9" height="9" rx="2"/>
+        <path d="M13 18h9"/><path d="M18 13v9"/>
+      </svg>
+      <span>morf</span>
+    </a>
+
+    <div class="code">404</div>
+
+    <h1>Página no encontrada</h1>
+    <p>La página que buscas no existe o ha sido movida.<br>Vuelve al inicio y sigue convirtiendo tus archivos.</p>
+
+    <div class="btns">
+      <a href="/" class="btn-pri">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        Ir al inicio
+      </a>
+      <a href="javascript:history.back()" class="btn-sec">Volver atrás</a>
+    </div>
+  </div>
+</body>
+</html>
