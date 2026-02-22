@@ -451,6 +451,42 @@ const css = `
   @media(max-width:560px){.grid{grid-template-columns:repeat(2,1fr)!important}}
   @media(max-width:360px){.grid{grid-template-columns:1fr!important}}
 
+  /* ── Mobile improvements ── */
+  @media(max-width:600px){
+    /* Header */
+    .m-header-inner{padding:0 14px!important}
+    .m-logo-text{display:none}
+    .m-nav-labels{display:none}
+
+    /* Hero */
+    .m-hero{padding:32px 14px 48px!important}
+    .m-hero-drop{padding:28px 14px!important;margin-bottom:32px!important}
+
+    /* Panel */
+    .m-panel{margin:0 -14px!important;border-radius:0!important;border-left:none!important;border-right:none!important}
+
+    /* Features */
+    .m-feat{grid-template-columns:1fr 1fr!important}
+
+    /* Buttons */
+    .bp,.bg{font-size:12px!important;padding:8px 14px!important}
+
+    /* Modal */
+    .sh{max-height:92vh!important}
+    .sh-body{padding:16px!important}
+
+    /* Toast */
+    .toast{left:14px!important;right:14px!important;bottom:14px!important;font-size:11px!important}
+
+    /* Steps UI */
+    .m-steps{padding:12px!important}
+  }
+
+  @media(max-width:400px){
+    .grid{grid-template-columns:1fr 1fr!important}
+    .m-nav-privacy{display:none}
+  }
+
   /* lang picker */
   .lang-wrap{position:relative}
   .lang-btn{display:flex;align-items:center;gap:6px;background:transparent;border:1px solid var(--bd);
@@ -1016,7 +1052,7 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{} }) {
               </div>
             )}
             {status==="proc"&&(
-              <div style={{marginBottom:16,padding:"16px",background:"var(--al)",borderRadius:10,textAlign:"center"}}>
+              <div className="m-steps" style={{marginBottom:16,padding:"16px",background:"var(--al)",borderRadius:10,textAlign:"center"}}>
                 {/* Pasos */}
                 <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:0,marginBottom:12}}>
                   {[T.step_read, T.step_proc].map((label,i)=>{
@@ -1124,16 +1160,16 @@ export default function App() {
 
         {/* Header */}
         <header style={{borderBottom:"1px solid var(--bd)",background:"var(--sf)",position:"sticky",top:0,zIndex:100}}>
-          <div style={{maxWidth:960,margin:"0 auto",padding:"0 20px",height:52,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div className="m-header-inner" style={{maxWidth:960,margin:"0 auto",padding:"0 20px",height:52,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
             <div style={{display:"flex",alignItems:"center",gap:9}}>
               <Ic n="logo" s={20} c="var(--ac)" sw={1.6}/>
-              <span style={{fontWeight:600,fontSize:15,letterSpacing:"-.02em"}}>morf</span>
+              <span className="m-logo-text" style={{fontWeight:600,fontSize:15,letterSpacing:"-.02em"}}>morf</span>
               <span style={{fontSize:9,fontFamily:"'DM Mono',monospace",background:"var(--al)",color:"var(--ac)",padding:"2px 6px",borderRadius:3,fontWeight:500}}>BETA</span>
             </div>
             <nav style={{display:"flex",gap:16,alignItems:"center"}}>
-              <button className="nl" onClick={()=>setModal("privacy")}>{T.nav_privacy}</button>
-              <button className="nl" onClick={()=>setModal("api")}>{T.nav_api}</button>
-              <button className="nl" onClick={()=>setModal("contact")}>{T.nav_help}</button>
+              <button className="nl m-nav-privacy" onClick={()=>setModal("privacy")}>{T.nav_privacy}</button>
+              <button className="nl m-nav-labels" onClick={()=>setModal("api")}>{T.nav_api}</button>
+              <button className="nl m-nav-labels" onClick={()=>setModal("contact")}>{T.nav_help}</button>
               <button onClick={()=>setDark(d=>!d)}
                 style={{background:"transparent",border:"1px solid var(--bd)",borderRadius:6,
                   padding:"5px 8px",cursor:"pointer",color:"var(--t2)",display:"flex",
@@ -1146,7 +1182,7 @@ export default function App() {
           </div>
         </header>
 
-        <div style={{maxWidth:960,margin:"0 auto",padding:"48px 20px 64px"}}>
+        <div className="m-hero" style={{maxWidth:960,margin:"0 auto",padding:"48px 20px 64px"}}>
           {/* Hero */}
           <div className="fu" style={{textAlign:"center",marginBottom:44}}>
             <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"var(--sf)",border:"1px solid var(--bd)",borderRadius:20,padding:"3px 11px 3px 7px",fontSize:11,color:"var(--tm)",marginBottom:20,fontFamily:"'DM Mono',monospace"}}>
@@ -1171,7 +1207,7 @@ export default function App() {
           </div>
 
           {/* Hero drop */}
-          <div className={`dz fu fu1 ${heroDrag?"ov":""}`}
+          <div className={`dz fu fu1 m-hero-drop ${heroDrag?"ov":""}`}
             style={{padding:"44px 24px",textAlign:"center",maxWidth:560,margin:"0 auto 48px"}}
             onDragOver={e=>{e.preventDefault();setHeroDrag(true)}}
             onDragLeave={()=>setHeroDrag(false)}
@@ -1217,7 +1253,7 @@ export default function App() {
           </div>
 
           {/* Features */}
-          <div style={{borderTop:"1px solid var(--bd)",marginTop:48,paddingTop:36,display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:20}}>
+          <div className="m-feat" style={{borderTop:"1px solid var(--bd)",marginTop:48,paddingTop:36,display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:20}}>
             {T.feat.map(([title,desc],i)=>(
               <div key={i} style={{display:"flex",gap:11,alignItems:"flex-start"}}>
                 <div style={{width:28,height:28,borderRadius:6,background:"#F5F5F3",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
