@@ -35,6 +35,7 @@ const LANGS = {
     max_size:"máx. 200 MB",
     counter:"archivos convertidos",
     step_read:"Leyendo archivo…", step_proc:"Procesando…", step_done:"¡Listo!",
+    hist_title:"Conversiones recientes", hist_empty:"Aún no has convertido ningún archivo.", hist_clear:"Borrar historial",
     nav_privacy:"Privacidad", nav_api:"API", nav_help:"Ayuda",
     footer_copy:"morf · © 2025",
     modal_privacy:"Política de Privacidad", modal_terms:"Términos de Uso",
@@ -110,6 +111,7 @@ const LANGS = {
     max_size:"max. 200 MB",
     counter:"files converted",
     step_read:"Reading file…", step_proc:"Processing…", step_done:"Done!",
+    hist_title:"Recent conversions", hist_empty:"You haven't converted any files yet.", hist_clear:"Clear history",
     nav_privacy:"Privacy", nav_api:"API", nav_help:"Help",
     footer_copy:"morf · © 2025",
     modal_privacy:"Privacy Policy", modal_terms:"Terms of Use",
@@ -181,6 +183,7 @@ const LANGS = {
     max_size:"max. 200 Mo",
     counter:"fichiers convertis",
     step_read:"Lecture du fichier…", step_proc:"Traitement…", step_done:"Terminé !",
+    hist_title:"Conversions récentes", hist_empty:"Vous n'avez pas encore converti de fichiers.", hist_clear:"Effacer l'historique",
     nav_privacy:"Confidentialité", nav_api:"API", nav_help:"Aide",
     footer_copy:"morf · © 2025",
     modal_privacy:"Politique de confidentialité", modal_terms:"Conditions d'utilisation",
@@ -252,6 +255,7 @@ const LANGS = {
     max_size:"max. 200 MB",
     counter:"Dateien konvertiert",
     step_read:"Datei lesen…", step_proc:"Verarbeitung…", step_done:"Fertig!",
+    hist_title:"Letzte Konvertierungen", hist_empty:"Du hast noch keine Dateien konvertiert.", hist_clear:"Verlauf löschen",
     nav_privacy:"Datenschutz", nav_api:"API", nav_help:"Hilfe",
     footer_copy:"morf · © 2025",
     modal_privacy:"Datenschutzerklärung", modal_terms:"Nutzungsbedingungen",
@@ -323,6 +327,7 @@ const LANGS = {
     max_size:"máx. 200 MB",
     counter:"ficheiros convertidos",
     step_read:"A ler ficheiro…", step_proc:"A processar…", step_done:"Pronto!",
+    hist_title:"Conversões recentes", hist_empty:"Ainda não converteste nenhum ficheiro.", hist_clear:"Limpar histórico",
     nav_privacy:"Privacidade", nav_api:"API", nav_help:"Ajuda",
     footer_copy:"morf · © 2025",
     modal_privacy:"Política de Privacidade", modal_terms:"Termos de Utilização",
@@ -832,7 +837,7 @@ function FileRow({ file, onRemove }) {
   );
 }
 
-function Panel({ tool, onClose, showToast, bumpCount=()=>{} }) {
+function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{} }) {
   const T = useLang();
   const [files,setFiles]     = useState([]);
   const [drag,setDrag]       = useState(false);
@@ -899,6 +904,7 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{} }) {
         }
         showToast(T.conv_done);
         bumpCount();
+        addToHistory(files[0]?.name, tool.label);
         setStatus("idle"); setFiles([]); return;
       }
       else if (tool.id==="pdf-word")  { await pdfToWord(files[0]); }
@@ -914,6 +920,7 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{} }) {
       setStatus("done");
       showToast(T.conv_done);
       bumpCount();
+      addToHistory(files[0]?.name, tool.label);
     } catch(e) {
       console.error(e);
       setStep(0);
@@ -1110,6 +1117,23 @@ export default function App() {
   const [heroDrag, setHeroDrag] = useState(false);
   const [dark, setDark] = useState(() => window.matchMedia?.('(prefers-color-scheme: dark)').matches);
   const [count, setCount] = useState(() => parseInt(localStorage.getItem('morf_count')||'0'));
+  const [history, setHistory] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('morf_history')||'[]'); } catch(e){ return []; }
+  });
+
+  const addToHistory = (filename, toolLabel) => {
+    setHistory(prev => {
+      const entry = { filename, tool: toolLabel, date: new Date().toISOString() };
+      const next = [entry, ...prev].slice(0, 10);
+      localStorage.setItem('morf_history', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const clearHistory = () => {
+    setHistory([]);
+    localStorage.removeItem('morf_history');
+  };
 
   const bumpCount = () => {
     setCount(c => {
@@ -1249,7 +1273,7 @@ export default function App() {
                 </div>
               ))}
             </div>
-            {active&&<Panel tool={active} onClose={()=>setActive(null)} showToast={showToast} bumpCount={bumpCount}/>}
+            {active&&<Panel tool={active} onClose={()=>setActive(null)} showToast={showToast} bumpCount={bumpCount} addToHistory={addToHistory}/>}
           </div>
 
           {/* Features */}
@@ -1267,6 +1291,41 @@ export default function App() {
             ))}
           </div>
         </div>
+
+        {/* Historial */}
+        {history.length > 0 && (
+          <div style={{maxWidth:960,margin:"0 auto",padding:"0 20px 48px"}}>
+            <div style={{borderTop:"1px solid var(--bd)",paddingTop:32}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <Ic n="download" s={14} c="var(--t2)"/>
+                  <span style={{fontWeight:600,fontSize:13}}>{T.hist_title}</span>
+                </div>
+                <button className="nl" style={{fontSize:11,color:"var(--tm)"}} onClick={clearHistory}>{T.hist_clear}</button>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                {history.map((h,i)=>{
+                  const d = new Date(h.date);
+                  const dateStr = d.toLocaleDateString(T.code==="en"?"en-GB":T.code==="de"?"de-DE":T.code==="fr"?"fr-FR":T.code==="pt"?"pt-PT":"es-ES",
+                    {day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});
+                  return (
+                    <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",
+                      background:"var(--sf)",border:"1px solid var(--bd)",borderRadius:8,
+                      animation:`fu .2s ease ${i*0.04}s both`}}>
+                      <Ic n="file" s={13} c="var(--tm)"/>
+                      <span style={{flex:1,fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:"var(--t1)"}}>{h.filename}</span>
+                      <span style={{fontSize:11,color:"var(--ac)",fontWeight:500,flexShrink:0,
+                        background:"var(--al)",padding:"2px 7px",borderRadius:4,fontFamily:"'DM Mono',monospace"}}>
+                        {h.tool}
+                      </span>
+                      <span style={{fontSize:10,color:"var(--tm)",flexShrink:0}}>{dateStr}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Footer */}
         <footer style={{borderTop:"1px solid var(--bd)",background:"var(--sf)"}}>
