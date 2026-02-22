@@ -352,7 +352,20 @@ const css = `
     --ac:#1C3042;--al:#E8EDF2;--ah:#142435;--ok:#1B6640;
     font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--t1);
     font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;min-height:100vh;
+    transition:background .2s,color .2s;
   }
+  .m.dark{
+    --bg:#0F1117;--sf:#1A1D27;--bd:#2A2D3A;--bh:#3A3D4A;
+    --t1:#F0F0EE;--t2:#9A9AA8;--tm:#6A6A78;
+    --ac:#7BA7C4;--al:#1A2535;--ah:#8FB8D5;--ok:#4ADE80;
+  }
+  .m.dark .fr{background:#1E2130}
+  .m.dark .bg:hover{background:#2A2D3A}
+  .m.dark .lang-btn:hover{background:#2A2D3A}
+  .m.dark .lang-opt:hover{background:#2A2D3A}
+  .m.dark .tpdf{background:#3B1515;color:#F87171}
+  .m.dark .tdocx{background:#1A2540;color:#93C5FD}
+  .m.dark .timg{background:#142515;color:#4ADE80}
   @keyframes fu{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
   @keyframes sp{to{transform:rotate(360deg)}}
   @keyframes pr{from{width:0}to{width:100%}}
@@ -490,6 +503,8 @@ const ic = {
   shield:   <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></>,
   globe:    <><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></>,
   chevron:  <polyline points="6 9 12 15 18 9"/>,
+  sun:      <><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></>,
+  moon:     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>,
 };
 const Ic = ({ n, s=17, c="currentColor", sw=1.5 }) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
@@ -752,7 +767,6 @@ function Panel({ tool, onClose, showToast }) {
 
   const addFiles = l => {
     const list = Array.from(l);
-    // Detectar ODT antes de filtrar
     const hasOdt = list.some(f =>
       f.name.toLowerCase().endsWith(".odt") ||
       f.type === "application/vnd.oasis.opendocument.text"
@@ -794,7 +808,8 @@ function Panel({ tool, onClose, showToast }) {
       else if (tool.id==="img-pdf")  { await imagesToPdf(files); }
       else if (tool.id==="compress") { await compressPdf(files[0], quality); }
       else if (tool.id==="word-pdf") {
-        const res = await wordToPdf(files[0]);
+        const f = files[0];
+        const res = await wordToPdf(f);
         if (res === "popup-blocked") {
           setErrMsg(T.err_popup);
           setStatus("error");
@@ -963,6 +978,7 @@ export default function App() {
   const [modal, setModal]     = useState(null);
   const [toast, setToast]     = useState(null);
   const [heroDrag, setHeroDrag] = useState(false);
+  const [dark, setDark] = useState(() => window.matchMedia?.('(prefers-color-scheme: dark)').matches);
 
   const T = LANGS[lang];
   const showToast = (msg, type="ok") => setToast({msg,type});
@@ -976,7 +992,6 @@ export default function App() {
     if (!file) return;
     const ext = "."+file.name.split(".").pop().toLowerCase();
     const mime = file.type.toLowerCase();
-    // Detectar ODT específicamente
     if (ext === ".odt" || mime === "application/vnd.oasis.opendocument.text") {
       showToast(T.err_odt,"err");
       return;
@@ -998,7 +1013,7 @@ export default function App() {
 
   return (
     <LangCtx.Provider value={T}>
-      <div className="m">
+      <div className={`m${dark?" dark":""}`}>
         <style>{css}</style>
 
         {/* Header */}
@@ -1013,6 +1028,13 @@ export default function App() {
               <button className="nl" onClick={()=>setModal("privacy")}>{T.nav_privacy}</button>
               <button className="nl" onClick={()=>setModal("api")}>{T.nav_api}</button>
               <button className="nl" onClick={()=>setModal("contact")}>{T.nav_help}</button>
+              <button onClick={()=>setDark(d=>!d)}
+                style={{background:"transparent",border:"1px solid var(--bd)",borderRadius:6,
+                  padding:"5px 8px",cursor:"pointer",color:"var(--t2)",display:"flex",
+                  alignItems:"center",transition:"all .16s"}}
+                title={dark?"Modo claro":"Modo oscuro"}>
+                <Ic n={dark?"sun":"moon"} s={14} c="var(--t2)"/>
+              </button>
               <LangPicker lang={lang} setLang={setLang}/>
             </nav>
           </div>
