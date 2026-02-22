@@ -46,6 +46,7 @@ const LANGS = {
     err_popup:"El navegador bloqueó la ventana emergente. Permite las ventanas emergentes e inténtalo de nuevo.",
     err_generic:"Ha ocurrido un error inesperado. Comprueba que el archivo no está dañado e inténtalo de nuevo.",
     err_suggest:"¿Sigue fallando? Escríbenos a hola@morf.app",
+    err_odt:"Formato ODT detectado. Ábrelo en LibreOffice y guárdalo como .docx (Archivo → Guardar como → Word 2007-365) e inténtalo de nuevo.",
     // tools
     t:[ {label:"PDF → Word",    desc:"Convierte PDF a documento Word editable."},
         {label:"Word → PDF",    desc:"Transforma Word a PDF de alta fidelidad."},
@@ -114,6 +115,7 @@ const LANGS = {
     err_popup:"The browser blocked the pop-up window. Allow pop-ups for this site and try again.",
     err_generic:"An unexpected error occurred. Check the file is not corrupted and try again.",
     err_suggest:"Still not working? Email us at hola@morf.app",
+    err_odt:"ODT format detected. Open it in LibreOffice and save as .docx (File → Save As → Word 2007-365) then try again.",
     t:[ {label:"PDF → Word",    desc:"Convert PDF to an editable Word document."},
         {label:"Word → PDF",    desc:"Turn Word documents into high-fidelity PDFs."},
         {label:"Image → PDF",   desc:"Bundle JPG, PNG or WEBP files into one PDF."},
@@ -178,6 +180,7 @@ const LANGS = {
     err_popup:"Le navigateur a bloqué la fenêtre contextuelle. Autorisez les popups et réessayez.",
     err_generic:"Une erreur inattendue s'est produite. Vérifiez que le fichier n'est pas corrompu.",
     err_suggest:"Toujours un problème ? Écrivez-nous à hola@morf.app",
+    err_odt:"Format ODT détecté. Ouvrez-le dans LibreOffice et enregistrez-le en .docx (Fichier → Enregistrer sous → Word 2007-365) puis réessayez.",
     t:[ {label:"PDF → Word",      desc:"Convertit un PDF en document Word éditable."},
         {label:"Word → PDF",      desc:"Transforme Word en PDF haute fidélité."},
         {label:"Image → PDF",     desc:"Regroupe JPG, PNG ou WEBP en un seul PDF."},
@@ -242,6 +245,7 @@ const LANGS = {
     err_popup:"Der Browser hat das Popup-Fenster blockiert. Erlaube Popups und versuche es erneut.",
     err_generic:"Ein unerwarteter Fehler ist aufgetreten. Prüfe, ob die Datei nicht beschädigt ist.",
     err_suggest:"Immer noch Probleme? Schreib uns an hola@morf.app",
+    err_odt:"ODT-Format erkannt. Öffne es in LibreOffice und speichere es als .docx (Datei → Speichern unter → Word 2007-365) und versuche es erneut.",
     t:[ {label:"PDF → Word",       desc:"Konvertiert PDF in ein bearbeitbares Word-Dokument."},
         {label:"Word → PDF",       desc:"Wandelt Word in hochwertige PDFs um."},
         {label:"Bild → PDF",       desc:"Fasst JPG, PNG oder WEBP in eine PDF zusammen."},
@@ -306,6 +310,7 @@ const LANGS = {
     err_popup:"O browser bloqueou a janela pop-up. Permite pop-ups e tenta novamente.",
     err_generic:"Ocorreu um erro inesperado. Verifica se o ficheiro não está corrompido.",
     err_suggest:"Continua a falhar? Escreve-nos para hola@morf.app",
+    err_odt:"Formato ODT detetado. Abre-o no LibreOffice e guarda como .docx (Ficheiro → Guardar como → Word 2007-365) e tenta novamente.",
     t:[ {label:"PDF → Word",       desc:"Converte PDF em documento Word editável."},
         {label:"Word → PDF",       desc:"Transforma Word em PDF de alta fidelidade."},
         {label:"Imagem → PDF",     desc:"Agrupa JPG, PNG ou WEBP num único PDF."},
@@ -746,7 +751,14 @@ function Panel({ tool, onClose, showToast }) {
   const ref = useRef();
 
   const addFiles = l => {
-    const ok = Array.from(l).filter(f => {
+    const list = Array.from(l);
+    // Detectar ODT antes de filtrar
+    const hasOdt = list.some(f =>
+      f.name.toLowerCase().endsWith(".odt") ||
+      f.type === "application/vnd.oasis.opendocument.text"
+    );
+    if (hasOdt) { showToast(T.err_odt,"err"); return; }
+    const ok = list.filter(f => {
       const name = f.name.toLowerCase();
       const mime = f.type.toLowerCase();
       const extOk  = (tool.accepts||[]).some(e => name.endsWith(e.replace(".","").toLowerCase()));
@@ -964,6 +976,11 @@ export default function App() {
     if (!file) return;
     const ext = "."+file.name.split(".").pop().toLowerCase();
     const mime = file.type.toLowerCase();
+    // Detectar ODT específicamente
+    if (ext === ".odt" || mime === "application/vnd.oasis.opendocument.text") {
+      showToast(T.err_odt,"err");
+      return;
+    }
     const found = TOOLS.find(t =>
       (t.accepts||[]).includes(ext) ||
       (t.mimeTypes||[]).includes(mime)
