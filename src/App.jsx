@@ -345,6 +345,7 @@ const useLang = () => useContext(LangCtx);
 /* ── CSS ──────────────────────────────────────────────────────────────────── */
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+  html,body,#root{margin:0;padding:0;min-height:100vh;background:inherit}
   .m*{box-sizing:border-box;margin:0;padding:0}
   .m{
     --bg:#F9F9F8;--sf:#FFF;--bd:#E3E3E0;--bh:#C4C4C0;
@@ -979,6 +980,9 @@ export default function App() {
   const [toast, setToast]     = useState(null);
   const [heroDrag, setHeroDrag] = useState(false);
   const [dark, setDark] = useState(() => window.matchMedia?.('(prefers-color-scheme: dark)').matches);
+  useEffect(() => {
+    document.body.style.background = dark ? '#0F1117' : '#F9F9F8';
+  }, [dark]);
 
   const T = LANGS[lang];
   const showToast = (msg, type="ok") => setToast({msg,type});
