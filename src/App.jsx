@@ -963,7 +963,11 @@ export default function App() {
     const file = e.dataTransfer.files[0];
     if (!file) return;
     const ext = "."+file.name.split(".").pop().toLowerCase();
-    const found = TOOLS.find(t=>t.accepts.includes(ext));
+    const mime = file.type.toLowerCase();
+    const found = TOOLS.find(t =>
+      (t.accepts||[]).includes(ext) ||
+      (t.mimeTypes||[]).includes(mime)
+    );
     if (found){ setActive(found); showToast(`${T.detected}: ${found.label}`); }
     else showToast(T.unknown_fmt,"err");
   };
