@@ -711,7 +711,7 @@ function API() {
 /* ── Tools ───────────────────────────────────────────────────────────────── */
 const TOOL_BASE = [
   {id:"pdf-word",  icon:"word",     accepts:[".pdf"],                        from:"pdf",  to:"docx"},
-  {id:"word-pdf",  icon:"pdf",      accepts:[".doc",".docx"],                from:"docx", to:"pdf"},
+  {id:"word-pdf",  icon:"pdf",      accepts:[".doc",".docx"], mimeTypes:["application/msword","application/vnd.openxmlformats-officedocument.wordprocessingml.document"], from:"docx", to:"pdf"},
   {id:"img-pdf",   icon:"img",      accepts:[".jpg",".jpeg",".png",".webp"], from:"img",  to:"pdf", multi:true},
   {id:"merge",     icon:"merge",    accepts:[".pdf"],                        from:"pdf",  to:"pdf", multi:true},
   {id:"split",     icon:"split",    accepts:[".pdf"],                        from:"pdf",  to:"pdf"},
@@ -746,7 +746,13 @@ function Panel({ tool, onClose, showToast }) {
   const ref = useRef();
 
   const addFiles = l => {
-    const ok = Array.from(l).filter(f=>tool.accepts.some(e=>f.name.toLowerCase().endsWith(e.replace(".",""))));
+    const ok = Array.from(l).filter(f => {
+      const name = f.name.toLowerCase();
+      const mime = f.type.toLowerCase();
+      const extOk  = (tool.accepts||[]).some(e => name.endsWith(e.replace(".","").toLowerCase()));
+      const mimeOk = (tool.mimeTypes||[]).some(m => mime === m);
+      return extOk || mimeOk;
+    });
     if (!ok.length){ showToast(T.incompat,"err"); return; }
     setFiles(p=>tool.multi?[...p,...ok]:[ok[0]]);
   };
@@ -839,7 +845,7 @@ function Panel({ tool, onClose, showToast }) {
         ):(
           <>
             {/* Input oculto — se resetea tras cada selección para poder añadir el mismo archivo */}
-            <input ref={ref} type="file" accept={tool.accepts.join(",")} multiple={!!tool.multi}
+            <input ref={ref} type="file" accept={[...(tool.accepts||[]),...(tool.mimeTypes||[])].join(",")} multiple={!!tool.multi}
               style={{display:"none"}}
               onChange={e=>{ addFiles(e.target.files); e.target.value=""; }}/>
 
