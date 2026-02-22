@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, createContext, useContext } from "react";
-import { mergePdfs, splitPdf, imagesToPdf, compressPdf, wordToPdf, pdfToWord } from "./utils/convert";
+import { mergePdfs, splitPdf, imagesToPdf, compressPdf, wordToPdf, pdfToWord, pngToJpg, jpgToPng, rotatePdf, excelToPdf } from "./utils/convert";
 
 /* ── i18n ─────────────────────────────────────────────────────────────────── */
 const LANGS = {
@@ -55,7 +55,11 @@ const LANGS = {
         {label:"Imagen → PDF",  desc:"Agrupa JPG, PNG o WEBP en un único PDF."},
         {label:"Unir PDFs",     desc:"Fusiona varios PDFs respetando el orden."},
         {label:"Dividir PDF",   desc:"Extrae páginas o rangos de cualquier PDF."},
-        {label:"Comprimir PDF", desc:"Reduce el tamaño sin pérdida visible de calidad."} ],
+        {label:"Comprimir PDF", desc:"Reduce el tamaño sin pérdida visible de calidad."},
+        {label:"PNG → JPG",     desc:"Convierte imágenes PNG a formato JPG."},
+        {label:"JPG → PNG",     desc:"Convierte imágenes JPG a formato PNG."},
+        {label:"Rotar PDF",     desc:"Rota páginas de un PDF 90°, 180° o 270°."},
+        {label:"Excel → PDF",   desc:"Convierte hojas de cálculo Excel a PDF."} ],
     // contact
     con_intro:"¿Tienes alguna duda o incidencia? Escríbenos y te respondemos en menos de 48h laborables.",
     con_name:"Nombre", con_email:"Email", con_subject:"Asunto", con_msg:"Mensaje",
@@ -125,7 +129,11 @@ const LANGS = {
         {label:"Image → PDF",   desc:"Bundle JPG, PNG or WEBP files into one PDF."},
         {label:"Merge PDFs",    desc:"Combine multiple PDFs keeping the order."},
         {label:"Split PDF",     desc:"Extract pages or ranges from any PDF."},
-        {label:"Compress PDF",  desc:"Reduce file size with no visible quality loss."} ],
+        {label:"Compress PDF",  desc:"Reduce file size with no visible quality loss."},
+        {label:"PNG → JPG",     desc:"Convert PNG images to JPG format."},
+        {label:"JPG → PNG",     desc:"Convert JPG images to PNG format."},
+        {label:"Rotate PDF",    desc:"Rotate PDF pages 90°, 180° or 270°."},
+        {label:"Excel → PDF",   desc:"Convert Excel spreadsheets to PDF."} ],
     con_intro:"Got a question or issue? Write to us and we'll reply within 48 business hours.",
     con_name:"Name", con_email:"Email", con_subject:"Subject", con_msg:"Message",
     con_name_ph:"Your name", con_email_ph:"you@email.com", con_msg_ph:"Tell us in detail...",
@@ -192,7 +200,11 @@ const LANGS = {
         {label:"Image → PDF",     desc:"Regroupe JPG, PNG ou WEBP en un seul PDF."},
         {label:"Fusionner PDFs",  desc:"Combine plusieurs PDFs en respectant l'ordre."},
         {label:"Diviser PDF",     desc:"Extrait des pages ou plages de n'importe quel PDF."},
-        {label:"Compresser PDF",  desc:"Réduit la taille sans perte visible de qualité."} ],
+        {label:"Compresser PDF",  desc:"Réduit la taille sans perte visible de qualité."},
+        {label:"PNG → JPG",       desc:"Convertit des images PNG en format JPG."},
+        {label:"JPG → PNG",       desc:"Convertit des images JPG en format PNG."},
+        {label:"Rotation PDF",    desc:"Fait pivoter les pages PDF de 90°, 180° ou 270°."},
+        {label:"Excel → PDF",     desc:"Convertit des feuilles Excel en PDF."} ],
     con_intro:"Une question ou un problème ? Écrivez-nous et nous répondons en moins de 48h ouvrées.",
     con_name:"Nom", con_email:"E-mail", con_subject:"Sujet", con_msg:"Message",
     con_name_ph:"Votre nom", con_email_ph:"vous@email.com", con_msg_ph:"Décrivez en détail...",
@@ -259,7 +271,11 @@ const LANGS = {
         {label:"Bild → PDF",       desc:"Fasst JPG, PNG oder WEBP in eine PDF zusammen."},
         {label:"PDFs zusammenführen", desc:"Kombiniert mehrere PDFs in der richtigen Reihenfolge."},
         {label:"PDF teilen",       desc:"Extrahiert Seiten oder Bereiche aus beliebigen PDFs."},
-        {label:"PDF komprimieren", desc:"Reduziert die Dateigröße ohne sichtbaren Qualitätsverlust."} ],
+        {label:"PDF komprimieren", desc:"Reduziert die Dateigröße ohne sichtbaren Qualitätsverlust."},
+        {label:"PNG → JPG",        desc:"Konvertiert PNG-Bilder in das JPG-Format."},
+        {label:"JPG → PNG",        desc:"Konvertiert JPG-Bilder in das PNG-Format."},
+        {label:"PDF drehen",       desc:"Dreht PDF-Seiten um 90°, 180° oder 270°."},
+        {label:"Excel → PDF",      desc:"Konvertiert Excel-Tabellen in PDF."} ],
     con_intro:"Fragen oder Probleme? Schreib uns und wir antworten innerhalb von 48 Stunden.",
     con_name:"Name", con_email:"E-Mail", con_subject:"Betreff", con_msg:"Nachricht",
     con_name_ph:"Dein Name", con_email_ph:"du@email.com", con_msg_ph:"Beschreibe es im Detail...",
@@ -326,7 +342,11 @@ const LANGS = {
         {label:"Imagem → PDF",     desc:"Agrupa JPG, PNG ou WEBP num único PDF."},
         {label:"Unir PDFs",        desc:"Combina vários PDFs respeitando a ordem."},
         {label:"Dividir PDF",      desc:"Extrai páginas ou intervalos de qualquer PDF."},
-        {label:"Comprimir PDF",    desc:"Reduz o tamanho sem perda visível de qualidade."} ],
+        {label:"Comprimir PDF",    desc:"Reduz o tamanho sem perda visível de qualidade."},
+        {label:"PNG → JPG",        desc:"Converte imagens PNG para formato JPG."},
+        {label:"JPG → PNG",        desc:"Converte imagens JPG para formato PNG."},
+        {label:"Rodar PDF",        desc:"Roda páginas do PDF 90°, 180° ou 270°."},
+        {label:"Excel → PDF",      desc:"Converte folhas de cálculo Excel em PDF."} ],
     con_intro:"Tens alguma dúvida? Escreve-nos e respondemos em menos de 48h úteis.",
     con_name:"Nome", con_email:"E-mail", con_subject:"Assunto", con_msg:"Mensagem",
     con_name_ph:"O teu nome", con_email_ph:"tu@email.com", con_msg_ph:"Descreve em detalhe...",
@@ -518,6 +538,8 @@ const ic = {
   shield:   <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></>,
   globe:    <><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></>,
   chevron:  <polyline points="6 9 12 15 18 9"/>,
+  rotate:   <><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></>,
+  excel:    <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><polyline points="8 13 10.5 17 13 13"/><line x1="8" y1="17" x2="13" y2="13"/></>,
   sun:      <><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></>,
   moon:     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>,
 };
@@ -751,6 +773,10 @@ const TOOL_BASE = [
   {id:"merge",     icon:"merge",    accepts:[".pdf"],                        from:"pdf",  to:"pdf", multi:true},
   {id:"split",     icon:"split",    accepts:[".pdf"],                        from:"pdf",  to:"pdf"},
   {id:"compress",  icon:"compress", accepts:[".pdf"],                        from:"pdf",  to:"pdf"},
+  {id:"png-jpg",   icon:"img",      accepts:[".png"],                            from:"png",  to:"jpg"},
+  {id:"jpg-png",   icon:"img",      accepts:[".jpg",".jpeg"],                    from:"jpg",  to:"png"},
+  {id:"rotate",    icon:"rotate",   accepts:[".pdf"],                            from:"pdf",  to:"pdf"},
+  {id:"excel-pdf", icon:"excel",    accepts:[".xlsx",".xls"], mimeTypes:["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","application/vnd.ms-excel"], from:"xlsx", to:"pdf"},
 ];
 
 function FileRow({ file, onRemove }) {
@@ -777,6 +803,7 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{} }) {
   const [status,setStatus]   = useState("idle"); // idle | proc | done | error
   const [range,setRange]     = useState("");
   const [quality,setQuality] = useState("medium");
+  const [rotation,setRotation] = useState(90);
   const [errMsg,setErrMsg]   = useState("");
   const [step,setStep]       = useState(0); // 0=idle 1=read 2=proc 3=done
   const ref = useRef();
@@ -838,7 +865,15 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{} }) {
         bumpCount();
         setStatus("idle"); setFiles([]); return;
       }
-      else if (tool.id==="pdf-word") { await pdfToWord(files[0]); }
+      else if (tool.id==="pdf-word")  { await pdfToWord(files[0]); }
+      else if (tool.id==="png-jpg")   { await pngToJpg(files[0]); }
+      else if (tool.id==="jpg-png")   { await jpgToPng(files[0]); }
+      else if (tool.id==="rotate")    { await rotatePdf(files[0], rotation); }
+      else if (tool.id==="excel-pdf") {
+        const res = await excelToPdf(files[0]);
+        if (res === "popup-blocked") { setErrMsg(T.err_popup); setStatus("error"); return; }
+        showToast(T.conv_done); bumpCount(); setStatus("idle"); setFiles([]); return;
+      }
       setStep(3);
       setStatus("done");
       showToast(T.conv_done);
@@ -948,6 +983,21 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{} }) {
                   className="fi-inp" style={{fontFamily:"'DM Mono',monospace",fontSize:12}}
                   onFocus={e=>e.target.style.borderColor="var(--ac)"}
                   onBlur={e=>e.target.style.borderColor="var(--bd)"}/>
+              </div>
+            )}
+            {tool.id==="rotate"&&files.length>0&&(
+              <div style={{marginBottom:12}}>
+                <div style={{fontSize:11,fontWeight:500,color:"var(--t2)",marginBottom:6}}>Ángulo de rotación</div>
+                <div style={{display:"flex",gap:6}}>
+                  {[[90,"90°"],[180,"180°"],[270,"270°"]].map(([deg,lbl])=>(
+                    <button key={deg} onClick={()=>setRotation(deg)}
+                      style={{flex:1,padding:"7px 0",border:`1px solid ${rotation===deg?"var(--ac)":"var(--bd)"}`,borderRadius:6,
+                        fontSize:13,fontFamily:"'DM Mono',monospace",background:rotation===deg?"var(--al)":"transparent",
+                        color:rotation===deg?"var(--ac)":"var(--t2)",cursor:"pointer",fontWeight:rotation===deg?500:400,transition:"all .16s"}}>
+                      {lbl}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
             {tool.id==="compress"&&files.length>0&&(
