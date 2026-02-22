@@ -32,6 +32,7 @@ const LANGS = {
            ["Formato conservado","Fuentes, márgenes y tablas intactos."],
            ["Descarga inmediata","Resultado listo en segundos."],
            ["Sin límites","Archivos de hasta 200 MB."] ],
+    max_size:"máx. 200 MB",
     nav_privacy:"Privacidad", nav_api:"API", nav_help:"Ayuda",
     footer_copy:"morf · © 2025",
     modal_privacy:"Política de Privacidad", modal_terms:"Términos de Uso",
@@ -99,6 +100,7 @@ const LANGS = {
            ["Format preserved","Fonts, margins and tables intact."],
            ["Instant download","Result ready in seconds."],
            ["No limits","Files up to 200 MB."] ],
+    max_size:"max. 200 MB",
     nav_privacy:"Privacy", nav_api:"API", nav_help:"Help",
     footer_copy:"morf · © 2025",
     modal_privacy:"Privacy Policy", modal_terms:"Terms of Use",
@@ -162,6 +164,7 @@ const LANGS = {
            ["Format conservé","Polices, marges et tableaux intacts."],
            ["Téléchargement immédiat","Résultat prêt en quelques secondes."],
            ["Sans limite","Fichiers jusqu'à 200 Mo."] ],
+    max_size:"max. 200 Mo",
     nav_privacy:"Confidentialité", nav_api:"API", nav_help:"Aide",
     footer_copy:"morf · © 2025",
     modal_privacy:"Politique de confidentialité", modal_terms:"Conditions d'utilisation",
@@ -225,6 +228,7 @@ const LANGS = {
            ["Format erhalten","Schriften, Ränder und Tabellen intakt."],
            ["Sofort-Download","Ergebnis in Sekunden bereit."],
            ["Keine Limits","Dateien bis zu 200 MB."] ],
+    max_size:"max. 200 MB",
     nav_privacy:"Datenschutz", nav_api:"API", nav_help:"Hilfe",
     footer_copy:"morf · © 2025",
     modal_privacy:"Datenschutzerklärung", modal_terms:"Nutzungsbedingungen",
@@ -288,6 +292,7 @@ const LANGS = {
            ["Formato preservado","Fontes, margens e tabelas intactas."],
            ["Download imediato","Resultado pronto em segundos."],
            ["Sem limites","Ficheiros até 200 MB."] ],
+    max_size:"máx. 200 MB",
     nav_privacy:"Privacidade", nav_api:"API", nav_help:"Ajuda",
     footer_copy:"morf · © 2025",
     modal_privacy:"Política de Privacidade", modal_terms:"Termos de Utilização",
@@ -852,7 +857,7 @@ function Panel({ tool, onClose, showToast }) {
                 <div style={{fontWeight:500,fontSize:13,marginBottom:2,color:drag?"var(--ac)":"var(--t1)"}}>
                   {tool.multi?T.drag_multi:T.drag_single}
                 </div>
-                <div style={{fontSize:11,color:"var(--tm)"}}>{T.click_hint} · {tool.accepts.join(", ")}</div>
+                <div style={{fontSize:11,color:"var(--tm)"}}>{T.click_hint} · {tool.accepts.join(", ")} · {T.max_size}</div>
               </div>
             )}
 
@@ -1014,7 +1019,8 @@ export default function App() {
               </div>
             </div>
             <div style={{fontWeight:500,marginBottom:4,fontSize:14}}>{T.hero_drop}</div>
-            <div style={{fontSize:12,color:"var(--tm)",marginBottom:14}}>{T.hero_drop_sub}</div>
+            <div style={{fontSize:12,color:"var(--tm)",marginBottom:6}}>{T.hero_drop_sub}</div>
+            <div style={{fontSize:10,color:"var(--tm)",fontFamily:"'DM Mono',monospace",marginBottom:14,opacity:.7}}>{T.max_size}</div>
             <div style={{display:"flex",gap:5,justifyContent:"center"}}>
               <Tag type="pdf"/><Tag type="docx"/><Tag type="img"/>
             </div>
