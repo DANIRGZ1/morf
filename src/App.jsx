@@ -36,6 +36,15 @@ const LANGS = {
     footer_copy:"morf · © 2025",
     modal_privacy:"Política de Privacidad", modal_terms:"Términos de Uso",
     modal_contact:"Contacto", modal_api:"API de morf",
+    err_title:"No se pudo completar la conversión",
+    err_retry:"Reintentar",
+    err_size:"El archivo supera el límite de 200 MB. Prueba con un archivo más pequeño.",
+    err_protected:"El PDF está protegido con contraseña. Desprotégelo antes de convertir.",
+    err_corrupt:"El archivo parece estar dañado o no es un formato válido.",
+    err_range:"El rango de páginas no es válido. Usa el formato 1-3, 5, 7-9.",
+    err_popup:"El navegador bloqueó la ventana emergente. Permite las ventanas emergentes e inténtalo de nuevo.",
+    err_generic:"Ha ocurrido un error inesperado. Comprueba que el archivo no está dañado e inténtalo de nuevo.",
+    err_suggest:"¿Sigue fallando? Escríbenos a hola@morf.app",
     // tools
     t:[ {label:"PDF → Word",    desc:"Convierte PDF a documento Word editable."},
         {label:"Word → PDF",    desc:"Transforma Word a PDF de alta fidelidad."},
@@ -94,6 +103,15 @@ const LANGS = {
     footer_copy:"morf · © 2025",
     modal_privacy:"Privacy Policy", modal_terms:"Terms of Use",
     modal_contact:"Contact", modal_api:"morf API",
+    err_title:"Conversion failed",
+    err_retry:"Try again",
+    err_size:"File exceeds the 200 MB limit. Please use a smaller file.",
+    err_protected:"This PDF is password-protected. Remove the password before converting.",
+    err_corrupt:"The file appears to be corrupted or is not a valid format.",
+    err_range:"Invalid page range. Use the format 1-3, 5, 7-9.",
+    err_popup:"The browser blocked the pop-up window. Allow pop-ups for this site and try again.",
+    err_generic:"An unexpected error occurred. Check the file is not corrupted and try again.",
+    err_suggest:"Still not working? Email us at hola@morf.app",
     t:[ {label:"PDF → Word",    desc:"Convert PDF to an editable Word document."},
         {label:"Word → PDF",    desc:"Turn Word documents into high-fidelity PDFs."},
         {label:"Image → PDF",   desc:"Bundle JPG, PNG or WEBP files into one PDF."},
@@ -148,6 +166,15 @@ const LANGS = {
     footer_copy:"morf · © 2025",
     modal_privacy:"Politique de confidentialité", modal_terms:"Conditions d'utilisation",
     modal_contact:"Contact", modal_api:"API morf",
+    err_title:"La conversion a échoué",
+    err_retry:"Réessayer",
+    err_size:"Le fichier dépasse la limite de 200 Mo. Essayez avec un fichier plus petit.",
+    err_protected:"Ce PDF est protégé par un mot de passe. Supprimez-le avant de convertir.",
+    err_corrupt:"Le fichier semble corrompu ou n'est pas dans un format valide.",
+    err_range:"Plage de pages invalide. Utilisez le format 1-3, 5, 7-9.",
+    err_popup:"Le navigateur a bloqué la fenêtre contextuelle. Autorisez les popups et réessayez.",
+    err_generic:"Une erreur inattendue s'est produite. Vérifiez que le fichier n'est pas corrompu.",
+    err_suggest:"Toujours un problème ? Écrivez-nous à hola@morf.app",
     t:[ {label:"PDF → Word",      desc:"Convertit un PDF en document Word éditable."},
         {label:"Word → PDF",      desc:"Transforme Word en PDF haute fidélité."},
         {label:"Image → PDF",     desc:"Regroupe JPG, PNG ou WEBP en un seul PDF."},
@@ -202,6 +229,15 @@ const LANGS = {
     footer_copy:"morf · © 2025",
     modal_privacy:"Datenschutzerklärung", modal_terms:"Nutzungsbedingungen",
     modal_contact:"Kontakt", modal_api:"morf API",
+    err_title:"Konvertierung fehlgeschlagen",
+    err_retry:"Erneut versuchen",
+    err_size:"Die Datei überschreitet das 200-MB-Limit. Bitte verwende eine kleinere Datei.",
+    err_protected:"Dieses PDF ist passwortgeschützt. Entferne das Passwort vor der Konvertierung.",
+    err_corrupt:"Die Datei scheint beschädigt oder kein gültiges Format zu sein.",
+    err_range:"Ungültiger Seitenbereich. Verwende das Format 1-3, 5, 7-9.",
+    err_popup:"Der Browser hat das Popup-Fenster blockiert. Erlaube Popups und versuche es erneut.",
+    err_generic:"Ein unerwarteter Fehler ist aufgetreten. Prüfe, ob die Datei nicht beschädigt ist.",
+    err_suggest:"Immer noch Probleme? Schreib uns an hola@morf.app",
     t:[ {label:"PDF → Word",       desc:"Konvertiert PDF in ein bearbeitbares Word-Dokument."},
         {label:"Word → PDF",       desc:"Wandelt Word in hochwertige PDFs um."},
         {label:"Bild → PDF",       desc:"Fasst JPG, PNG oder WEBP in eine PDF zusammen."},
@@ -256,6 +292,15 @@ const LANGS = {
     footer_copy:"morf · © 2025",
     modal_privacy:"Política de Privacidade", modal_terms:"Termos de Utilização",
     modal_contact:"Contacto", modal_api:"API morf",
+    err_title:"Não foi possível completar a conversão",
+    err_retry:"Tentar novamente",
+    err_size:"O ficheiro excede o limite de 200 MB. Usa um ficheiro mais pequeno.",
+    err_protected:"Este PDF está protegido por palavra-passe. Remove-a antes de converter.",
+    err_corrupt:"O ficheiro parece estar corrompido ou não é um formato válido.",
+    err_range:"Intervalo de páginas inválido. Usa o formato 1-3, 5, 7-9.",
+    err_popup:"O browser bloqueou a janela pop-up. Permite pop-ups e tenta novamente.",
+    err_generic:"Ocorreu um erro inesperado. Verifica se o ficheiro não está corrompido.",
+    err_suggest:"Continua a falhar? Escreve-nos para hola@morf.app",
     t:[ {label:"PDF → Word",       desc:"Converte PDF em documento Word editável."},
         {label:"Word → PDF",       desc:"Transforma Word em PDF de alta fidelidade."},
         {label:"Imagem → PDF",     desc:"Agrupa JPG, PNG ou WEBP num único PDF."},
@@ -701,21 +746,38 @@ function Panel({ tool, onClose, showToast }) {
     setFiles(p=>tool.multi?[...p,...ok]:[ok[0]]);
   };
 
+  const getErrMsg = (e) => {
+    const msg = (e.message || "").toLowerCase();
+    if (files[0] && files[0].size > 200 * 1024 * 1024) return T.err_size;
+    if (msg.includes("encrypt") || msg.includes("password") || msg.includes("protected")) return T.err_protected;
+    if (msg.includes("range") || msg.includes("rango")) return T.err_range;
+    if (msg.includes("invalid") || msg.includes("corrupt") || msg.includes("unexpected")) return T.err_corrupt;
+    return T.err_generic;
+  };
+
   const convert = async () => {
+    // Validar tamaño antes de procesar
+    const maxSize = 200 * 1024 * 1024;
+    if (files.some(f => f.size > maxSize)) {
+      setErrMsg(T.err_size);
+      setStatus("error");
+      return;
+    }
     setStatus("proc");
     setErrMsg("");
     try {
-      if (tool.id==="merge")    { await mergePdfs(files); }
+      if (tool.id==="merge")         { await mergePdfs(files); }
       else if (tool.id==="split")    { await splitPdf(files[0], range); }
       else if (tool.id==="img-pdf")  { await imagesToPdf(files); }
       else if (tool.id==="compress") { await compressPdf(files[0], quality); }
       else if (tool.id==="word-pdf") {
         const res = await wordToPdf(files[0]);
         if (res === "popup-blocked") {
-          showToast(T.word_popup || "Abre el HTML descargado e imprime como PDF","ok");
-        } else {
-          showToast(T.word_print || "Selecciona 'Guardar como PDF' en el diálogo de impresión");
+          setErrMsg(T.err_popup);
+          setStatus("error");
+          return;
         }
+        showToast(T.conv_done);
         setStatus("idle"); setFiles([]); return;
       }
       else if (tool.id==="pdf-word") { await pdfToWord(files[0]); }
@@ -723,7 +785,7 @@ function Panel({ tool, onClose, showToast }) {
       showToast(T.conv_done);
     } catch(e) {
       console.error(e);
-      setErrMsg(e.message || "Error inesperado");
+      setErrMsg(getErrMsg(e));
       setStatus("error");
     }
   };
@@ -761,9 +823,13 @@ function Panel({ tool, onClose, showToast }) {
             <div style={{width:46,height:46,borderRadius:"50%",background:"#FEF2F2",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px"}}>
               <Ic n="x" s={20} c="#B91C1C"/>
             </div>
-            <div style={{fontWeight:500,marginBottom:4,color:"#B91C1C"}}>Error en la conversión</div>
-            <div style={{fontSize:12,color:"var(--tm)",marginBottom:18,maxWidth:320,margin:"0 auto 18px"}}>{errMsg}</div>
-            <button className="bg" onClick={()=>setStatus("idle")}>Reintentar</button>
+            <div style={{fontWeight:600,marginBottom:10,color:"#B91C1C",fontSize:14}}>{T.err_title}</div>
+            <div style={{fontSize:13,color:"var(--t2)",marginBottom:6,maxWidth:340,margin:"0 auto 8px",lineHeight:1.6}}>{errMsg}</div>
+            <div style={{fontSize:11,color:"var(--tm)",marginBottom:20}}>{T.err_suggest}</div>
+            <div style={{display:"flex",gap:8,justifyContent:"center"}}>
+              <button className="bg" onClick={()=>{ setStatus("idle"); setFiles([]); }}>{T.cancel}</button>
+              <button className="bp" onClick={()=>setStatus("idle")}>{T.err_retry}</button>
+            </div>
           </div>
         ):(
           <>
