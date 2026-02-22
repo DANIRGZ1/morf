@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <!-- Fondo -->
+  <rect width="1200" height="630" fill="#1C3042"/>
+
+  <!-- Patrón de puntos sutil -->
+  <pattern id="dots" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+    <circle cx="20" cy="20" r="1" fill="white" opacity="0.06"/>
+  </pattern>
+  <rect width="1200" height="630" fill="url(#dots)"/>
+
+  <!-- Logo (4 cuadrados) centrado arriba -->
+  <g transform="translate(540, 200)">
+    <!-- Cuadrado superior izquierdo -->
+    <rect x="0" y="0" width="44" height="44" rx="8" fill="none" stroke="white" stroke-width="3"/>
+    <!-- Cuadrado superior derecho -->
+    <rect x="56" y="0" width="44" height="44" rx="8" fill="none" stroke="white" stroke-width="3"/>
+    <!-- Cuadrado inferior izquierdo -->
+    <rect x="0" y="56" width="44" height="44" rx="8" fill="none" stroke="white" stroke-width="3"/>
+    <!-- Cruz (inferior derecho) -->
+    <line x1="56" y1="78" x2="100" y2="78" stroke="white" stroke-width="3" stroke-linecap="round"/>
+    <line x1="78" y1="56" x2="78" y2="100" stroke="white" stroke-width="3" stroke-linecap="round"/>
+  </g>
+
+  <!-- Nombre -->
+  <text x="600" y="360" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif"
+    font-size="96" font-weight="600" fill="white" text-anchor="middle" letter-spacing="-3">
+    morf
+  </text>
+
+  <!-- Eslogan -->
+  <text x="600" y="430" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif"
+    font-size="28" font-weight="300" fill="white" opacity="0.7" text-anchor="middle" letter-spacing="0.5">
+    Convierte tus archivos en segundos
+  </text>
+
+  <!-- Pills de características -->
+  <g transform="translate(600, 500)">
+    <!-- PDF a Word -->
+    <rect x="-310" y="-18" width="140" height="36" rx="18" fill="white" opacity="0.1"/>
+    <text x="-240" y="6" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif"
+      font-size="16" fill="white" opacity="0.9" text-anchor="middle">PDF → Word</text>
+
+    <!-- Word a PDF -->
+    <rect x="-155" y="-18" width="140" height="36" rx="18" fill="white" opacity="0.1"/>
+    <text x="-85" y="6" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif"
+      font-size="16" fill="white" opacity="0.9" text-anchor="middle">Word → PDF</text>
+
+    <!-- Imagen a PDF -->
+    <rect x="0" y="-18" width="150" height="36" rx="18" fill="white" opacity="0.1"/>
+    <text x="75" y="6" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif"
+      font-size="16" fill="white" opacity="0.9" text-anchor="middle">Imagen → PDF</text>
+
+    <!-- Y más -->
+    <rect x="165" y="-18" width="140" height="36" rx="18" fill="white" opacity="0.1"/>
+    <text x="235" y="6" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif"
+      font-size="16" fill="white" opacity="0.9" text-anchor="middle">y mucho más</text>
+  </g>
+
+  <!-- Badge gratis -->
+  <rect x="50" y="50" width="120" height="36" rx="18" fill="white" opacity="0.12"/>
+  <text x="110" y="74" font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif"
+    font-size="15" font-weight="500" fill="white" opacity="0.9" text-anchor="middle" letter-spacing="1">
+    GRATIS
+  </text>
+
+  <!-- URL -->
+  <text x="1150" y="74" font-family="'DM Mono', 'Courier New', monospace"
+    font-size="15" fill="white" opacity="0.4" text-anchor="end">
+    morf-three.vercel.app
+  </text>
+</svg>
