@@ -37,6 +37,27 @@ const LANGS = {
     counter:"archivos convertidos",
     step_read:"Leyendo archivo…", step_proc:"Procesando…", step_done:"¡Listo!",
     hist_title:"Conversiones recientes", hist_empty:"Aún no has convertido ningún archivo.", hist_clear:"Borrar historial",
+    free_limit:"Has alcanzado el límite diario de conversiones gratuitas.",
+    free_size:"El archivo supera el límite de 10 MB del plan gratuito.",
+    upgrade_cta:"Ver planes Pro",
+    upgrade_sub:"Ilimitado · Archivos hasta 200 MB · Sin publicidad",
+    plan_free:"Gratis", plan_pro:"Pro",
+    plan_free_desc:"Para uso ocasional",
+    plan_pro_desc:"Para uso profesional",
+    plan_monthly:"al mes", plan_yearly:"al año",
+    plan_save:"Ahorra 25%",
+    plan_cta_free:"Empezar gratis",
+    plan_cta_pro:"Empezar con Pro",
+    plan_current:"Plan actual",
+    feat_conversions:"conversiones al día",
+    feat_size_free:"Archivos hasta 10 MB",
+    feat_size_pro:"Archivos hasta 200 MB",
+    feat_tools:"Todas las herramientas",
+    feat_unlimited:"Conversiones ilimitadas",
+    feat_noad:"Sin publicidad",
+    feat_priority:"Procesamiento prioritario",
+    pricing_title:"Planes simples y transparentes",
+    pricing_sub:"Sin contratos. Cancela cuando quieras.",
     faq_title:"Preguntas frecuentes", faq:[["¿Es completamente gratis?", "Sí, morf es 100% gratuito. No necesitas registrarte ni dejar tu email. Sin límites, sin sorpresas."], ["¿Mis archivos se suben a algún servidor?", "No. Todo ocurre en tu navegador con WebAssembly. Tus archivos nunca salen de tu dispositivo."], ["¿Qué formatos puedo convertir?", "PDF, Word (DOCX), Excel (XLSX), imágenes (JPG, PNG, WEBP). También puedes unir, dividir, comprimir o rotar PDFs."], ["¿Hay límite de tamaño?", "200 MB por archivo. Como el procesamiento es local, el rendimiento depende de tu dispositivo."], ["¿Funciona en móvil?", "Sí, en cualquier dispositivo con un navegador moderno: ordenador, tablet o móvil."], ["¿Puedo subir varios archivos a la vez?", "Para unir PDFs sí. El resto de herramientas procesan un archivo cada vez."]],
     nav_privacy:"Privacidad", nav_api:"API", nav_help:"Ayuda",
     footer_copy:"morf · © 2025",
@@ -114,6 +135,27 @@ const LANGS = {
     max_size:"max. 200 MB",
     counter:"files converted",
     step_read:"Reading file…", step_proc:"Processing…", step_done:"Done!",
+    free_limit:"You've reached the daily free conversion limit.",
+    free_size:"File exceeds the 10 MB limit of the free plan.",
+    upgrade_cta:"See Pro plans",
+    upgrade_sub:"Unlimited · Files up to 200 MB · No ads",
+    plan_free:"Free", plan_pro:"Pro",
+    plan_free_desc:"For occasional use",
+    plan_pro_desc:"For professional use",
+    plan_monthly:"per month", plan_yearly:"per year",
+    plan_save:"Save 25%",
+    plan_cta_free:"Start for free",
+    plan_cta_pro:"Start with Pro",
+    plan_current:"Current plan",
+    feat_conversions:"conversions per day",
+    feat_size_free:"Files up to 10 MB",
+    feat_size_pro:"Files up to 200 MB",
+    feat_tools:"All tools included",
+    feat_unlimited:"Unlimited conversions",
+    feat_noad:"No ads",
+    feat_priority:"Priority processing",
+    pricing_title:"Simple, transparent pricing",
+    pricing_sub:"No contracts. Cancel anytime.",
     faq_title:"Frequently asked questions", faq:[["Is it completely free?", "Yes, morf is 100% free. No sign-up, no email required. No limits, no surprises."], ["Are my files uploaded to a server?", "No. Everything runs in your browser via WebAssembly. Your files never leave your device."], ["What formats can I convert?", "PDF, Word (DOCX), Excel (XLSX), images (JPG, PNG, WEBP). Also merge, split, compress or rotate PDFs."], ["Is there a file size limit?", "200 MB per file. Since processing is local, performance depends on your device."], ["Does it work on mobile?", "Yes, on any device with a modern browser: desktop, tablet or mobile."], ["Can I upload multiple files at once?", "For merging PDFs yes. Other tools process one file at a time."]],
     hist_title:"Recent conversions", hist_empty:"You haven't converted any files yet.", hist_clear:"Clear history",
     nav_privacy:"Privacy", nav_api:"API", nav_help:"Help",
@@ -187,6 +229,27 @@ const LANGS = {
            ["Sans limite","Fichiers jusqu'à 200 Mo."] ],
     max_size:"max. 200 Mo",
     counter:"fichiers convertis",
+    free_limit:"Vous avez atteint la limite quotidienne de conversions gratuites.",
+    free_size:"Le fichier dépasse la limite de 10 Mo du plan gratuit.",
+    upgrade_cta:"Voir les plans Pro",
+    upgrade_sub:"Illimité · Fichiers jusqu'à 200 Mo · Sans pub",
+    plan_free:"Gratuit", plan_pro:"Pro",
+    plan_free_desc:"Pour usage occasionnel",
+    plan_pro_desc:"Pour usage professionnel",
+    plan_monthly:"par mois", plan_yearly:"par an",
+    plan_save:"Économisez 25%",
+    plan_cta_free:"Commencer gratuitement",
+    plan_cta_pro:"Commencer avec Pro",
+    plan_current:"Plan actuel",
+    feat_conversions:"conversions par jour",
+    feat_size_free:"Fichiers jusqu'à 10 Mo",
+    feat_size_pro:"Fichiers jusqu'à 200 Mo",
+    feat_tools:"Tous les outils inclus",
+    feat_unlimited:"Conversions illimitées",
+    feat_noad:"Sans publicité",
+    feat_priority:"Traitement prioritaire",
+    pricing_title:"Tarifs simples et transparents",
+    pricing_sub:"Sans engagement. Annulez à tout moment.",
     faq_title:"Questions fréquentes", faq:[["Est-ce entièrement gratuit ?", "Oui, morf est 100% gratuit. Pas d'inscription, pas d'email. Sans limites, sans surprises."], ["Mes fichiers sont-ils envoyés à un serveur ?", "Non. Tout se passe dans votre navigateur via WebAssembly. Vos fichiers ne quittent jamais votre appareil."], ["Quels formats puis-je convertir ?", "PDF, Word (DOCX), Excel (XLSX), images (JPG, PNG, WEBP). Fusionnez, divisez, compressez ou faites pivoter des PDFs."], ["Y a-t-il une limite de taille ?", "200 Mo par fichier. Le traitement étant local, les performances dépendent de votre appareil."], ["Fonctionne-t-il sur mobile ?", "Oui, sur tout appareil avec un navigateur moderne : ordinateur, tablette ou mobile."], ["Puis-je uploader plusieurs fichiers à la fois ?", "Pour fusionner des PDFs oui. Les autres outils traitent un fichier à la fois."]],
     step_read:"Lecture du fichier…", step_proc:"Traitement…", step_done:"Terminé !",
     hist_title:"Conversions récentes", hist_empty:"Vous n'avez pas encore converti de fichiers.", hist_clear:"Effacer l'historique",
@@ -260,6 +323,27 @@ const LANGS = {
            ["Sofort-Download","Ergebnis in Sekunden bereit."],
            ["Keine Limits","Dateien bis zu 200 MB."] ],
     max_size:"max. 200 MB",
+    free_limit:"Du hast das tägliche Limit für kostenlose Konvertierungen erreicht.",
+    free_size:"Die Datei überschreitet das 10-MB-Limit des kostenlosen Plans.",
+    upgrade_cta:"Pro-Pläne ansehen",
+    upgrade_sub:"Unbegrenzt · Dateien bis 200 MB · Keine Werbung",
+    plan_free:"Kostenlos", plan_pro:"Pro",
+    plan_free_desc:"Für gelegentliche Nutzung",
+    plan_pro_desc:"Für professionelle Nutzung",
+    plan_monthly:"pro Monat", plan_yearly:"pro Jahr",
+    plan_save:"25% sparen",
+    plan_cta_free:"Kostenlos starten",
+    plan_cta_pro:"Mit Pro starten",
+    plan_current:"Aktueller Plan",
+    feat_conversions:"Konvertierungen pro Tag",
+    feat_size_free:"Dateien bis 10 MB",
+    feat_size_pro:"Dateien bis 200 MB",
+    feat_tools:"Alle Tools inklusive",
+    feat_unlimited:"Unbegrenzte Konvertierungen",
+    feat_noad:"Keine Werbung",
+    feat_priority:"Prioritätsverarbeitung",
+    pricing_title:"Einfache, transparente Preise",
+    pricing_sub:"Keine Verträge. Jederzeit kündbar.",
     faq_title:"Häufig gestellte Fragen", faq:[["Ist es komplett kostenlos?", "Ja, morf ist 100% kostenlos. Keine Anmeldung, keine E-Mail. Keine Limits, keine Überraschungen."], ["Werden meine Dateien hochgeladen?", "Nein. Alles läuft im Browser via WebAssembly. Deine Dateien verlassen niemals dein Gerät."], ["Welche Formate kann ich konvertieren?", "PDF, Word (DOCX), Excel (XLSX), Bilder (JPG, PNG, WEBP). PDFs zusammenführen, teilen, komprimieren oder drehen."], ["Gibt es ein Dateigrößenlimit?", "200 MB pro Datei. Da die Verarbeitung lokal erfolgt, hängt die Leistung von deinem Gerät ab."], ["Funktioniert es auf dem Handy?", "Ja, auf jedem Gerät mit einem modernen Browser: Desktop, Tablet oder Handy."], ["Kann ich mehrere Dateien gleichzeitig hochladen?", "Beim Zusammenführen von PDFs ja. Andere Tools verarbeiten eine Datei pro Mal."]],
     counter:"Dateien konvertiert",
     step_read:"Datei lesen…", step_proc:"Verarbeitung…", step_done:"Fertig!",
@@ -333,6 +417,27 @@ const LANGS = {
            ["Formato preservado","Fontes, margens e tabelas intactas."],
            ["Download imediato","Resultado pronto em segundos."],
            ["Sem limites","Ficheiros até 200 MB."] ],
+    free_limit:"Atingiste o limite diário de conversões gratuitas.",
+    free_size:"O ficheiro excede o limite de 10 MB do plano gratuito.",
+    upgrade_cta:"Ver planos Pro",
+    upgrade_sub:"Ilimitado · Ficheiros até 200 MB · Sem anúncios",
+    plan_free:"Gratuito", plan_pro:"Pro",
+    plan_free_desc:"Para uso ocasional",
+    plan_pro_desc:"Para uso profissional",
+    plan_monthly:"por mês", plan_yearly:"por ano",
+    plan_save:"Poupa 25%",
+    plan_cta_free:"Começar grátis",
+    plan_cta_pro:"Começar com Pro",
+    plan_current:"Plano atual",
+    feat_conversions:"conversões por dia",
+    feat_size_free:"Ficheiros até 10 MB",
+    feat_size_pro:"Ficheiros até 200 MB",
+    feat_tools:"Todas as ferramentas",
+    feat_unlimited:"Conversões ilimitadas",
+    feat_noad:"Sem anúncios",
+    feat_priority:"Processamento prioritário",
+    pricing_title:"Preços simples e transparentes",
+    pricing_sub:"Sem contratos. Cancela quando quiseres.",
     faq_title:"Perguntas frequentes", faq:[["É completamente gratuito?", "Sim, morf é 100% gratuito. Sem registo, sem email. Sem limites, sem surpresas."], ["Os meus ficheiros são enviados para um servidor?", "Não. Tudo acontece no browser via WebAssembly. Os teus ficheiros nunca saem do teu dispositivo."], ["Que formatos posso converter?", "PDF, Word (DOCX), Excel (XLSX), imagens (JPG, PNG, WEBP). Une, divide, comprime ou roda PDFs."], ["Existe limite de tamanho?", "200 MB por ficheiro. Como o processamento é local, o desempenho depende do teu dispositivo."], ["Funciona no telemóvel?", "Sim, em qualquer dispositivo com um browser moderno: computador, tablet ou telemóvel."], ["Posso carregar vários ficheiros de uma vez?", "Para unir PDFs sim. As outras ferramentas processam um ficheiro de cada vez."]],
     max_size:"máx. 200 MB",
     counter:"ficheiros convertidos",
@@ -605,6 +710,89 @@ const Tag = ({ type }) => {
   return <span className={`tag ${cls}`}>{lbl}</span>;
 };
 
+/* ── Upgrade Modal ───────────────────────────────────────────────────────── */
+function UpgradeModal({ reason, billingYear, setBillingYear, onClose, T }) {
+  const monthly = 5.99;
+  const yearly  = (monthly * 12 * 0.75 / 12).toFixed(2);
+  const price   = billingYear ? yearly : monthly;
+
+  return (
+    <div className="ov" onClick={onClose}>
+      <div className="sh" style={{maxWidth:480}} onClick={e=>e.stopPropagation()}>
+        <div className="sh-head">
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <Ic n="zap" s={16} c="var(--ac)"/>
+            <span style={{fontWeight:600,fontSize:14}}>{T.upgrade_cta}</span>
+          </div>
+          <button style={{background:"none",border:"none",cursor:"pointer",padding:4}} onClick={onClose}>
+            <Ic n="x" s={16} c="var(--tm)"/>
+          </button>
+        </div>
+        <div className="sh-body">
+          {/* Reason */}
+          <div style={{background:"#FEF9EC",border:"1px solid #FCD34D",borderRadius:8,padding:"10px 14px",
+            fontSize:13,color:"#92400E",marginBottom:20,display:"flex",gap:8,alignItems:"flex-start"}}>
+            <Ic n="zap" s={14} c="#F59E0B" style={{flexShrink:0,marginTop:1}}/>
+            <span>{reason==='size' ? T.free_size : T.free_limit}</span>
+          </div>
+
+          {/* Billing toggle */}
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,marginBottom:20}}>
+            <span style={{fontSize:13,color:!billingYear?"var(--t1)":"var(--tm)",fontWeight:!billingYear?500:400}}>Mensual</span>
+            <button onClick={()=>setBillingYear(y=>!y)}
+              style={{width:40,height:22,borderRadius:11,border:"none",cursor:"pointer",
+                background:billingYear?"var(--ac)":"var(--bd)",transition:"background .2s",position:"relative",padding:0}}>
+              <span style={{position:"absolute",top:3,left:billingYear?20:3,width:16,height:16,
+                borderRadius:"50%",background:"#fff",transition:"left .2s",display:"block"}}/>
+            </button>
+            <span style={{fontSize:13,color:billingYear?"var(--t1)":"var(--tm)",fontWeight:billingYear?500:400}}>
+              Anual <span style={{fontSize:10,background:"#DCFCE7",color:"#15803D",padding:"1px 5px",borderRadius:3,fontWeight:600}}>{T.plan_save}</span>
+            </span>
+          </div>
+
+          {/* Plans */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:20}}>
+            {/* Free */}
+            <div style={{border:"1px solid var(--bd)",borderRadius:10,padding:"16px 14px"}}>
+              <div style={{fontWeight:600,fontSize:13,marginBottom:2}}>{T.plan_free}</div>
+              <div style={{fontSize:11,color:"var(--tm)",marginBottom:12}}>{T.plan_free_desc}</div>
+              <div style={{fontSize:22,fontWeight:700,marginBottom:12}}>€0</div>
+              {[`${5} ${T.feat_conversions}`, T.feat_size_free, T.feat_tools].map((f,i)=>(
+                <div key={i} style={{display:"flex",gap:6,alignItems:"flex-start",fontSize:12,color:"var(--t2)",marginBottom:6}}>
+                  <Ic n="check" s={12} c="var(--tm)"/>{f}
+                </div>
+              ))}
+              <button className="bg" style={{width:"100%",marginTop:12,fontSize:12,padding:"7px 0",textAlign:"center"}} onClick={onClose}>
+                {T.plan_current}
+              </button>
+            </div>
+            {/* Pro */}
+            <div style={{border:"2px solid var(--ac)",borderRadius:10,padding:"16px 14px",background:"var(--al)",position:"relative"}}>
+              <div style={{position:"absolute",top:-10,left:"50%",transform:"translateX(-50%)",
+                background:"var(--ac)",color:"#fff",fontSize:9,fontWeight:600,padding:"2px 8px",borderRadius:10,
+                fontFamily:"'DM Mono',monospace",letterSpacing:".05em",whiteSpace:"nowrap"}}>MÁS POPULAR</div>
+              <div style={{fontWeight:600,fontSize:13,marginBottom:2,color:"var(--ac)"}}>{T.plan_pro}</div>
+              <div style={{fontSize:11,color:"var(--tm)",marginBottom:12}}>{T.plan_pro_desc}</div>
+              <div style={{fontSize:22,fontWeight:700,marginBottom:2,color:"var(--ac)"}}>€{price}</div>
+              <div style={{fontSize:10,color:"var(--tm)",marginBottom:10}}>{billingYear ? T.plan_monthly : T.plan_monthly}</div>
+              {[T.feat_unlimited, T.feat_size_pro, T.feat_tools, T.feat_noad, T.feat_priority].map((f,i)=>(
+                <div key={i} style={{display:"flex",gap:6,alignItems:"flex-start",fontSize:12,color:"var(--t1)",marginBottom:6}}>
+                  <Ic n="check" s={12} c="var(--ok)"/>{f}
+                </div>
+              ))}
+              <button className="bp" style={{width:"100%",marginTop:12,fontSize:12,padding:"8px 0",justifyContent:"center"}}
+                onClick={()=>alert('Pasarela de pago próximamente')}>
+                {T.plan_cta_pro}
+              </button>
+            </div>
+          </div>
+          <div style={{textAlign:"center",fontSize:11,color:"var(--tm)"}}>{T.pricing_sub}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── FAQ Item ────────────────────────────────────────────────────────────── */
 function FaqItem({ q, a }) {
   const [open, setOpen] = useState(false);
@@ -871,7 +1059,7 @@ function FileRow({ file, onRemove }) {
   );
 }
 
-function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{} }) {
+function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}, checkLimits=()=>true, bumpDaily=()=>{} }) {
   const T = useLang();
   const [files,setFiles]     = useState([]);
   const [drag,setDrag]       = useState(false);
@@ -918,6 +1106,9 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
       setStatus("error");
       return;
     }
+    // Check freemium limits
+    if (!checkLimits(files)) return;
+
     setStatus("proc");
     setStep(1); // leyendo
     setErrMsg("");
@@ -938,6 +1129,7 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
         }
         showToast(T.conv_done);
         bumpCount();
+        bumpDaily();
         addToHistory(files[0]?.name, tool.label);
         setStatus("idle"); setFiles([]); return;
       }
@@ -954,6 +1146,7 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
       setStatus("done");
       showToast(T.conv_done);
       bumpCount();
+      bumpDaily();
       addToHistory(files[0]?.name, tool.label);
     } catch(e) {
       console.error(e);
@@ -1151,6 +1344,43 @@ export default function App() {
   const [heroDrag, setHeroDrag] = useState(false);
   const [dark, setDark] = useState(() => window.matchMedia?.('(prefers-color-scheme: dark)').matches);
   const [count, setCount] = useState(() => parseInt(localStorage.getItem('morf_count')||'0'));
+  // ── Freemium ──────────────────────────────────────────────────────────────
+  const FREE_DAILY = 5;
+  const FREE_MAX_MB = 10;
+  const isPro = () => localStorage.getItem('morf_pro') === 'true';
+
+  const todayKey = () => `morf_daily_${new Date().toISOString().slice(0,10)}`;
+  const getDailyCount = () => parseInt(localStorage.getItem(todayKey())||'0');
+  const bumpDaily = () => {
+    const k = todayKey();
+    const n = getDailyCount() + 1;
+    localStorage.setItem(k, n);
+    setDailyCountState(n);
+  };
+
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  const [dailyCount, setDailyCountState] = useState(getDailyCount);
+  const [upgradeReason, setUpgradeReason] = useState('limit'); // 'limit' | 'size'
+  const [billingYear, setBillingYear] = useState(true);
+
+  const checkLimits = (files) => {
+    if (isPro()) return true;
+    // Límite de tamaño
+    if (files.some(f => f.size > FREE_MAX_MB * 1024 * 1024)) {
+      setUpgradeReason('size');
+      setShowUpgrade(true);
+      return false;
+    }
+    // Límite diario
+    if (getDailyCount() >= FREE_DAILY) {
+      setUpgradeReason('limit');
+      setShowUpgrade(true);
+      return false;
+    }
+    return true;
+  };
+  // ──────────────────────────────────────────────────────────────────────────
+
   const [history, setHistory] = useState(() => {
     try { return JSON.parse(localStorage.getItem('morf_history')||'[]'); } catch(e){ return []; }
   });
@@ -1248,6 +1478,17 @@ export default function App() {
               <button className="nl m-nav-privacy" onClick={()=>setModal("privacy")}>{T.nav_privacy}</button>
               <button className="nl m-nav-labels" onClick={()=>setModal("api")}>{T.nav_api}</button>
               <button className="nl m-nav-labels" onClick={()=>setModal("contact")}>{T.nav_help}</button>
+              {!isPro()&&(
+                <button onClick={()=>{ setUpgradeReason("limit"); setShowUpgrade(true); }}
+                  style={{background:"transparent",border:"1px solid var(--bd)",borderRadius:6,
+                    padding:"4px 10px",cursor:"pointer",display:"flex",alignItems:"center",gap:5,transition:"all .16s"}}
+                  title="Conversiones restantes hoy">
+                  <span style={{fontSize:11,fontFamily:"'DM Mono',monospace",color:"var(--ac)",fontWeight:600}}>
+                    {Math.max(0, FREE_DAILY - dailyCount)}/{FREE_DAILY}
+                  </span>
+                  <Ic n="zap" s={11} c="var(--ac)"/>
+                </button>
+              )}
               <button onClick={()=>setDark(d=>!d)}
                 style={{background:"transparent",border:"1px solid var(--bd)",borderRadius:6,
                   padding:"5px 8px",cursor:"pointer",color:"var(--t2)",display:"flex",
@@ -1351,7 +1592,7 @@ export default function App() {
                 </div>
               ))}
             </div>
-            {active&&<Panel tool={active} onClose={()=>setActive(null)} showToast={showToast} bumpCount={bumpCount} addToHistory={addToHistory}/>}
+            {active&&<Panel tool={active} onClose={()=>setActive(null)} showToast={showToast} bumpCount={bumpCount} addToHistory={addToHistory} checkLimits={checkLimits} bumpDaily={bumpDaily}/>}
           </div>
 
           {/* Features */}
@@ -1367,6 +1608,68 @@ export default function App() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* Pricing */}
+        <div style={{maxWidth:960,margin:"0 auto",padding:"0 20px 48px"}}>
+          <div style={{borderTop:"1px solid var(--bd)",paddingTop:36}}>
+            <h2 style={{fontSize:18,fontWeight:600,letterSpacing:"-.02em",marginBottom:6,textAlign:"center"}}>{T.pricing_title}</h2>
+            <p style={{fontSize:13,color:"var(--tm)",textAlign:"center",marginBottom:24}}>{T.pricing_sub}</p>
+
+            {/* Billing toggle */}
+            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,marginBottom:28}}>
+              <span style={{fontSize:13,color:!billingYear?"var(--t1)":"var(--tm)",fontWeight:!billingYear?500:400}}>Mensual</span>
+              <button onClick={()=>setBillingYear(y=>!y)}
+                style={{width:40,height:22,borderRadius:11,border:"none",cursor:"pointer",
+                  background:billingYear?"var(--ac)":"var(--bd)",transition:"background .2s",position:"relative",padding:0}}>
+                <span style={{position:"absolute",top:3,left:billingYear?20:3,width:16,height:16,
+                  borderRadius:"50%",background:"#fff",transition:"left .2s",display:"block"}}/>
+              </button>
+              <span style={{fontSize:13,color:billingYear?"var(--t1)":"var(--tm)",fontWeight:billingYear?500:400}}>
+                Anual <span style={{fontSize:10,background:"#DCFCE7",color:"#15803D",padding:"1px 5px",borderRadius:3,fontWeight:600}}>{T.plan_save}</span>
+              </span>
+            </div>
+
+            {/* Plan cards */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:16,maxWidth:560,margin:"0 auto"}}>
+              {/* Free */}
+              <div style={{border:"1px solid var(--bd)",borderRadius:12,padding:"24px 20px",background:"var(--sf)"}}>
+                <div style={{fontWeight:600,fontSize:15,marginBottom:2}}>{T.plan_free}</div>
+                <div style={{fontSize:12,color:"var(--tm)",marginBottom:16}}>{T.plan_free_desc}</div>
+                <div style={{fontSize:32,fontWeight:700,marginBottom:4}}>€0</div>
+                <div style={{fontSize:11,color:"var(--tm)",marginBottom:20}}>para siempre</div>
+                {[`${5} ${T.feat_conversions}`, T.feat_size_free, T.feat_tools].map((f,i)=>(
+                  <div key={i} style={{display:"flex",gap:8,alignItems:"flex-start",fontSize:13,color:"var(--t2)",marginBottom:8}}>
+                    <Ic n="check" s={13} c="var(--tm)"/>{f}
+                  </div>
+                ))}
+                <button className="bg" style={{width:"100%",marginTop:20,fontSize:13,padding:"9px 0",textAlign:"center"}}>
+                  {T.plan_cta_free}
+                </button>
+              </div>
+              {/* Pro */}
+              <div style={{border:"2px solid var(--ac)",borderRadius:12,padding:"24px 20px",background:"var(--al)",position:"relative"}}>
+                <div style={{position:"absolute",top:-12,left:"50%",transform:"translateX(-50%)",
+                  background:"var(--ac)",color:"#fff",fontSize:10,fontWeight:600,padding:"3px 10px",borderRadius:10,
+                  fontFamily:"'DM Mono',monospace",letterSpacing:".05em",whiteSpace:"nowrap"}}>MÁS POPULAR</div>
+                <div style={{fontWeight:600,fontSize:15,marginBottom:2,color:"var(--ac)"}}>{T.plan_pro}</div>
+                <div style={{fontSize:12,color:"var(--tm)",marginBottom:16}}>{T.plan_pro_desc}</div>
+                <div style={{fontSize:32,fontWeight:700,marginBottom:4,color:"var(--ac)"}}>
+                  €{billingYear?(5.99*12*0.75/12).toFixed(2):"5.99"}
+                </div>
+                <div style={{fontSize:11,color:"var(--tm)",marginBottom:20}}>{T.plan_monthly}{billingYear&&<span style={{color:"var(--ok)",fontWeight:500}}> · {T.plan_save}</span>}</div>
+                {[T.feat_unlimited, T.feat_size_pro, T.feat_tools, T.feat_noad, T.feat_priority].map((f,i)=>(
+                  <div key={i} style={{display:"flex",gap:8,alignItems:"flex-start",fontSize:13,color:"var(--t1)",marginBottom:8}}>
+                    <Ic n="check" s={13} c="var(--ok)"/>{f}
+                  </div>
+                ))}
+                <button className="bp" style={{width:"100%",marginTop:20,fontSize:13,padding:"10px 0",justifyContent:"center"}}
+                  onClick={()=>alert('Pasarela de pago próximamente')}>
+                  {T.plan_cta_pro}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1434,6 +1737,11 @@ export default function App() {
         </footer>
 
         {/* Modals */}
+        {showUpgrade&&(
+          <UpgradeModal reason={upgradeReason} billingYear={billingYear} setBillingYear={setBillingYear}
+            onClose={()=>setShowUpgrade(false)} T={T}/>
+        )}
+
         {modal&&(
           <Modal title={modalCfg[modal].title} icon={modalCfg[modal].icon} onClose={()=>setModal(null)}>
             {modal==="privacy"&&<Privacy/>}
