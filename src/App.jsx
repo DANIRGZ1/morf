@@ -7,8 +7,8 @@ const LANGS = {
     code:"es", flag:"🇪🇸", name:"Español",
     tagline:"Sin registro · Sin marcas de agua · 100% privado",
     hero_h1a:"La forma más rápida de", hero_h1b:"convertir tus archivos.",
-    hero_sub:"PDF, Word, Excel, imágenes. Todo gratis, sin registro y sin que tus archivos salgan de tu navegador.",
-    hero_cta:"Empezar ahora — es gratis",
+    hero_sub:"PDF, Word, Excel, imágenes. Gratis para archivos de hasta 10 MB. Sin que tus archivos salgan de tu navegador.",
+    hero_cta:"Empezar gratis",
     hero_drop:"Arrastra cualquier archivo aquí",
     hero_drop_sub:"Selección automática de herramienta",
     tools_title:"Herramientas", tools_count:"disponibles",
@@ -32,12 +32,13 @@ const LANGS = {
     feat:[ ["Procesado local","Tus archivos no salen del navegador."],
            ["Formato conservado","Fuentes, márgenes y tablas intactos."],
            ["Descarga inmediata","Resultado listo en segundos."],
-           ["Sin límites","Archivos de hasta 200 MB."] ],
+           ["Sin publicidad","Plan gratuito sin anuncios."] ],
     max_size:"máx. 200 MB",
     counter:"archivos convertidos",
     step_read:"Leyendo archivo…", step_proc:"Procesando…", step_done:"¡Listo!",
     hist_title:"Conversiones recientes", hist_empty:"Aún no has convertido ningún archivo.", hist_clear:"Borrar historial",
-    free_limit:"Has alcanzado el límite diario de conversiones gratuitas.",
+    free_limit:"El archivo supera el límite de 10 MB del plan gratuito.",
+    free_batch:"El plan gratuito permite unir hasta 2 archivos. Actualiza a Pro para unir archivos ilimitados.",
     free_size:"El archivo supera el límite de 10 MB del plan gratuito.",
     upgrade_cta:"Ver planes Pro",
     upgrade_sub:"Ilimitado · Archivos hasta 200 MB · Sin publicidad",
@@ -49,16 +50,17 @@ const LANGS = {
     plan_cta_free:"Empezar gratis",
     plan_cta_pro:"Empezar con Pro",
     plan_current:"Plan actual",
-    feat_conversions:"conversiones al día",
+    feat_batch:"Unir hasta 2 archivos",
+    merge_hint:"Plan gratuito: máx. 2 archivos. Actualiza a Pro para más.",
     feat_size_free:"Archivos hasta 10 MB",
     feat_size_pro:"Archivos hasta 200 MB",
     feat_tools:"Todas las herramientas",
-    feat_unlimited:"Conversiones ilimitadas",
+    feat_unlimited:"Unir archivos ilimitados",
     feat_noad:"Sin publicidad",
     feat_priority:"Procesamiento prioritario",
     pricing_title:"Planes simples y transparentes",
     pricing_sub:"Sin contratos. Cancela cuando quieras.",
-    faq_title:"Preguntas frecuentes", faq:[["¿Es completamente gratis?", "Sí, morf es 100% gratuito. No necesitas registrarte ni dejar tu email. Sin límites, sin sorpresas."], ["¿Mis archivos se suben a algún servidor?", "No. Todo ocurre en tu navegador con WebAssembly. Tus archivos nunca salen de tu dispositivo."], ["¿Qué formatos puedo convertir?", "PDF, Word (DOCX), Excel (XLSX), imágenes (JPG, PNG, WEBP). También puedes unir, dividir, comprimir o rotar PDFs."], ["¿Hay límite de tamaño?", "200 MB por archivo. Como el procesamiento es local, el rendimiento depende de tu dispositivo."], ["¿Funciona en móvil?", "Sí, en cualquier dispositivo con un navegador moderno: ordenador, tablet o móvil."], ["¿Puedo subir varios archivos a la vez?", "Para unir PDFs sí. El resto de herramientas procesan un archivo cada vez."]],
+    faq_title:"Preguntas frecuentes", faq:[["¿Es completamente gratis?", "El plan gratuito incluye todas las herramientas sin registro, para archivos de hasta 10 MB y puedes unir hasta 2 PDFs a la vez. El plan Pro sube el límite a 200 MB y permite unir archivos ilimitados."], ["¿Mis archivos se suben a algún servidor?", "No. Todo ocurre en tu navegador con WebAssembly. Tus archivos nunca salen de tu dispositivo."], ["¿Qué formatos puedo convertir?", "PDF, Word (DOCX), Excel (XLSX), imágenes (JPG, PNG, WEBP). También puedes unir, dividir, comprimir o rotar PDFs."], ["¿Hay límite de tamaño?", "En el plan gratuito el límite es de 10 MB por archivo. Con Pro puedes convertir archivos de hasta 200 MB."], ["¿Funciona en móvil?", "Sí, en cualquier dispositivo con un navegador moderno: ordenador, tablet o móvil."], ["¿Puedo subir varios archivos a la vez?", "Para unir PDFs sí. El resto de herramientas procesan un archivo cada vez."]],
     nav_privacy:"Privacidad", nav_api:"API", nav_help:"Ayuda",
     footer_copy:"morf · © 2025",
     modal_privacy:"Política de Privacidad", modal_terms:"Términos de Uso",
@@ -106,8 +108,8 @@ const LANGS = {
     code:"en", flag:"🇬🇧", name:"English",
     tagline:"No signup · No watermarks · 100% private",
     hero_h1a:"The fastest way to", hero_h1b:"convert your files.",
-    hero_sub:"PDF, Word, Excel, images. All free, no sign-up, and your files never leave your browser.",
-    hero_cta:"Start now — it's free",
+    hero_sub:"PDF, Word, Excel, images. Free for files up to 10 MB. Your files never leave your browser.",
+    hero_cta:"Start for free",
     hero_drop:"Drop any file here",
     hero_drop_sub:"Automatic tool detection",
     tools_title:"Tools", tools_count:"available",
@@ -131,11 +133,12 @@ const LANGS = {
     feat:[ ["Local processing","Your files never leave your browser."],
            ["Format preserved","Fonts, margins and tables intact."],
            ["Instant download","Result ready in seconds."],
-           ["No limits","Files up to 200 MB."] ],
+           ["No ads","Free plan with no advertising."] ],
     max_size:"max. 200 MB",
     counter:"files converted",
     step_read:"Reading file…", step_proc:"Processing…", step_done:"Done!",
-    free_limit:"You've reached the daily free conversion limit.",
+    free_limit:"File exceeds the 10 MB limit of the free plan.",
+    free_batch:"The free plan allows merging up to 2 files. Upgrade to Pro to merge unlimited files.",
     free_size:"File exceeds the 10 MB limit of the free plan.",
     upgrade_cta:"See Pro plans",
     upgrade_sub:"Unlimited · Files up to 200 MB · No ads",
@@ -147,16 +150,17 @@ const LANGS = {
     plan_cta_free:"Start for free",
     plan_cta_pro:"Start with Pro",
     plan_current:"Current plan",
-    feat_conversions:"conversions per day",
+    feat_batch:"Merge up to 2 files",
+    merge_hint:"Free plan: max. 2 files. Upgrade to Pro for more.",
     feat_size_free:"Files up to 10 MB",
     feat_size_pro:"Files up to 200 MB",
     feat_tools:"All tools included",
-    feat_unlimited:"Unlimited conversions",
+    feat_unlimited:"Merge unlimited files",
     feat_noad:"No ads",
     feat_priority:"Priority processing",
     pricing_title:"Simple, transparent pricing",
     pricing_sub:"No contracts. Cancel anytime.",
-    faq_title:"Frequently asked questions", faq:[["Is it completely free?", "Yes, morf is 100% free. No sign-up, no email required. No limits, no surprises."], ["Are my files uploaded to a server?", "No. Everything runs in your browser via WebAssembly. Your files never leave your device."], ["What formats can I convert?", "PDF, Word (DOCX), Excel (XLSX), images (JPG, PNG, WEBP). Also merge, split, compress or rotate PDFs."], ["Is there a file size limit?", "200 MB per file. Since processing is local, performance depends on your device."], ["Does it work on mobile?", "Yes, on any device with a modern browser: desktop, tablet or mobile."], ["Can I upload multiple files at once?", "For merging PDFs yes. Other tools process one file at a time."]],
+    faq_title:"Frequently asked questions", faq:[["Is it completely free?", "The free plan includes all tools with no sign-up, for files up to 10 MB and merging up to 2 PDFs at once. Pro raises the limit to 200 MB and allows unlimited merging."], ["Are my files uploaded to a server?", "No. Everything runs in your browser via WebAssembly. Your files never leave your device."], ["What formats can I convert?", "PDF, Word (DOCX), Excel (XLSX), images (JPG, PNG, WEBP). Also merge, split, compress or rotate PDFs."], ["Is there a file size limit?", "On the free plan the limit is 10 MB per file. With Pro you can convert files up to 200 MB."], ["Does it work on mobile?", "Yes, on any device with a modern browser: desktop, tablet or mobile."], ["Can I upload multiple files at once?", "For merging PDFs yes. Other tools process one file at a time."]],
     hist_title:"Recent conversions", hist_empty:"You haven't converted any files yet.", hist_clear:"Clear history",
     nav_privacy:"Privacy", nav_api:"API", nav_help:"Help",
     footer_copy:"morf · © 2025",
@@ -201,8 +205,8 @@ const LANGS = {
     code:"fr", flag:"🇫🇷", name:"Français",
     tagline:"Sans inscription · Sans filigrane · 100% privé",
     hero_h1a:"La façon la plus rapide de", hero_h1b:"convertir vos fichiers.",
-    hero_sub:"PDF, Word, Excel, images. Tout gratuit, sans inscription, vos fichiers restent dans votre navigateur.",
-    hero_cta:"Commencer — c'est gratuit",
+    hero_sub:"PDF, Word, Excel, images. Gratuit pour les fichiers jusqu'à 10 Mo. Vos fichiers restent dans votre navigateur.",
+    hero_cta:"Commencer gratuitement",
     hero_drop:"Déposez n'importe quel fichier ici",
     hero_drop_sub:"Détection automatique de l'outil",
     tools_title:"Outils", tools_count:"disponibles",
@@ -226,10 +230,11 @@ const LANGS = {
     feat:[ ["Traitement local","Vos fichiers ne quittent pas le navigateur."],
            ["Format conservé","Polices, marges et tableaux intacts."],
            ["Téléchargement immédiat","Résultat prêt en quelques secondes."],
-           ["Sans limite","Fichiers jusqu'à 200 Mo."] ],
+           ["Sans publicité","Plan gratuit sans aucune publicité."] ],
     max_size:"max. 200 Mo",
     counter:"fichiers convertis",
-    free_limit:"Vous avez atteint la limite quotidienne de conversions gratuites.",
+    free_limit:"Le fichier dépasse la limite de 10 Mo du plan gratuit.",
+    free_batch:"Le plan gratuit permet de fusionner jusqu'à 2 fichiers. Passez à Pro pour en fusionner autant que vous voulez.",
     free_size:"Le fichier dépasse la limite de 10 Mo du plan gratuit.",
     upgrade_cta:"Voir les plans Pro",
     upgrade_sub:"Illimité · Fichiers jusqu'à 200 Mo · Sans pub",
@@ -241,16 +246,17 @@ const LANGS = {
     plan_cta_free:"Commencer gratuitement",
     plan_cta_pro:"Commencer avec Pro",
     plan_current:"Plan actuel",
-    feat_conversions:"conversions par jour",
+    feat_batch:"Fusionner jusqu'à 2 fichiers",
+    merge_hint:"Plan gratuit: max. 2 fichiers. Passez à Pro pour plus.",
     feat_size_free:"Fichiers jusqu'à 10 Mo",
     feat_size_pro:"Fichiers jusqu'à 200 Mo",
     feat_tools:"Tous les outils inclus",
-    feat_unlimited:"Conversions illimitées",
+    feat_unlimited:"Fusion illimitée de fichiers",
     feat_noad:"Sans publicité",
     feat_priority:"Traitement prioritaire",
     pricing_title:"Tarifs simples et transparents",
     pricing_sub:"Sans engagement. Annulez à tout moment.",
-    faq_title:"Questions fréquentes", faq:[["Est-ce entièrement gratuit ?", "Oui, morf est 100% gratuit. Pas d'inscription, pas d'email. Sans limites, sans surprises."], ["Mes fichiers sont-ils envoyés à un serveur ?", "Non. Tout se passe dans votre navigateur via WebAssembly. Vos fichiers ne quittent jamais votre appareil."], ["Quels formats puis-je convertir ?", "PDF, Word (DOCX), Excel (XLSX), images (JPG, PNG, WEBP). Fusionnez, divisez, compressez ou faites pivoter des PDFs."], ["Y a-t-il une limite de taille ?", "200 Mo par fichier. Le traitement étant local, les performances dépendent de votre appareil."], ["Fonctionne-t-il sur mobile ?", "Oui, sur tout appareil avec un navigateur moderne : ordinateur, tablette ou mobile."], ["Puis-je uploader plusieurs fichiers à la fois ?", "Pour fusionner des PDFs oui. Les autres outils traitent un fichier à la fois."]],
+    faq_title:"Questions fréquentes", faq:[["Est-ce entièrement gratuit ?", "Le plan gratuit inclut tous les outils sans inscription, pour les fichiers jusqu'à 10 Mo et la fusion jusqu'à 2 PDFs. Pro monte la limite à 200 Mo et permet la fusion illimitée."], ["Mes fichiers sont-ils envoyés à un serveur ?", "Non. Tout se passe dans votre navigateur via WebAssembly. Vos fichiers ne quittent jamais votre appareil."], ["Quels formats puis-je convertir ?", "PDF, Word (DOCX), Excel (XLSX), images (JPG, PNG, WEBP). Fusionnez, divisez, compressez ou faites pivoter des PDFs."], ["Y a-t-il une limite de taille ?", "En plan gratuit, la limite est de 10 Mo par fichier. Avec Pro, vous pouvez convertir des fichiers jusqu'à 200 Mo."], ["Fonctionne-t-il sur mobile ?", "Oui, sur tout appareil avec un navigateur moderne : ordinateur, tablette ou mobile."], ["Puis-je uploader plusieurs fichiers à la fois ?", "Pour fusionner des PDFs oui. Les autres outils traitent un fichier à la fois."]],
     step_read:"Lecture du fichier…", step_proc:"Traitement…", step_done:"Terminé !",
     hist_title:"Conversions récentes", hist_empty:"Vous n'avez pas encore converti de fichiers.", hist_clear:"Effacer l'historique",
     nav_privacy:"Confidentialité", nav_api:"API", nav_help:"Aide",
@@ -294,10 +300,10 @@ const LANGS = {
   },
   de: {
     code:"de", flag:"🇩🇪", name:"Deutsch",
-    tagline:"Ohne Anmeldung · Ohne Wasserzeichen · 100% privat",
+    tagline:"Ohne Anmeldung · Kein Wasserzeichen · 100% privat",
     hero_h1a:"Der schnellste Weg,", hero_h1b:"deine Dateien zu konvertieren.",
-    hero_sub:"PDF, Word, Excel, Bilder. Alles kostenlos, ohne Anmeldung, deine Dateien verlassen den Browser nicht.",
-    hero_cta:"Jetzt starten — kostenlos",
+    hero_sub:"PDF, Word, Excel, Bilder. Kostenlos für Dateien bis 10 MB. Deine Dateien verlassen den Browser nicht.",
+    hero_cta:"Kostenlos starten",
     hero_drop:"Datei hier ablegen",
     hero_drop_sub:"Automatische Tool-Erkennung",
     tools_title:"Werkzeuge", tools_count:"verfügbar",
@@ -321,9 +327,10 @@ const LANGS = {
     feat:[ ["Lokale Verarbeitung","Deine Dateien verlassen den Browser nicht."],
            ["Format erhalten","Schriften, Ränder und Tabellen intakt."],
            ["Sofort-Download","Ergebnis in Sekunden bereit."],
-           ["Keine Limits","Dateien bis zu 200 MB."] ],
+           ["Keine Werbung","Kostenloser Plan ohne Werbung."] ],
     max_size:"max. 200 MB",
-    free_limit:"Du hast das tägliche Limit für kostenlose Konvertierungen erreicht.",
+    free_limit:"Die Datei überschreitet das 10-MB-Limit des kostenlosen Plans.",
+    free_batch:"Im kostenlosen Plan können bis zu 2 Dateien zusammengeführt werden. Upgrade auf Pro für unbegrenzte Dateien.",
     free_size:"Die Datei überschreitet das 10-MB-Limit des kostenlosen Plans.",
     upgrade_cta:"Pro-Pläne ansehen",
     upgrade_sub:"Unbegrenzt · Dateien bis 200 MB · Keine Werbung",
@@ -335,16 +342,17 @@ const LANGS = {
     plan_cta_free:"Kostenlos starten",
     plan_cta_pro:"Mit Pro starten",
     plan_current:"Aktueller Plan",
-    feat_conversions:"Konvertierungen pro Tag",
+    feat_batch:"Bis zu 2 Dateien zusammenführen",
+    merge_hint:"Kostenloser Plan: max. 2 Dateien. Upgrade auf Pro für mehr.",
     feat_size_free:"Dateien bis 10 MB",
     feat_size_pro:"Dateien bis 200 MB",
     feat_tools:"Alle Tools inklusive",
-    feat_unlimited:"Unbegrenzte Konvertierungen",
+    feat_unlimited:"Unbegrenzte Dateien zusammenführen",
     feat_noad:"Keine Werbung",
     feat_priority:"Prioritätsverarbeitung",
     pricing_title:"Einfache, transparente Preise",
     pricing_sub:"Keine Verträge. Jederzeit kündbar.",
-    faq_title:"Häufig gestellte Fragen", faq:[["Ist es komplett kostenlos?", "Ja, morf ist 100% kostenlos. Keine Anmeldung, keine E-Mail. Keine Limits, keine Überraschungen."], ["Werden meine Dateien hochgeladen?", "Nein. Alles läuft im Browser via WebAssembly. Deine Dateien verlassen niemals dein Gerät."], ["Welche Formate kann ich konvertieren?", "PDF, Word (DOCX), Excel (XLSX), Bilder (JPG, PNG, WEBP). PDFs zusammenführen, teilen, komprimieren oder drehen."], ["Gibt es ein Dateigrößenlimit?", "200 MB pro Datei. Da die Verarbeitung lokal erfolgt, hängt die Leistung von deinem Gerät ab."], ["Funktioniert es auf dem Handy?", "Ja, auf jedem Gerät mit einem modernen Browser: Desktop, Tablet oder Handy."], ["Kann ich mehrere Dateien gleichzeitig hochladen?", "Beim Zusammenführen von PDFs ja. Andere Tools verarbeiten eine Datei pro Mal."]],
+    faq_title:"Häufig gestellte Fragen", faq:[["Ist es komplett kostenlos?", "Der kostenlose Plan umfasst alle Tools ohne Anmeldung, für Dateien bis 10 MB und das Zusammenführen von bis zu 2 PDFs. Pro erhöht das Limit auf 200 MB und erlaubt unbegrenzte Zusammenführung."], ["Werden meine Dateien hochgeladen?", "Nein. Alles läuft im Browser via WebAssembly. Deine Dateien verlassen niemals dein Gerät."], ["Welche Formate kann ich konvertieren?", "PDF, Word (DOCX), Excel (XLSX), Bilder (JPG, PNG, WEBP). PDFs zusammenführen, teilen, komprimieren oder drehen."], ["Gibt es ein Dateigrößenlimit?", "Im kostenlosen Plan liegt das Limit bei 10 MB pro Datei. Mit Pro kannst du Dateien bis zu 200 MB konvertieren."], ["Funktioniert es auf dem Handy?", "Ja, auf jedem Gerät mit einem modernen Browser: Desktop, Tablet oder Handy."], ["Kann ich mehrere Dateien gleichzeitig hochladen?", "Beim Zusammenführen von PDFs ja. Andere Tools verarbeiten eine Datei pro Mal."]],
     counter:"Dateien konvertiert",
     step_read:"Datei lesen…", step_proc:"Verarbeitung…", step_done:"Fertig!",
     hist_title:"Letzte Konvertierungen", hist_empty:"Du hast noch keine Dateien konvertiert.", hist_clear:"Verlauf löschen",
@@ -391,8 +399,8 @@ const LANGS = {
     code:"pt", flag:"🇵🇹", name:"Português",
     tagline:"Sem registo · Sem marcas de água · 100% privado",
     hero_h1a:"A forma mais rápida de", hero_h1b:"converter os teus ficheiros.",
-    hero_sub:"PDF, Word, Excel, imagens. Tudo grátis, sem registo e os ficheiros ficam no teu browser.",
-    hero_cta:"Começar agora — é grátis",
+    hero_sub:"PDF, Word, Excel, imagens. Grátis para ficheiros até 10 MB. Os ficheiros ficam sempre no teu browser.",
+    hero_cta:"Começar grátis",
     hero_drop:"Arrasta qualquer ficheiro para aqui",
     hero_drop_sub:"Deteção automática da ferramenta",
     tools_title:"Ferramentas", tools_count:"disponíveis",
@@ -416,8 +424,9 @@ const LANGS = {
     feat:[ ["Processamento local","Os teus ficheiros não saem do browser."],
            ["Formato preservado","Fontes, margens e tabelas intactas."],
            ["Download imediato","Resultado pronto em segundos."],
-           ["Sem limites","Ficheiros até 200 MB."] ],
-    free_limit:"Atingiste o limite diário de conversões gratuitas.",
+           ["Sem publicidade","Plano gratuito sem anúncios."] ],
+    free_limit:"O ficheiro excede o limite de 10 MB do plano gratuito.",
+    free_batch:"O plano gratuito permite unir até 2 ficheiros. Atualiza para Pro para unir ficheiros ilimitados.",
     free_size:"O ficheiro excede o limite de 10 MB do plano gratuito.",
     upgrade_cta:"Ver planos Pro",
     upgrade_sub:"Ilimitado · Ficheiros até 200 MB · Sem anúncios",
@@ -429,16 +438,17 @@ const LANGS = {
     plan_cta_free:"Começar grátis",
     plan_cta_pro:"Começar com Pro",
     plan_current:"Plano atual",
-    feat_conversions:"conversões por dia",
+    feat_batch:"Unir até 2 ficheiros",
+    merge_hint:"Plano gratuito: máx. 2 ficheiros. Atualiza para Pro para mais.",
     feat_size_free:"Ficheiros até 10 MB",
     feat_size_pro:"Ficheiros até 200 MB",
     feat_tools:"Todas as ferramentas",
-    feat_unlimited:"Conversões ilimitadas",
+    feat_unlimited:"Unir ficheiros ilimitados",
     feat_noad:"Sem anúncios",
     feat_priority:"Processamento prioritário",
     pricing_title:"Preços simples e transparentes",
     pricing_sub:"Sem contratos. Cancela quando quiseres.",
-    faq_title:"Perguntas frequentes", faq:[["É completamente gratuito?", "Sim, morf é 100% gratuito. Sem registo, sem email. Sem limites, sem surpresas."], ["Os meus ficheiros são enviados para um servidor?", "Não. Tudo acontece no browser via WebAssembly. Os teus ficheiros nunca saem do teu dispositivo."], ["Que formatos posso converter?", "PDF, Word (DOCX), Excel (XLSX), imagens (JPG, PNG, WEBP). Une, divide, comprime ou roda PDFs."], ["Existe limite de tamanho?", "200 MB por ficheiro. Como o processamento é local, o desempenho depende do teu dispositivo."], ["Funciona no telemóvel?", "Sim, em qualquer dispositivo com um browser moderno: computador, tablet ou telemóvel."], ["Posso carregar vários ficheiros de uma vez?", "Para unir PDFs sim. As outras ferramentas processam um ficheiro de cada vez."]],
+    faq_title:"Perguntas frequentes", faq:[["É completamente gratuito?", "O plano gratuito inclui todas as ferramentas sem registo, para ficheiros até 10 MB e união de até 2 PDFs. O Pro aumenta o limite para 200 MB e permite união ilimitada."], ["Os meus ficheiros são enviados para um servidor?", "Não. Tudo acontece no browser via WebAssembly. Os teus ficheiros nunca saem do teu dispositivo."], ["Que formatos posso converter?", "PDF, Word (DOCX), Excel (XLSX), imagens (JPG, PNG, WEBP). Une, divide, comprime ou roda PDFs."], ["Existe limite de tamanho?", "No plano gratuito o limite é de 10 MB por ficheiro. Com Pro podes converter ficheiros até 200 MB."], ["Funciona no telemóvel?", "Sim, em qualquer dispositivo com um browser moderno: computador, tablet ou telemóvel."], ["Posso carregar vários ficheiros de uma vez?", "Para unir PDFs sim. As outras ferramentas processam um ficheiro de cada vez."]],
     max_size:"máx. 200 MB",
     counter:"ficheiros convertidos",
     step_read:"A ler ficheiro…", step_proc:"A processar…", step_done:"Pronto!",
@@ -733,7 +743,7 @@ function UpgradeModal({ reason, billingYear, setBillingYear, onClose, T }) {
           <div style={{background:"#FEF9EC",border:"1px solid #FCD34D",borderRadius:8,padding:"10px 14px",
             fontSize:13,color:"#92400E",marginBottom:20,display:"flex",gap:8,alignItems:"flex-start"}}>
             <Ic n="zap" s={14} c="#F59E0B" style={{flexShrink:0,marginTop:1}}/>
-            <span>{reason==='size' ? T.free_size : T.free_limit}</span>
+            <span>{reason==='batch' ? T.free_batch : T.free_size}</span>
           </div>
 
           {/* Billing toggle */}
@@ -757,7 +767,7 @@ function UpgradeModal({ reason, billingYear, setBillingYear, onClose, T }) {
               <div style={{fontWeight:600,fontSize:13,marginBottom:2}}>{T.plan_free}</div>
               <div style={{fontSize:11,color:"var(--tm)",marginBottom:12}}>{T.plan_free_desc}</div>
               <div style={{fontSize:22,fontWeight:700,marginBottom:12}}>€0</div>
-              {[`${5} ${T.feat_conversions}`, T.feat_size_free, T.feat_tools].map((f,i)=>(
+              {[T.feat_batch, T.feat_size_free, T.feat_tools].map((f,i)=>(
                 <div key={i} style={{display:"flex",gap:6,alignItems:"flex-start",fontSize:12,color:"var(--t2)",marginBottom:6}}>
                   <Ic n="check" s={12} c="var(--tm)"/>{f}
                 </div>
@@ -1059,7 +1069,7 @@ function FileRow({ file, onRemove }) {
   );
 }
 
-function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}, checkLimits=()=>true, bumpDaily=()=>{} }) {
+function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}, checkLimits=()=>true }) {
   const T = useLang();
   const [files,setFiles]     = useState([]);
   const [drag,setDrag]       = useState(false);
@@ -1107,7 +1117,7 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
       return;
     }
     // Check freemium limits
-    if (!checkLimits(files)) return;
+    if (!checkLimits(files, tool.id)) return;
 
     setStatus("proc");
     setStep(1); // leyendo
@@ -1129,8 +1139,7 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
         }
         showToast(T.conv_done);
         bumpCount();
-        bumpDaily();
-        addToHistory(files[0]?.name, tool.label);
+          addToHistory(files[0]?.name, tool.label);
         setStatus("idle"); setFiles([]); return;
       }
       else if (tool.id==="pdf-word")  { await pdfToWord(files[0]); }
@@ -1146,7 +1155,6 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
       setStatus("done");
       showToast(T.conv_done);
       bumpCount();
-      bumpDaily();
       addToHistory(files[0]?.name, tool.label);
     } catch(e) {
       console.error(e);
@@ -1230,20 +1238,30 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
                     <FileRow key={i} file={f} onRemove={()=>setFiles(p=>p.filter((_,j)=>j!==i))}/>
                   ))}
                 </div>
-                {tool.multi&&(
-                  <div
-                    className={`dz ${drag?"ov":""}`}
-                    style={{padding:"12px",textAlign:"center",cursor:"pointer",borderStyle:"dashed"}}
-                    onDragOver={e=>{e.preventDefault();setDrag(true)}}
-                    onDragLeave={()=>setDrag(false)}
-                    onDrop={e=>{e.preventDefault();setDrag(false);addFiles(e.dataTransfer.files)}}
-                    onClick={()=>ref.current?.click()}>
-                    <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,fontSize:12,color:"var(--t2)"}}>
-                      <Ic n="upload" s={13} c="var(--t2)"/>
-                      Añadir más archivos
+                {tool.multi&&(()=>{
+                  const isFreeLimit = tool.id==='merge' && !localStorage.getItem('morf_pro') && files.length >= 2;
+                  return isFreeLimit ? (
+                    <div style={{padding:"10px 12px",background:"var(--al)",border:"1px solid var(--ac)",
+                      borderRadius:8,display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
+                      <span style={{fontSize:11,color:"var(--ac)"}}>{T.merge_hint}</span>
+                      <button className="bp" style={{fontSize:10,padding:"4px 10px",borderRadius:5}}
+                        onClick={()=>checkLimits([...files,{size:0,name:"x"}],"merge")}>Pro</button>
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <div
+                      className={`dz ${drag?"ov":""}`}
+                      style={{padding:"12px",textAlign:"center",cursor:"pointer",borderStyle:"dashed"}}
+                      onDragOver={e=>{e.preventDefault();setDrag(true)}}
+                      onDragLeave={()=>setDrag(false)}
+                      onDrop={e=>{e.preventDefault();setDrag(false);addFiles(e.dataTransfer.files)}}
+                      onClick={()=>ref.current?.click()}>
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,fontSize:12,color:"var(--t2)"}}>
+                        <Ic n="upload" s={13} c="var(--t2)"/>
+                        Añadir más archivos
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             )}
             {tool.id==="split"&&files.length>0&&(
@@ -1345,35 +1363,25 @@ export default function App() {
   const [dark, setDark] = useState(() => window.matchMedia?.('(prefers-color-scheme: dark)').matches);
   const [count, setCount] = useState(() => parseInt(localStorage.getItem('morf_count')||'0'));
   // ── Freemium ──────────────────────────────────────────────────────────────
-  const FREE_DAILY = 5;
-  const FREE_MAX_MB = 10;
+  const FREE_MAX_MB    = 10;
+  const FREE_MAX_BATCH = 2;
   const isPro = () => localStorage.getItem('morf_pro') === 'true';
 
-  const todayKey = () => `morf_daily_${new Date().toISOString().slice(0,10)}`;
-  const getDailyCount = () => parseInt(localStorage.getItem(todayKey())||'0');
-  const bumpDaily = () => {
-    const k = todayKey();
-    const n = getDailyCount() + 1;
-    localStorage.setItem(k, n);
-    setDailyCountState(n);
-  };
-
   const [showUpgrade, setShowUpgrade] = useState(false);
-  const [dailyCount, setDailyCountState] = useState(getDailyCount);
-  const [upgradeReason, setUpgradeReason] = useState('limit'); // 'limit' | 'size'
+  const [upgradeReason, setUpgradeReason] = useState('size'); // 'size' | 'batch'
   const [billingYear, setBillingYear] = useState(true);
 
-  const checkLimits = (files) => {
+  const checkLimits = (files, toolId) => {
     if (isPro()) return true;
-    // Límite de tamaño
-    if (files.some(f => f.size > FREE_MAX_MB * 1024 * 1024)) {
-      setUpgradeReason('size');
+    // Límite batch (solo merge)
+    if (toolId === 'merge' && files.length > FREE_MAX_BATCH) {
+      setUpgradeReason('batch');
       setShowUpgrade(true);
       return false;
     }
-    // Límite diario
-    if (getDailyCount() >= FREE_DAILY) {
-      setUpgradeReason('limit');
+    // Límite de tamaño
+    if (files.some(f => f.size > FREE_MAX_MB * 1024 * 1024)) {
+      setUpgradeReason('size');
       setShowUpgrade(true);
       return false;
     }
@@ -1478,17 +1486,7 @@ export default function App() {
               <button className="nl m-nav-privacy" onClick={()=>setModal("privacy")}>{T.nav_privacy}</button>
               <button className="nl m-nav-labels" onClick={()=>setModal("api")}>{T.nav_api}</button>
               <button className="nl m-nav-labels" onClick={()=>setModal("contact")}>{T.nav_help}</button>
-              {!isPro()&&(
-                <button onClick={()=>{ setUpgradeReason("limit"); setShowUpgrade(true); }}
-                  style={{background:"transparent",border:"1px solid var(--bd)",borderRadius:6,
-                    padding:"4px 10px",cursor:"pointer",display:"flex",alignItems:"center",gap:5,transition:"all .16s"}}
-                  title="Conversiones restantes hoy">
-                  <span style={{fontSize:11,fontFamily:"'DM Mono',monospace",color:"var(--ac)",fontWeight:600}}>
-                    {Math.max(0, FREE_DAILY - dailyCount)}/{FREE_DAILY}
-                  </span>
-                  <Ic n="zap" s={11} c="var(--ac)"/>
-                </button>
-              )}
+
               <button onClick={()=>setDark(d=>!d)}
                 style={{background:"transparent",border:"1px solid var(--bd)",borderRadius:6,
                   padding:"5px 8px",cursor:"pointer",color:"var(--t2)",display:"flex",
@@ -1592,7 +1590,7 @@ export default function App() {
                 </div>
               ))}
             </div>
-            {active&&<Panel tool={active} onClose={()=>setActive(null)} showToast={showToast} bumpCount={bumpCount} addToHistory={addToHistory} checkLimits={checkLimits} bumpDaily={bumpDaily}/>}
+            {active&&<Panel tool={active} onClose={()=>setActive(null)} showToast={showToast} bumpCount={bumpCount} addToHistory={addToHistory} checkLimits={checkLimits}/>}
           </div>
 
           {/* Features */}
@@ -1639,7 +1637,7 @@ export default function App() {
                 <div style={{fontSize:12,color:"var(--tm)",marginBottom:16}}>{T.plan_free_desc}</div>
                 <div style={{fontSize:32,fontWeight:700,marginBottom:4}}>€0</div>
                 <div style={{fontSize:11,color:"var(--tm)",marginBottom:20}}>para siempre</div>
-                {[`${5} ${T.feat_conversions}`, T.feat_size_free, T.feat_tools].map((f,i)=>(
+                {[T.feat_batch, T.feat_size_free, T.feat_tools].map((f,i)=>(
                   <div key={i} style={{display:"flex",gap:8,alignItems:"flex-start",fontSize:13,color:"var(--t2)",marginBottom:8}}>
                     <Ic n="check" s={13} c="var(--tm)"/>{f}
                   </div>
