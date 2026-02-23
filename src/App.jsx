@@ -37,6 +37,7 @@ const LANGS = {
     counter:"archivos convertidos",
     step_read:"Leyendo archivo…", step_proc:"Procesando…", step_done:"¡Listo!",
     hist_title:"Conversiones recientes", hist_empty:"Aún no has convertido ningún archivo.", hist_clear:"Borrar historial",
+    faq_title:"Preguntas frecuentes", faq:[["¿Es completamente gratis?", "Sí, morf es 100% gratuito. No necesitas registrarte ni dejar tu email. Sin límites, sin sorpresas."], ["¿Mis archivos se suben a algún servidor?", "No. Todo ocurre en tu navegador con WebAssembly. Tus archivos nunca salen de tu dispositivo."], ["¿Qué formatos puedo convertir?", "PDF, Word (DOCX), Excel (XLSX), imágenes (JPG, PNG, WEBP). También puedes unir, dividir, comprimir o rotar PDFs."], ["¿Hay límite de tamaño?", "200 MB por archivo. Como el procesamiento es local, el rendimiento depende de tu dispositivo."], ["¿Funciona en móvil?", "Sí, en cualquier dispositivo con un navegador moderno: ordenador, tablet o móvil."], ["¿Puedo subir varios archivos a la vez?", "Para unir PDFs sí. El resto de herramientas procesan un archivo cada vez."]],
     nav_privacy:"Privacidad", nav_api:"API", nav_help:"Ayuda",
     footer_copy:"morf · © 2025",
     modal_privacy:"Política de Privacidad", modal_terms:"Términos de Uso",
@@ -113,6 +114,7 @@ const LANGS = {
     max_size:"max. 200 MB",
     counter:"files converted",
     step_read:"Reading file…", step_proc:"Processing…", step_done:"Done!",
+    faq_title:"Frequently asked questions", faq:[["Is it completely free?", "Yes, morf is 100% free. No sign-up, no email required. No limits, no surprises."], ["Are my files uploaded to a server?", "No. Everything runs in your browser via WebAssembly. Your files never leave your device."], ["What formats can I convert?", "PDF, Word (DOCX), Excel (XLSX), images (JPG, PNG, WEBP). Also merge, split, compress or rotate PDFs."], ["Is there a file size limit?", "200 MB per file. Since processing is local, performance depends on your device."], ["Does it work on mobile?", "Yes, on any device with a modern browser: desktop, tablet or mobile."], ["Can I upload multiple files at once?", "For merging PDFs yes. Other tools process one file at a time."]],
     hist_title:"Recent conversions", hist_empty:"You haven't converted any files yet.", hist_clear:"Clear history",
     nav_privacy:"Privacy", nav_api:"API", nav_help:"Help",
     footer_copy:"morf · © 2025",
@@ -185,6 +187,7 @@ const LANGS = {
            ["Sans limite","Fichiers jusqu'à 200 Mo."] ],
     max_size:"max. 200 Mo",
     counter:"fichiers convertis",
+    faq_title:"Questions fréquentes", faq:[["Est-ce entièrement gratuit ?", "Oui, morf est 100% gratuit. Pas d'inscription, pas d'email. Sans limites, sans surprises."], ["Mes fichiers sont-ils envoyés à un serveur ?", "Non. Tout se passe dans votre navigateur via WebAssembly. Vos fichiers ne quittent jamais votre appareil."], ["Quels formats puis-je convertir ?", "PDF, Word (DOCX), Excel (XLSX), images (JPG, PNG, WEBP). Fusionnez, divisez, compressez ou faites pivoter des PDFs."], ["Y a-t-il une limite de taille ?", "200 Mo par fichier. Le traitement étant local, les performances dépendent de votre appareil."], ["Fonctionne-t-il sur mobile ?", "Oui, sur tout appareil avec un navigateur moderne : ordinateur, tablette ou mobile."], ["Puis-je uploader plusieurs fichiers à la fois ?", "Pour fusionner des PDFs oui. Les autres outils traitent un fichier à la fois."]],
     step_read:"Lecture du fichier…", step_proc:"Traitement…", step_done:"Terminé !",
     hist_title:"Conversions récentes", hist_empty:"Vous n'avez pas encore converti de fichiers.", hist_clear:"Effacer l'historique",
     nav_privacy:"Confidentialité", nav_api:"API", nav_help:"Aide",
@@ -257,6 +260,7 @@ const LANGS = {
            ["Sofort-Download","Ergebnis in Sekunden bereit."],
            ["Keine Limits","Dateien bis zu 200 MB."] ],
     max_size:"max. 200 MB",
+    faq_title:"Häufig gestellte Fragen", faq:[["Ist es komplett kostenlos?", "Ja, morf ist 100% kostenlos. Keine Anmeldung, keine E-Mail. Keine Limits, keine Überraschungen."], ["Werden meine Dateien hochgeladen?", "Nein. Alles läuft im Browser via WebAssembly. Deine Dateien verlassen niemals dein Gerät."], ["Welche Formate kann ich konvertieren?", "PDF, Word (DOCX), Excel (XLSX), Bilder (JPG, PNG, WEBP). PDFs zusammenführen, teilen, komprimieren oder drehen."], ["Gibt es ein Dateigrößenlimit?", "200 MB pro Datei. Da die Verarbeitung lokal erfolgt, hängt die Leistung von deinem Gerät ab."], ["Funktioniert es auf dem Handy?", "Ja, auf jedem Gerät mit einem modernen Browser: Desktop, Tablet oder Handy."], ["Kann ich mehrere Dateien gleichzeitig hochladen?", "Beim Zusammenführen von PDFs ja. Andere Tools verarbeiten eine Datei pro Mal."]],
     counter:"Dateien konvertiert",
     step_read:"Datei lesen…", step_proc:"Verarbeitung…", step_done:"Fertig!",
     hist_title:"Letzte Konvertierungen", hist_empty:"Du hast noch keine Dateien konvertiert.", hist_clear:"Verlauf löschen",
@@ -329,6 +333,7 @@ const LANGS = {
            ["Formato preservado","Fontes, margens e tabelas intactas."],
            ["Download imediato","Resultado pronto em segundos."],
            ["Sem limites","Ficheiros até 200 MB."] ],
+    faq_title:"Perguntas frequentes", faq:[["É completamente gratuito?", "Sim, morf é 100% gratuito. Sem registo, sem email. Sem limites, sem surpresas."], ["Os meus ficheiros são enviados para um servidor?", "Não. Tudo acontece no browser via WebAssembly. Os teus ficheiros nunca saem do teu dispositivo."], ["Que formatos posso converter?", "PDF, Word (DOCX), Excel (XLSX), imagens (JPG, PNG, WEBP). Une, divide, comprime ou roda PDFs."], ["Existe limite de tamanho?", "200 MB por ficheiro. Como o processamento é local, o desempenho depende do teu dispositivo."], ["Funciona no telemóvel?", "Sim, em qualquer dispositivo com um browser moderno: computador, tablet ou telemóvel."], ["Posso carregar vários ficheiros de uma vez?", "Para unir PDFs sim. As outras ferramentas processam um ficheiro de cada vez."]],
     max_size:"máx. 200 MB",
     counter:"ficheiros convertidos",
     step_read:"A ler ficheiro…", step_proc:"A processar…", step_done:"Pronto!",
@@ -599,6 +604,30 @@ const Tag = ({ type }) => {
   const [cls,lbl] = m[type]||["tpdf","PDF"];
   return <span className={`tag ${cls}`}>{lbl}</span>;
 };
+
+/* ── FAQ Item ────────────────────────────────────────────────────────────── */
+function FaqItem({ q, a }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{borderBottom:"1px solid var(--bd)"}}>
+      <button onClick={()=>setOpen(o=>!o)}
+        style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",
+          padding:"14px 0",background:"transparent",border:"none",cursor:"pointer",
+          fontFamily:"'DM Sans',sans-serif",fontSize:14,fontWeight:500,color:"var(--t1)",
+          textAlign:"left",gap:12}}>
+        <span>{q}</span>
+        <span style={{flexShrink:0,transform:open?"rotate(180deg)":"rotate(0deg)",transition:"transform .2s"}}>
+          <Ic n="chevron" s={16} c="var(--tm)"/>
+        </span>
+      </button>
+      {open&&(
+        <div style={{fontSize:13,color:"var(--t2)",lineHeight:1.7,paddingBottom:14,animation:"fu .2s ease both"}}>
+          {a}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /* ── Language Picker ─────────────────────────────────────────────────────── */
 function LangPicker({ lang, setLang }) {
@@ -1151,6 +1180,26 @@ export default function App() {
     document.body.style.background = dark ? '#0F1117' : '#F9F9F8';
   }, [dark]);
 
+  // FAQ structured data para SEO
+  useEffect(() => {
+    const existing = document.getElementById('faq-schema');
+    if (existing) existing.remove();
+    const schema = {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": T.faq.map(([q,a]) => ({
+        "@type": "Question",
+        "name": q,
+        "acceptedAnswer": { "@type": "Answer", "text": a }
+      }))
+    };
+    const s = document.createElement('script');
+    s.id = 'faq-schema';
+    s.type = 'application/ld+json';
+    s.text = JSON.stringify(schema);
+    document.head.appendChild(s);
+  }, [lang]);
+
   const T = LANGS[lang];
   const showToast = (msg, type="ok") => setToast({msg,type});
 
@@ -1318,6 +1367,18 @@ export default function App() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* FAQ */}
+        <div style={{maxWidth:960,margin:"0 auto",padding:"0 20px 48px"}}>
+          <div style={{borderTop:"1px solid var(--bd)",paddingTop:36}}>
+            <h2 style={{fontSize:18,fontWeight:600,letterSpacing:"-.02em",marginBottom:24,textAlign:"center"}}>{T.faq_title}</h2>
+            <div style={{maxWidth:680,margin:"0 auto",display:"flex",flexDirection:"column",gap:2}}>
+              {T.faq.map(([q,a],i)=>(
+                <FaqItem key={i} q={q} a={a}/>
+              ))}
+            </div>
           </div>
         </div>
 
