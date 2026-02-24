@@ -18,7 +18,7 @@ function download(blob, filename) {
 }
 
 /* ── Nombre sin extensión ── */
-const basename = (f) => f.name.replace(/\.[^.]+$/, "");
+export const basename = (f) => f.name.replace(/\.[^.]+$/, "");
 
 // ─────────────────────────────────────────────────────────────────
 // 1. UNIR PDFs
@@ -38,14 +38,9 @@ export async function mergePdfs(files) {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// 2. DIVIDIR PDF
+// Parsear rango "1-3, 5, 7-9" → índices base-0: [0,1,2,4,6,7,8]
 // ─────────────────────────────────────────────────────────────────
-export async function splitPdf(file, rangeStr) {
-  const bytes = await file.arrayBuffer();
-  const doc   = await PDFDocument.load(bytes, { ignoreEncryption: true });
-  const total = doc.getPageCount();
-
-  // Parsear rango "1-3, 5, 7-9" → [0,1,2,4,6,7,8]
+export function parsePageRange(rangeStr, total) {
   let indices = [];
   if (rangeStr.trim()) {
     for (const part of rangeStr.split(",")) {
@@ -60,8 +55,19 @@ export async function splitPdf(file, rangeStr) {
   } else {
     indices = Array.from({ length: total }, (_, i) => i);
   }
-
   if (indices.length === 0) throw new Error("Rango de páginas inválido");
+  return indices;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 2. DIVIDIR PDF
+// ─────────────────────────────────────────────────────────────────
+export async function splitPdf(file, rangeStr) {
+  const bytes = await file.arrayBuffer();
+  const doc   = await PDFDocument.load(bytes, { ignoreEncryption: true });
+  const total = doc.getPageCount();
+
+  const indices = parsePageRange(rangeStr, total);
 
   for (const idx of indices) {
     const newDoc  = await PDFDocument.create();
@@ -74,6 +80,15 @@ export async function splitPdf(file, rangeStr) {
     );
     await new Promise(r => setTimeout(r, 120));
   }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Escalar dimensiones al tamaño A4 (595×842 pt) manteniendo aspecto
+// ─────────────────────────────────────────────────────────────────
+export function scaleToA4(w, h, maxW = 595, maxH = 842) {
+  if (w <= maxW && h <= maxH) return { w, h };
+  const scale = Math.min(maxW / w, maxH / h);
+  return { w: Math.round(w * scale), h: Math.round(h * scale) };
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -109,13 +124,7 @@ export async function imagesToPdf(files) {
     }
 
     if (image) {
-      const maxW = 595, maxH = 842; // A4 en puntos
-      let w = image.width, h = image.height;
-      if (w > maxW || h > maxH) {
-        const scale = Math.min(maxW / w, maxH / h);
-        w = Math.round(w * scale);
-        h = Math.round(h * scale);
-      }
+      const { w, h } = scaleToA4(image.width, image.height);
       const page = doc.addPage([w, h]);
       page.drawImage(image, { x: 0, y: 0, width: w, height: h });
     }
@@ -219,6 +228,17 @@ export async function wordToPdf(file) {
 }
 
 // ─────────────────────────────────────────────────────────────────
+// Escapar caracteres especiales de RTF
+// ─────────────────────────────────────────────────────────────────
+export function escapeRtf(s) {
+  return s
+    .replace(/\\/g, "\\\\")
+    .replace(/\{/g,  "\\{")
+    .replace(/\}/g,  "\\}")
+    .replace(/[^\x00-\x7F]/g, c => `\\u${c.charCodeAt(0)}?`);
+}
+
+// ─────────────────────────────────────────────────────────────────
 // 6. PDF → WORD  (extrae texto → genera RTF que Word abre directamente)
 // ─────────────────────────────────────────────────────────────────
 export async function pdfToWord(file) {
@@ -258,15 +278,9 @@ export async function pdfToWord(file) {
     pages.push(text);
   }
 
-  const esc = s => s
-    .replace(/\\/g, "\\\\")
-    .replace(/\{/g,  "\\{")
-    .replace(/\}/g,  "\\}")
-    .replace(/[^\x00-\x7F]/g, c => `\\u${c.charCodeAt(0)}?`);
-
   const rtfBody = pages
     .map((p, i) => {
-      const lines = p.split("\n").map(l => esc(l) + "\\par").join("\n");
+      const lines = p.split("\n").map(l => escapeRtf(l) + "\\par").join("\n");
       return i > 0 ? `\\page\n${lines}` : lines;
     })
     .join("\n");
