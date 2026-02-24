@@ -298,6 +298,31 @@ ${rtfBody}
 }
 
 // ─────────────────────────────────────────────────────────────────
+// Convertir un nodo XML de ODT a HTML
+// ─────────────────────────────────────────────────────────────────
+export function convertOdtNode(node) {
+  if (node.nodeType === 3) return node.textContent; // texto plano
+
+  const tag = node.localName;
+  const children = Array.from(node.childNodes).map(convertOdtNode).join("");
+
+  if (tag === "p")           return `<p>${children}</p>`;
+  if (tag === "h")           return `<h2>${children}</h2>`;
+  if (tag === "span")        return children;
+  if (tag === "s")           return " ".repeat(parseInt(node.getAttribute("text:c")||"1"));
+  if (tag === "tab")         return "&nbsp;&nbsp;&nbsp;&nbsp;";
+  if (tag === "line-break")  return "<br/>";
+  if (tag === "list")        return `<ul>${children}</ul>`;
+  if (tag === "list-item")   return `<li>${children}</li>`;
+  if (tag === "table")       return `<table>${children}</table>`;
+  if (tag === "table-row")   return `<tr>${children}</tr>`;
+  if (tag === "table-cell")  return `<td>${children}</td>`;
+  if (tag === "a")           return `<a>${children}</a>`;
+
+  return children;
+}
+
+// ─────────────────────────────────────────────────────────────────
 // 7. ODT → PDF
 // ODT es un ZIP con content.xml dentro. Extraemos el texto con JSZip,
 // lo renderizamos como HTML y abrimos el diálogo de impresión.
@@ -324,31 +349,8 @@ export async function odtToPdf(file) {
   const parser = new DOMParser();
   const doc    = parser.parseFromString(contentXml, "text/xml");
 
-  // Convertir nodos ODT a HTML
-  const convertNode = (node) => {
-    if (node.nodeType === 3) return node.textContent; // texto plano
-
-    const tag = node.localName;
-    const children = Array.from(node.childNodes).map(convertNode).join("");
-
-    if (tag === "p")           return `<p>${children}</p>`;
-    if (tag === "h")           return `<h2>${children}</h2>`;
-    if (tag === "span")        return children;
-    if (tag === "s")           return " ".repeat(parseInt(node.getAttribute("text:c")||"1"));
-    if (tag === "tab")         return "&nbsp;&nbsp;&nbsp;&nbsp;";
-    if (tag === "line-break")  return "<br/>";
-    if (tag === "list")        return `<ul>${children}</ul>`;
-    if (tag === "list-item")   return `<li>${children}</li>`;
-    if (tag === "table")       return `<table>${children}</table>`;
-    if (tag === "table-row")   return `<tr>${children}</tr>`;
-    if (tag === "table-cell")  return `<td>${children}</td>`;
-    if (tag === "a")           return `<a>${children}</a>`;
-
-    return children;
-  };
-
   const body = doc.querySelector("body") || doc.querySelector("text");
-  const html_body = body ? convertNode(body) : "<p>No se pudo extraer el contenido.</p>";
+  const html_body = body ? convertOdtNode(body) : "<p>No se pudo extraer el contenido.</p>";
 
   const html = `<!DOCTYPE html>
 <html lang="es">

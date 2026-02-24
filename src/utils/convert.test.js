@@ -2,10 +2,25 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 // ── vi.hoisted() lifts these values before the vi.mock factories run,
 //    avoiding Temporal Dead Zone errors that would occur with plain const ────
-const { mockPdfSave, mockPdfDoc } = vi.hoisted(() => {
-  const mockPdfSave = vi.fn()
-  const mockPdfDoc  = { save: (...args) => mockPdfSave(...args) }
-  return { mockPdfSave, mockPdfDoc }
+const { mockPdfSave, mockPdfDoc, mockPage, mockSetRotation } = vi.hoisted(() => {
+  const mockPdfSave      = vi.fn()
+  const mockSetRotation  = vi.fn()
+  const mockPage = {
+    getRotation: vi.fn(() => ({ angle: 0 })),
+    setRotation: mockSetRotation,
+    drawImage:   vi.fn(),
+  }
+  const mockPdfDoc = {
+    save:           (...args) => mockPdfSave(...args),
+    copyPages:      vi.fn().mockResolvedValue([mockPage]),
+    addPage:        vi.fn().mockReturnValue(mockPage),
+    getPageIndices: vi.fn().mockReturnValue([0, 1]),
+    getPageCount:   vi.fn().mockReturnValue(5),
+    getPages:       vi.fn().mockReturnValue([mockPage]),
+    embedJpg:       vi.fn().mockResolvedValue({ width: 200, height: 150 }),
+    embedPng:       vi.fn().mockResolvedValue({ width: 200, height: 150 }),
+  }
+  return { mockPdfSave, mockPdfDoc, mockPage, mockSetRotation }
 })
 
 vi.mock('pdf-lib', () => ({
@@ -28,8 +43,13 @@ import {
   parsePageRange,
   escapeRtf,
   scaleToA4,
+  convertOdtNode,
   compressPdf,
   wordToPdf,
+  mergePdfs,
+  rotatePdf,
+  pngToJpg,
+  jpgToPng,
 } from './convert'
 
 // ─────────────────────────────────────────────────────────────────
@@ -334,5 +354,244 @@ describe('compressPdf', () => {
         expect.objectContaining({ useObjectStreams: true })
       )
     }
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────
+// convertOdtNode — pure XML-node-to-HTML converter
+// ─────────────────────────────────────────────────────────────────
+describe('convertOdtNode', () => {
+  it('returns the text content of a text node', () => {
+    const node = document.createTextNode('hello')
+    expect(convertOdtNode(node)).toBe('hello')
+  })
+
+  it('wraps a <p> element in <p> tags', () => {
+    const el = document.createElement('p')
+    el.textContent = 'paragraph'
+    expect(convertOdtNode(el)).toBe('<p>paragraph</p>')
+  })
+
+  it('wraps a <h> element in <h2> tags', () => {
+    const el = document.createElement('h')
+    el.textContent = 'heading'
+    expect(convertOdtNode(el)).toBe('<h2>heading</h2>')
+  })
+
+  it('<span> passes children through without a wrapper', () => {
+    const span = document.createElement('span')
+    span.textContent = 'inline'
+    expect(convertOdtNode(span)).toBe('inline')
+  })
+
+  it('<s> returns spaces based on text:c attribute', () => {
+    const el = document.createElement('s')
+    el.setAttribute('text:c', '3')
+    expect(convertOdtNode(el)).toBe('   ')
+  })
+
+  it('<s> without text:c defaults to one space', () => {
+    const el = document.createElement('s')
+    expect(convertOdtNode(el)).toBe(' ')
+  })
+
+  it('<tab> returns four non-breaking spaces', () => {
+    const el = document.createElement('tab')
+    expect(convertOdtNode(el)).toBe('&nbsp;&nbsp;&nbsp;&nbsp;')
+  })
+
+  it('<line-break> returns <br/>', () => {
+    const el = document.createElement('line-break')
+    expect(convertOdtNode(el)).toBe('<br/>')
+  })
+
+  it('<list> and <list-item> produce a <ul><li> structure', () => {
+    const list = document.createElement('list')
+    const item = document.createElement('list-item')
+    item.textContent = 'item'
+    list.appendChild(item)
+    expect(convertOdtNode(list)).toBe('<ul><li>item</li></ul>')
+  })
+
+  it('<table>, <table-row>, <table-cell> produce correct HTML structure', () => {
+    const table = document.createElement('table')
+    const row   = document.createElement('table-row')
+    const cell  = document.createElement('table-cell')
+    cell.textContent = 'data'
+    row.appendChild(cell)
+    table.appendChild(row)
+    expect(convertOdtNode(table)).toBe('<table><tr><td>data</td></tr></table>')
+  })
+
+  it('<a> wraps children in an <a> tag', () => {
+    const el = document.createElement('a')
+    el.textContent = 'link'
+    expect(convertOdtNode(el)).toBe('<a>link</a>')
+  })
+
+  it('unknown tags pass children through unchanged', () => {
+    const el = document.createElement('unknown-tag')
+    el.textContent = 'pass'
+    expect(convertOdtNode(el)).toBe('pass')
+  })
+
+  it('recursively converts nested elements', () => {
+    const p    = document.createElement('p')
+    const span = document.createElement('span')
+    span.textContent = 'nested'
+    p.appendChild(span)
+    expect(convertOdtNode(p)).toBe('<p>nested</p>')
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────
+// mergePdfs
+// ─────────────────────────────────────────────────────────────────
+describe('mergePdfs', () => {
+  beforeEach(() => {
+    mockPdfSave.mockReset()
+    mockPdfSave.mockResolvedValue(new Uint8Array([1, 2, 3]))
+    mockPdfDoc.copyPages.mockClear()
+    mockPdfDoc.addPage.mockClear()
+    URL.createObjectURL.mockClear()
+  })
+
+  const makeFile = (name = 'a.pdf') =>
+    new File([new Uint8Array(10)], name, { type: 'application/pdf' })
+
+  it('copies pages from each source document into the merged doc', async () => {
+    await mergePdfs([makeFile('a.pdf'), makeFile('b.pdf')])
+    expect(mockPdfDoc.copyPages).toHaveBeenCalledTimes(2)
+  })
+
+  it('adds every copied page to the merged document', async () => {
+    await mergePdfs([makeFile()])
+    expect(mockPdfDoc.addPage).toHaveBeenCalledWith(mockPage)
+  })
+
+  it('saves the merged document', async () => {
+    await mergePdfs([makeFile()])
+    expect(mockPdfSave).toHaveBeenCalled()
+  })
+
+  it('triggers a download after merging', async () => {
+    await mergePdfs([makeFile()])
+    expect(URL.createObjectURL).toHaveBeenCalled()
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────
+// rotatePdf
+// ─────────────────────────────────────────────────────────────────
+describe('rotatePdf', () => {
+  beforeEach(() => {
+    mockPdfSave.mockReset()
+    mockPdfSave.mockResolvedValue(new Uint8Array([1, 2, 3]))
+    mockSetRotation.mockClear()
+    mockPage.getRotation.mockReturnValue({ angle: 0 })
+    URL.createObjectURL.mockClear()
+  })
+
+  const makeFile = () =>
+    new File([new Uint8Array(10)], 'doc.pdf', { type: 'application/pdf' })
+
+  it('calls setRotation on every page', async () => {
+    await rotatePdf(makeFile(), 90)
+    expect(mockSetRotation).toHaveBeenCalled()
+  })
+
+  it('adds degrees to the page current rotation angle', async () => {
+    mockPage.getRotation.mockReturnValue({ angle: 90 })
+    await rotatePdf(makeFile(), 90)
+    expect(mockSetRotation).toHaveBeenCalledWith({ type: 'degrees', angle: 180 })
+  })
+
+  it('wraps the rotation angle at 360', async () => {
+    mockPage.getRotation.mockReturnValue({ angle: 270 })
+    await rotatePdf(makeFile(), 90)
+    expect(mockSetRotation).toHaveBeenCalledWith({ type: 'degrees', angle: 0 })
+  })
+
+  it('defaults to 90 degrees when no argument is provided', async () => {
+    await rotatePdf(makeFile())
+    expect(mockSetRotation).toHaveBeenCalledWith({ type: 'degrees', angle: 90 })
+  })
+
+  it('triggers a download for the rotated PDF', async () => {
+    await rotatePdf(makeFile(), 90)
+    expect(URL.createObjectURL).toHaveBeenCalled()
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────
+// pngToJpg / jpgToPng — canvas-based image conversions
+// ─────────────────────────────────────────────────────────────────
+describe('pngToJpg', () => {
+  beforeEach(() => {
+    URL.createObjectURL.mockClear()
+    URL.revokeObjectURL.mockClear()
+    vi.stubGlobal('Image', class MockImage {
+      set src(_val) { setTimeout(() => this.onload?.(), 0) }
+      get naturalWidth()  { return 100 }
+      get naturalHeight() { return 80  }
+    })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  const makeFile = () =>
+    new File([new Uint8Array(10)], 'photo.png', { type: 'image/png' })
+
+  it('creates an object URL from the source file', async () => {
+    await pngToJpg(makeFile())
+    expect(URL.createObjectURL).toHaveBeenCalled()
+  })
+
+  it('revokes the source object URL after the image is loaded', async () => {
+    await pngToJpg(makeFile())
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-url')
+  })
+
+  it('downloads the converted JPEG (two createObjectURL calls total)', async () => {
+    await pngToJpg(makeFile())
+    // 1st call: source blob for Image.src; 2nd call: download anchor href
+    expect(URL.createObjectURL).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('jpgToPng', () => {
+  beforeEach(() => {
+    URL.createObjectURL.mockClear()
+    URL.revokeObjectURL.mockClear()
+    vi.stubGlobal('Image', class MockImage {
+      set src(_val) { setTimeout(() => this.onload?.(), 0) }
+      get naturalWidth()  { return 100 }
+      get naturalHeight() { return 80  }
+    })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  const makeFile = () =>
+    new File([new Uint8Array(10)], 'photo.jpg', { type: 'image/jpeg' })
+
+  it('creates an object URL from the source file', async () => {
+    await jpgToPng(makeFile())
+    expect(URL.createObjectURL).toHaveBeenCalled()
+  })
+
+  it('revokes the source object URL after the image is loaded', async () => {
+    await jpgToPng(makeFile())
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-url')
+  })
+
+  it('downloads the converted PNG (two createObjectURL calls total)', async () => {
+    await jpgToPng(makeFile())
+    // 1st call: source blob for Image.src; 2nd call: download anchor href
+    expect(URL.createObjectURL).toHaveBeenCalledTimes(2)
   })
 })

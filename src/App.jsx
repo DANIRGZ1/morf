@@ -1,5 +1,8 @@
 import { useState, useRef, useEffect, createContext, useContext } from "react";
 import { mergePdfs, splitPdf, imagesToPdf, compressPdf, wordToPdf, pdfToWord, pngToJpg, jpgToPng, rotatePdf, excelToPdf } from "./utils/convert";
+import { useHistory }   from "./hooks/useHistory";
+import { useFreemium }  from "./hooks/useFreemium";
+import { useCounter }   from "./hooks/useCounter";
 
 /* ── i18n ─────────────────────────────────────────────────────────────────── */
 const LANGS = {
@@ -987,26 +990,28 @@ function Contact({ showToast, onClose }) {
 }
 
 /* ── API ─────────────────────────────────────────────────────────────────── */
-function API() {
-  const T = useLang();
-  const [cop, setCop] = useState(null);
-  const copy = (id, txt) => {
-    try { navigator.clipboard.writeText(txt); } catch(e){}
-    setCop(id); setTimeout(()=>setCop(null), 1600);
-  };
-  const CB = ({ id, txt, children }) => (
+function CB({ id, txt, children, cop, copy, T }) {
+  return (
     <div className="cb">
       {children}
       <button className="cpbtn" onClick={()=>copy(id,txt)}>{cop===id?T.api_copied:T.api_copy}</button>
     </div>
   );
+}
+function API() {
+  const T = useLang();
+  const [cop, setCop] = useState(null);
+  const copy = (id, txt) => {
+    try { navigator.clipboard.writeText(txt); } catch {}
+    setCop(id); setTimeout(()=>setCop(null), 1600);
+  };
   return <>
     <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",background:"var(--al)",borderRadius:8,marginBottom:20,border:"1px solid #CBD5E1"}}>
       <Ic n="zap" s={13} c="var(--ac)"/>
       <span style={{fontSize:12,color:"var(--ac)"}}>{T.api_beta}</span>
     </div>
     <h2>Endpoint</h2>
-    <CB id="req" txt="POST https://api.morf.app/v1/convert">
+    <CB id="req" txt="POST https://api.morf.app/v1/convert" cop={cop} copy={copy} T={T}>
       <span className="fn">POST</span> https://api.morf.app/<span className="kw">v1</span>/convert{"\n\n"}
       <span className="cm">// multipart/form-data</span>{"\n"}
       file:          <span className="st">document.pdf</span>{"\n"}
@@ -1014,7 +1019,7 @@ function API() {
       quality:       <span className="st">"high"</span>   <span className="cm">// low | medium | high</span>
     </CB>
     <h2>JavaScript</h2>
-    <CB id="js" txt={`const form = new FormData();\nform.append('file', fileInput.files[0]);\nform.append('output_format', 'docx');\n\nconst res = await fetch('https://api.morf.app/v1/convert', {\n  method: 'POST',\n  headers: { 'Authorization': 'Bearer mk_live_xxx' },\n  body: form\n});\nconst blob = await res.blob();`}>
+    <CB id="js" txt={`const form = new FormData();\nform.append('file', fileInput.files[0]);\nform.append('output_format', 'docx');\n\nconst res = await fetch('https://api.morf.app/v1/convert', {\n  method: 'POST',\n  headers: { 'Authorization': 'Bearer mk_live_xxx' },\n  body: form\n});\nconst blob = await res.blob();`} cop={cop} copy={copy} T={T}>
       <span className="kw">const</span> form = <span className="kw">new</span> <span className="fn">FormData</span>();{"\n"}
       form.<span className="fn">append</span>(<span className="st">'file'</span>, fileInput.files[<span className="kw">0</span>]);{"\n"}
       form.<span className="fn">append</span>(<span className="st">'output_format'</span>, <span className="st">'docx'</span>);{"\n\n"}
@@ -1361,59 +1366,10 @@ export default function App() {
   const [toast, setToast]     = useState(null);
   const [heroDrag, setHeroDrag] = useState(false);
   const [dark, setDark] = useState(() => window.matchMedia?.('(prefers-color-scheme: dark)').matches);
-  const [count, setCount] = useState(() => parseInt(localStorage.getItem('morf_count')||'0'));
-  // ── Freemium ──────────────────────────────────────────────────────────────
-  const FREE_MAX_MB    = 10;
-  const FREE_MAX_BATCH = 2;
-  const isPro = () => localStorage.getItem('morf_pro') === 'true';
-
-  const [showUpgrade, setShowUpgrade] = useState(false);
-  const [upgradeReason, setUpgradeReason] = useState('size'); // 'size' | 'batch'
+  const { count, bumpCount }                          = useCounter();
+  const { showUpgrade, setShowUpgrade, upgradeReason, checkLimits } = useFreemium();
+  const { history, addToHistory, clearHistory }        = useHistory();
   const [billingYear, setBillingYear] = useState(true);
-
-  const checkLimits = (files, toolId) => {
-    if (isPro()) return true;
-    // Límite batch (solo merge)
-    if (toolId === 'merge' && files.length > FREE_MAX_BATCH) {
-      setUpgradeReason('batch');
-      setShowUpgrade(true);
-      return false;
-    }
-    // Límite de tamaño
-    if (files.some(f => f.size > FREE_MAX_MB * 1024 * 1024)) {
-      setUpgradeReason('size');
-      setShowUpgrade(true);
-      return false;
-    }
-    return true;
-  };
-  // ──────────────────────────────────────────────────────────────────────────
-
-  const [history, setHistory] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('morf_history')||'[]'); } catch(e){ return []; }
-  });
-
-  const addToHistory = (filename, toolLabel) => {
-    setHistory(prev => {
-      const entry = { filename, tool: toolLabel, date: new Date().toISOString() };
-      const next = [entry, ...prev].slice(0, 10);
-      localStorage.setItem('morf_history', JSON.stringify(next));
-      return next;
-    });
-  };
-
-  const clearHistory = () => {
-    setHistory([]);
-    localStorage.removeItem('morf_history');
-  };
-
-  const bumpCount = () => {
-    setCount(c => {
-      const n = c + 1;
-      localStorage.setItem('morf_count', n);
-      return n;
-    });
-  };
   useEffect(() => {
     document.body.style.background = dark ? '#0F1117' : '#F9F9F8';
   }, [dark]);
