@@ -1381,7 +1381,7 @@ export default function App() {
     const schema = {
       "@context": "https://schema.org",
       "@type": "FAQPage",
-      "mainEntity": T.faq.map(([q,a]) => ({
+      "mainEntity": LANGS[lang].faq.map(([q,a]) => ({
         "@type": "Question",
         "name": q,
         "acceptedAnswer": { "@type": "Answer", "text": a }
