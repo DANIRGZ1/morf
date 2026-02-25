@@ -4,6 +4,7 @@ import { useLang } from "../contexts/LangContext";
 import { mergePdfs, splitPdf, imagesToPdf, compressPdf, wordToPdf, pdfToWord, pngToJpg, jpgToPng, rotatePdf, excelToPdf } from "../utils/convert";
 
 /* ── Tools ───────────────────────────────────────────────────────────────── */
+// eslint-disable-next-line react-refresh/only-export-components
 export const TOOL_BASE = [
   {id:"pdf-word",  icon:"word",     accepts:[".pdf"],                        from:"pdf",  to:"docx"},
   {id:"word-pdf",  icon:"pdf",      accepts:[".doc",".docx"], mimeTypes:["application/msword","application/vnd.openxmlformats-officedocument.wordprocessingml.document"], from:"docx", to:"pdf"},

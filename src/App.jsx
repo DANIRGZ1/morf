@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useHistory }   from "./hooks/useHistory";
 import { useFreemium }  from "./hooks/useFreemium";
 import { useCounter }   from "./hooks/useCounter";
-import { LANGS, LangCtx, useLang, detectLang } from "./contexts/LangContext";
+import { LANGS, LangCtx, detectLang } from "./contexts/LangContext";
 import { Ic, Tag } from "./components/icons";
 import FaqItem from "./components/FaqItem";
 import LangPicker from "./components/LangPicker";

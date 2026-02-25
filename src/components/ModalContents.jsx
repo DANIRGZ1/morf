@@ -118,7 +118,7 @@ export function API() {
   const T = useLang();
   const [cop, setCop] = useState(null);
   const copy = (id, txt) => {
-    try { navigator.clipboard.writeText(txt); } catch {}
+    try { navigator.clipboard.writeText(txt); } catch { /* ignore */ }
     setCop(id); setTimeout(()=>setCop(null), 1600);
   };
   return <>

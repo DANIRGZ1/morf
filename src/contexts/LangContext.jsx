@@ -493,12 +493,15 @@ const LANGS = {
   },
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function detectLang() {
   const nav = (navigator.language || navigator.userLanguage || "en").toLowerCase().slice(0,2);
   return LANGS[nav] ? nav : "en";
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const LangCtx = createContext(null);
+// eslint-disable-next-line react-refresh/only-export-components
 export const useLang = () => useContext(LangCtx);
 
 export { LANGS };
