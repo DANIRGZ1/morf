@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import App from './App'
 
 // Mock all conversion functions — tests focus on UI behaviour, not file I/O
@@ -27,6 +28,11 @@ beforeEach(() => {
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
     })),
+  })
+  // Reset language to English before every test so tests that set navigator.language
+  // for locale assertions don't contaminate unrelated interaction tests.
+  Object.defineProperty(navigator, 'language', {
+    value: 'en', configurable: true, writable: true,
   })
   localStorage.clear()
 })
@@ -181,5 +187,253 @@ describe('localStorage initialisation', () => {
     ]
     localStorage.setItem('morf_history', JSON.stringify(history))
     expect(() => render(<App />)).not.toThrow()
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────
+// Tool card interactions
+// ─────────────────────────────────────────────────────────────────
+describe('tool card interactions', () => {
+  it('clicking a tool card opens its conversion panel', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    // "Cancel" is only visible when a panel is open
+    expect(screen.queryByText('Cancel')).not.toBeInTheDocument()
+    // The first tool card label ("PDF → Word" in English)
+    const [card] = screen.getAllByText('PDF → Word')
+    await user.click(card)
+    expect(screen.getByText('Cancel')).toBeInTheDocument()
+  })
+
+  it('clicking an active tool card again closes the panel', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    const [card] = screen.getAllByText('PDF → Word')
+    await user.click(card)
+    expect(screen.getByText('Cancel')).toBeInTheDocument()
+    // After opening there are two "PDF → Word" elements (card + panel header); click the first
+    const [cardAgain] = screen.getAllByText('PDF → Word')
+    await user.click(cardAgain)
+    expect(screen.queryByText('Cancel')).not.toBeInTheDocument()
+  })
+
+  it('closing the panel via its Cancel button returns to the grid', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getAllByText('PDF → Word')[0])
+    await user.click(screen.getByText('Cancel'))
+    expect(screen.queryByText('Cancel')).not.toBeInTheDocument()
+  })
+
+  it('switching between tool cards replaces the open panel', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getAllByText('PDF → Word')[0])
+    expect(screen.getByText('Cancel')).toBeInTheDocument()
+    // Click a different card while one is open
+    await user.click(screen.getAllByText('Merge PDFs')[0])
+    // Panel should now show the new tool label
+    expect(screen.getAllByText('Merge PDFs').length).toBeGreaterThan(1)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────
+// Modal interactions
+// ─────────────────────────────────────────────────────────────────
+describe('modal interactions', () => {
+  it('clicking Privacy in the header nav opens the privacy modal', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    // T.nav_privacy = "Privacy" (header nav button)
+    await user.click(screen.getByRole('button', { name: 'Privacy' }))
+    // The modal overlay (.ov) is only present when a modal is open
+    expect(document.querySelector('.ov')).toBeInTheDocument()
+  })
+
+  it('pressing Escape closes an open modal', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: 'Privacy' }))
+    expect(document.querySelector('.ov')).toBeInTheDocument()
+    await user.keyboard('{Escape}')
+    expect(document.querySelector('.ov')).not.toBeInTheDocument()
+  })
+
+  it('clicking the modal backdrop closes the modal', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: 'Privacy' }))
+    // The overlay has class "ov"; clicking directly on it (the backdrop) closes the modal
+    const backdrop = document.querySelector('.ov')
+    fireEvent.click(backdrop, { target: backdrop })
+    expect(document.querySelector('.ov')).not.toBeInTheDocument()
+  })
+
+  it('clicking the API nav button opens the API modal', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: 'API' }))
+    // The modal overlay (.ov) is only present when a modal is open
+    expect(document.querySelector('.ov')).toBeInTheDocument()
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────
+// Dark mode
+// ─────────────────────────────────────────────────────────────────
+describe('dark mode', () => {
+  it('dark mode toggle adds the "dark" class to the root element', async () => {
+    const user = userEvent.setup()
+    const { container } = render(<App />)
+    const root = container.querySelector('.m')
+    expect(root).not.toHaveClass('dark')
+    // The toggle button title is "Modo oscuro" (hardcoded) when dark=false
+    await user.click(screen.getByTitle('Modo oscuro'))
+    expect(root).toHaveClass('dark')
+  })
+
+  it('clicking dark mode twice returns to light mode', async () => {
+    const user = userEvent.setup()
+    const { container } = render(<App />)
+    const root = container.querySelector('.m')
+    await user.click(screen.getByTitle('Modo oscuro'))
+    expect(root).toHaveClass('dark')
+    await user.click(screen.getByTitle('Modo claro'))
+    expect(root).not.toHaveClass('dark')
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────
+// Conversion history
+// ─────────────────────────────────────────────────────────────────
+describe('conversion history', () => {
+  it('shows history entries from localStorage', () => {
+    localStorage.setItem('morf_history', JSON.stringify([
+      { filename: 'report.pdf', tool: 'PDF → Word', date: new Date().toISOString() }
+    ]))
+    render(<App />)
+    expect(screen.getByText('report.pdf')).toBeInTheDocument()
+    // T.hist_title = "Recent conversions"
+    expect(screen.getByText('Recent conversions')).toBeInTheDocument()
+  })
+
+  it('clear history button removes all history entries', async () => {
+    const user = userEvent.setup()
+    localStorage.setItem('morf_history', JSON.stringify([
+      { filename: 'doc.pdf', tool: 'PDF → Word', date: new Date().toISOString() }
+    ]))
+    render(<App />)
+    expect(screen.getByText('doc.pdf')).toBeInTheDocument()
+    // T.hist_clear = "Clear history"
+    await user.click(screen.getByText('Clear history'))
+    expect(screen.queryByText('doc.pdf')).not.toBeInTheDocument()
+    expect(screen.queryByText('Recent conversions')).not.toBeInTheDocument()
+  })
+
+  it('does not show the history section when history is empty', () => {
+    render(<App />)
+    // T.hist_title = "Recent conversions" — should not be present
+    expect(screen.queryByText('Recent conversions')).not.toBeInTheDocument()
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────
+// Conversion counter
+// ─────────────────────────────────────────────────────────────────
+describe('conversion counter', () => {
+  it('displays the counter value when count > 0', () => {
+    localStorage.setItem('morf_count', '7')
+    render(<App />)
+    // The number is rendered with toLocaleString; "7" → "7"
+    expect(screen.getByText('7')).toBeInTheDocument()
+    // T.counter = "files converted"
+    expect(screen.getByText('files converted')).toBeInTheDocument()
+  })
+
+  it('does not show the counter area when count is 0', () => {
+    render(<App />)
+    // "files converted" label is only rendered when count > 0
+    expect(screen.queryByText('files converted')).not.toBeInTheDocument()
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────
+// FAQ accordion
+// ─────────────────────────────────────────────────────────────────
+describe('FAQ accordion', () => {
+  it('FAQ questions are visible on load', () => {
+    render(<App />)
+    expect(screen.getByText('Is it completely free?')).toBeInTheDocument()
+  })
+
+  it('clicking a question reveals its answer', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    // Answer should not be visible initially
+    expect(screen.queryByText(/free plan includes all tools/i)).not.toBeInTheDocument()
+    await user.click(screen.getByText('Is it completely free?'))
+    expect(screen.getByText(/free plan includes all tools/i)).toBeInTheDocument()
+  })
+
+  it('clicking an open question collapses it again', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    const q = screen.getByText('Is it completely free?')
+    await user.click(q)
+    expect(screen.getByText(/free plan includes all tools/i)).toBeInTheDocument()
+    await user.click(q)
+    expect(screen.queryByText(/free plan includes all tools/i)).not.toBeInTheDocument()
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────
+// Accessibility (a11y)
+// ─────────────────────────────────────────────────────────────────
+describe('accessibility', () => {
+  it('header landmark is present', () => {
+    render(<App />)
+    expect(screen.getByRole('banner')).toBeInTheDocument()
+  })
+
+  it('navigation landmark is present in the header', () => {
+    render(<App />)
+    expect(screen.getByRole('navigation')).toBeInTheDocument()
+  })
+
+  it('footer landmark is present', () => {
+    render(<App />)
+    expect(screen.getByRole('contentinfo')).toBeInTheDocument()
+  })
+
+  it('the main CTA button has an accessible name', () => {
+    render(<App />)
+    // T.hero_cta = "Start for free" — may appear in hero AND pricing, so use getAllBy
+    const ctaBtns = screen.getAllByRole('button', { name: /Start for free/i })
+    expect(ctaBtns.length).toBeGreaterThan(0)
+  })
+
+  it('the dark mode toggle has an accessible title', () => {
+    render(<App />)
+    expect(screen.getByTitle(/Modo oscuro|Modo claro/i)).toBeInTheDocument()
+  })
+
+  it('the language picker button has visible text', () => {
+    render(<App />)
+    // Language button shows current locale code in uppercase ("EN")
+    expect(screen.getByText('EN')).toBeInTheDocument()
+  })
+
+  it('nav Privacy button is keyboard-accessible via role query', () => {
+    render(<App />)
+    const privBtn = screen.getByRole('button', { name: 'Privacy' })
+    expect(privBtn).toBeInTheDocument()
+    expect(privBtn.tagName).toBe('BUTTON')
+  })
+
+  it('FAQ question buttons are keyboard-accessible', () => {
+    render(<App />)
+    // FaqItem renders a <button> for each question
+    const faqBtn = screen.getByRole('button', { name: /Is it completely free\?/i })
+    expect(faqBtn).toBeInTheDocument()
   })
 })

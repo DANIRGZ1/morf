@@ -1,12 +1,16 @@
-// src/utils/convert.js
+// src/utils/convert.ts
 // Conversiones reales 100% en el navegador. Sin servidor, sin APIs de pago.
 // Librerías: pdf-lib, mammoth (instaladas vía npm)
 
-import { PDFDocument } from "pdf-lib";
+import { PDFDocument, degrees as pdfDegrees } from "pdf-lib";
 import mammoth from "mammoth";
 
+/** Wrap pdf-lib Uint8Array output (which uses ArrayBufferLike) into a Blob. */
+const pdfBlob = (out: Uint8Array, type = "application/pdf") =>
+  new Blob([out as unknown as ArrayBuffer], { type });
+
 /* ── Descarga un Blob como fichero ── */
-function download(blob, filename) {
+function download(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const a   = document.createElement("a");
   a.href     = url;
@@ -18,12 +22,12 @@ function download(blob, filename) {
 }
 
 /* ── Nombre sin extensión ── */
-export const basename = (f) => f.name.replace(/\.[^.]+$/, "");
+export const basename = (f: { name: string }): string => f.name.replace(/\.[^.]+$/, "");
 
 // ─────────────────────────────────────────────────────────────────
 // 1. UNIR PDFs
 // ─────────────────────────────────────────────────────────────────
-export async function mergePdfs(files) {
+export async function mergePdfs(files: File[]): Promise<void> {
   const merged = await PDFDocument.create();
 
   for (const file of files) {
@@ -34,14 +38,14 @@ export async function mergePdfs(files) {
   }
 
   const out = await merged.save();
-  download(new Blob([out], { type: "application/pdf" }), "merged.pdf");
+  download(pdfBlob(out), "merged.pdf");
 }
 
 // ─────────────────────────────────────────────────────────────────
 // Parsear rango "1-3, 5, 7-9" → índices base-0: [0,1,2,4,6,7,8]
 // ─────────────────────────────────────────────────────────────────
-export function parsePageRange(rangeStr, total) {
-  let indices = [];
+export function parsePageRange(rangeStr: string, total: number): number[] {
+  let indices: number[] = [];
   if (rangeStr.trim()) {
     for (const part of rangeStr.split(",")) {
       const [a, b] = part.trim().split("-").map(n => parseInt(n.trim()) - 1);
@@ -62,7 +66,7 @@ export function parsePageRange(rangeStr, total) {
 // ─────────────────────────────────────────────────────────────────
 // 2. DIVIDIR PDF
 // ─────────────────────────────────────────────────────────────────
-export async function splitPdf(file, rangeStr) {
+export async function splitPdf(file: File, rangeStr: string): Promise<void> {
   const bytes = await file.arrayBuffer();
   const doc   = await PDFDocument.load(bytes, { ignoreEncryption: true });
   const total = doc.getPageCount();
@@ -75,7 +79,7 @@ export async function splitPdf(file, rangeStr) {
     newDoc.addPage(page);
     const out = await newDoc.save();
     download(
-      new Blob([out], { type: "application/pdf" }),
+      pdfBlob(out),
       `${basename(file)}-p${idx + 1}.pdf`
     );
     await new Promise(r => setTimeout(r, 120));
@@ -85,7 +89,7 @@ export async function splitPdf(file, rangeStr) {
 // ─────────────────────────────────────────────────────────────────
 // Escalar dimensiones al tamaño A4 (595×842 pt) manteniendo aspecto
 // ─────────────────────────────────────────────────────────────────
-export function scaleToA4(w, h, maxW = 595, maxH = 842) {
+export function scaleToA4(w: number, h: number, maxW = 595, maxH = 842): { w: number; h: number } {
   if (w <= maxW && h <= maxH) return { w, h };
   const scale = Math.min(maxW / w, maxH / h);
   return { w: Math.round(w * scale), h: Math.round(h * scale) };
@@ -94,12 +98,12 @@ export function scaleToA4(w, h, maxW = 595, maxH = 842) {
 // ─────────────────────────────────────────────────────────────────
 // 3. IMÁGENES → PDF
 // ─────────────────────────────────────────────────────────────────
-export async function imagesToPdf(files) {
+export async function imagesToPdf(files: File[]): Promise<void> {
   const doc = await PDFDocument.create();
 
   for (const file of files) {
     const bytes = await file.arrayBuffer();
-    const ext   = file.name.split(".").pop().toLowerCase();
+    const ext   = file.name.split(".").pop()!.toLowerCase();
     let image;
 
     if (ext === "jpg" || ext === "jpeg") {
@@ -107,18 +111,19 @@ export async function imagesToPdf(files) {
     } else if (ext === "png") {
       image = await doc.embedPng(bytes);
     } else if (ext === "webp") {
-      // WEBP → PNG via Canvas (pdf-lib no soporta WEBP directamente)
       const blob  = new Blob([bytes], { type: "image/webp" });
       const url   = URL.createObjectURL(blob);
       const img   = new Image();
-      await new Promise((res, rej) => {
-        img.onload = res; img.onerror = rej; img.src = url;
+      await new Promise<void>((res, rej) => {
+        img.onload = () => res();
+        img.onerror = () => rej(new Error("Image load error"));
+        img.src = url;
       });
       const cv = document.createElement("canvas");
       cv.width = img.naturalWidth; cv.height = img.naturalHeight;
-      cv.getContext("2d").drawImage(img, 0, 0);
+      cv.getContext("2d")!.drawImage(img, 0, 0);
       URL.revokeObjectURL(url);
-      const pngBlob  = await new Promise(r => cv.toBlob(r, "image/png"));
+      const pngBlob  = await new Promise<Blob>(r => cv.toBlob(b => r(b!), "image/png"));
       const pngBytes = await pngBlob.arrayBuffer();
       image = await doc.embedPng(pngBytes);
     }
@@ -131,13 +136,13 @@ export async function imagesToPdf(files) {
   }
 
   const out = await doc.save();
-  download(new Blob([out], { type: "application/pdf" }), "imagenes.pdf");
+  download(pdfBlob(out), "imagenes.pdf");
 }
 
 // ─────────────────────────────────────────────────────────────────
 // 4. COMPRIMIR PDF
 // ─────────────────────────────────────────────────────────────────
-export async function compressPdf(file, level) {
+export async function compressPdf(file: File, level: string): Promise<void> {
   const bytes = await file.arrayBuffer();
   const doc   = await PDFDocument.load(bytes, { ignoreEncryption: true });
 
@@ -153,23 +158,24 @@ export async function compressPdf(file, level) {
   );
 
   download(
-    new Blob([out], { type: "application/pdf" }),
+    pdfBlob(out),
     `${basename(file)}-comprimido.pdf`
   );
 }
 
 // ─────────────────────────────────────────────────────────────────
 // 5. WORD → PDF
-// Convierte DOCX a HTML con mammoth → abre diálogo de impresión
-// El usuario selecciona "Guardar como PDF" en el diálogo
 // ─────────────────────────────────────────────────────────────────
-export async function wordToPdf(file) {
+export async function wordToPdf(file: File): Promise<string> {
   const bytes  = await file.arrayBuffer();
 
-  const result = await mammoth.convertToHtml({
+  // convertImage is a valid mammoth option not yet reflected in its TS types
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const result = await (mammoth as any).convertToHtml({
     arrayBuffer: bytes,
-    convertImage: mammoth.images.imgElement(img =>
-      img.read("base64").then(data => ({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    convertImage: (mammoth as any).images.imgElement((img: any) =>
+      img.read("base64").then((data: string) => ({
         src: `data:${img.contentType};base64,${data}`,
       }))
     ),
@@ -214,7 +220,6 @@ export async function wordToPdf(file) {
 
   const win = window.open("", "_blank", "width=900,height=700");
   if (!win) {
-    // Navegador bloqueó el popup → descargar como HTML
     download(
       new Blob([html], { type: "text/html;charset=utf-8" }),
       `${basename(file)}.html`
@@ -230,7 +235,7 @@ export async function wordToPdf(file) {
 // ─────────────────────────────────────────────────────────────────
 // Escapar caracteres especiales de RTF
 // ─────────────────────────────────────────────────────────────────
-export function escapeRtf(s) {
+export function escapeRtf(s: string): string {
   return s
     .replace(/\\/g, "\\\\")
     .replace(/\{/g,  "\\{")
@@ -239,15 +244,15 @@ export function escapeRtf(s) {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// 6. PDF → WORD  (extrae texto → genera RTF que Word abre directamente)
+// 6. PDF → WORD
 // ─────────────────────────────────────────────────────────────────
-export async function pdfToWord(file) {
-  // Cargamos pdf.js desde CDN solo para esta función (es muy pesado para instalar)
+export async function pdfToWord(file: File): Promise<void> {
   if (!window.pdfjsLib) {
-    await new Promise((res, rej) => {
+    await new Promise<void>((res, rej) => {
       const s = document.createElement("script");
       s.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
-      s.onload = res; s.onerror = rej;
+      s.onload = () => res();
+      s.onerror = () => rej(new Error("pdf.js load error"));
       document.head.appendChild(s);
     });
     window.pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -256,14 +261,14 @@ export async function pdfToWord(file) {
 
   const bytes = await file.arrayBuffer();
   const pdf   = await window.pdfjsLib.getDocument({ data: bytes }).promise;
-  const pages = [];
+  const pages: string[] = [];
 
   for (let i = 1; i <= pdf.numPages; i++) {
     const page    = await pdf.getPage(i);
     const content = await page.getTextContent();
 
-    const lines = {};
-    for (const item of content.items) {
+    const lines: Record<number, string[]> = {};
+    for (const item of content.items as Array<{ str: string; transform: number[] }>) {
       if (!item.str.trim()) continue;
       const y = Math.round(item.transform[5]);
       if (!lines[y]) lines[y] = [];
@@ -271,8 +276,8 @@ export async function pdfToWord(file) {
     }
 
     const text = Object.keys(lines)
-      .sort((a, b) => b - a)
-      .map(y => lines[y].join(" "))
+      .sort((a, b) => Number(b) - Number(a))
+      .map(y => lines[Number(y)].join(" "))
       .join("\n");
 
     pages.push(text);
@@ -300,16 +305,17 @@ ${rtfBody}
 // ─────────────────────────────────────────────────────────────────
 // Convertir un nodo XML de ODT a HTML
 // ─────────────────────────────────────────────────────────────────
-export function convertOdtNode(node) {
-  if (node.nodeType === 3) return node.textContent; // texto plano
+export function convertOdtNode(node: Node): string {
+  if (node.nodeType === 3) return node.textContent ?? "";
 
-  const tag = node.localName;
+  const el  = node as Element;
+  const tag = el.localName;
   const children = Array.from(node.childNodes).map(convertOdtNode).join("");
 
   if (tag === "p")           return `<p>${children}</p>`;
   if (tag === "h")           return `<h2>${children}</h2>`;
   if (tag === "span")        return children;
-  if (tag === "s")           return " ".repeat(parseInt(node.getAttribute("text:c")||"1"));
+  if (tag === "s")           return " ".repeat(parseInt(el.getAttribute("text:c") || "1"));
   if (tag === "tab")         return "&nbsp;&nbsp;&nbsp;&nbsp;";
   if (tag === "line-break")  return "<br/>";
   if (tag === "list")        return `<ul>${children}</ul>`;
@@ -324,16 +330,14 @@ export function convertOdtNode(node) {
 
 // ─────────────────────────────────────────────────────────────────
 // 7. ODT → PDF
-// ODT es un ZIP con content.xml dentro. Extraemos el texto con JSZip,
-// lo renderizamos como HTML y abrimos el diálogo de impresión.
 // ─────────────────────────────────────────────────────────────────
-export async function odtToPdf(file) {
-  // Cargar JSZip desde CDN
+export async function odtToPdf(file: File): Promise<string> {
   if (!window.JSZip) {
-    await new Promise((res, rej) => {
+    await new Promise<void>((res, rej) => {
       const s = document.createElement("script");
       s.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
-      s.onload = res; s.onerror = rej;
+      s.onload = () => res();
+      s.onerror = () => rej(new Error("JSZip load error"));
       document.head.appendChild(s);
     });
   }
@@ -341,11 +345,9 @@ export async function odtToPdf(file) {
   const bytes  = await file.arrayBuffer();
   const zip    = await window.JSZip.loadAsync(bytes);
 
-  // content.xml contiene el texto del documento
-  const contentXml = await zip.file("content.xml")?.async("string");
+  const contentXml = await zip.file("content.xml")?.async("string") as string | undefined;
   if (!contentXml) throw new Error("No se encontró content.xml en el ODT");
 
-  // Parsear el XML
   const parser = new DOMParser();
   const doc    = parser.parseFromString(contentXml, "text/xml");
 
@@ -390,70 +392,78 @@ export async function odtToPdf(file) {
 // ─────────────────────────────────────────────────────────────────
 // 8. PNG → JPG
 // ─────────────────────────────────────────────────────────────────
-export async function pngToJpg(file, quality = 0.92) {
+export async function pngToJpg(file: File, quality = 0.92): Promise<void> {
   const bytes = await file.arrayBuffer();
   const blob  = new Blob([bytes], { type: "image/png" });
   const url   = URL.createObjectURL(blob);
   const img   = new Image();
-  await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+  await new Promise<void>((res, rej) => {
+    img.onload = () => res();
+    img.onerror = () => rej(new Error("Image load error"));
+    img.src = url;
+  });
 
   const cv = document.createElement("canvas");
   cv.width = img.naturalWidth; cv.height = img.naturalHeight;
-  const ctx = cv.getContext("2d");
-  ctx.fillStyle = "#FFFFFF"; // fondo blanco (JPG no tiene transparencia)
+  const ctx = cv.getContext("2d")!;
+  ctx.fillStyle = "#FFFFFF";
   ctx.fillRect(0, 0, cv.width, cv.height);
   ctx.drawImage(img, 0, 0);
   URL.revokeObjectURL(url);
 
-  const jpgBlob = await new Promise(r => cv.toBlob(r, "image/jpeg", quality));
+  const jpgBlob = await new Promise<Blob>(r => cv.toBlob(b => r(b!), "image/jpeg", quality));
   download(jpgBlob, `${basename(file)}.jpg`);
 }
 
 // ─────────────────────────────────────────────────────────────────
 // 9. JPG → PNG
 // ─────────────────────────────────────────────────────────────────
-export async function jpgToPng(file) {
+export async function jpgToPng(file: File): Promise<void> {
   const bytes = await file.arrayBuffer();
   const blob  = new Blob([bytes], { type: "image/jpeg" });
   const url   = URL.createObjectURL(blob);
   const img   = new Image();
-  await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+  await new Promise<void>((res, rej) => {
+    img.onload = () => res();
+    img.onerror = () => rej(new Error("Image load error"));
+    img.src = url;
+  });
 
   const cv = document.createElement("canvas");
   cv.width = img.naturalWidth; cv.height = img.naturalHeight;
-  cv.getContext("2d").drawImage(img, 0, 0);
+  cv.getContext("2d")!.drawImage(img, 0, 0);
   URL.revokeObjectURL(url);
 
-  const pngBlob = await new Promise(r => cv.toBlob(r, "image/png"));
+  const pngBlob = await new Promise<Blob>(r => cv.toBlob(b => r(b!), "image/png"));
   download(pngBlob, `${basename(file)}.png`);
 }
 
 // ─────────────────────────────────────────────────────────────────
 // 10. ROTAR PDF
 // ─────────────────────────────────────────────────────────────────
-export async function rotatePdf(file, degrees = 90) {
+export async function rotatePdf(file: File, degrees = 90): Promise<void> {
   const bytes = await file.arrayBuffer();
   const doc   = await PDFDocument.load(bytes, { ignoreEncryption: true });
 
   doc.getPages().forEach(page => {
     const current = page.getRotation().angle;
-    page.setRotation({ type: "degrees", angle: (current + degrees) % 360 });
+    page.setRotation(pdfDegrees((current + degrees) % 360));
   });
 
   const out = await doc.save();
-  download(new Blob([out], { type: "application/pdf" }), `${basename(file)}-rotado.pdf`);
+  download(pdfBlob(out), `${basename(file)}-rotado.pdf`);
 }
 
 // ─────────────────────────────────────────────────────────────────
 // 11. EXCEL → PDF
-// Usa SheetJS para leer el Excel → genera tabla HTML → impresión
 // ─────────────────────────────────────────────────────────────────
-export async function excelToPdf(file) {
+export async function excelToPdf(file: File): Promise<string> {
   if (!window.XLSX) {
-    await new Promise((res, rej) => {
+    await new Promise<void>((res, rej) => {
       const s = document.createElement("script");
       s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
-      s.onload = res; s.onerror = rej;
+      s.onload = () => res();
+      s.onerror = () => rej(new Error("XLSX load error"));
       document.head.appendChild(s);
     });
   }
@@ -462,9 +472,9 @@ export async function excelToPdf(file) {
   const workbook = window.XLSX.read(bytes, { type: "array" });
 
   let allSheets = "";
-  for (const sheetName of workbook.SheetNames) {
+  for (const sheetName of workbook.SheetNames as string[]) {
     const sheet = workbook.Sheets[sheetName];
-    const html  = window.XLSX.utils.sheet_to_html(sheet, { editable: false });
+    const html  = window.XLSX.utils.sheet_to_html(sheet, { editable: false }) as string;
     allSheets += `
       <div class="sheet">
         <div class="sheet-name">${sheetName}</div>

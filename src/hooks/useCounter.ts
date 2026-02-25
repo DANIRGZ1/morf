@@ -1,14 +1,19 @@
 import { useState } from 'react'
 
-export function useCounter() {
-  const [count, setCount] = useState(
+export interface CounterState {
+  count: number
+  bumpCount: () => void
+}
+
+export function useCounter(): CounterState {
+  const [count, setCount] = useState<number>(
     () => parseInt(localStorage.getItem('morf_count') || '0')
   )
 
   const bumpCount = () => {
     setCount(c => {
       const n = c + 1
-      localStorage.setItem('morf_count', n)
+      localStorage.setItem('morf_count', String(n))
       return n
     })
   }

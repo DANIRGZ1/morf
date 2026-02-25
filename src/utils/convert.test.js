@@ -28,6 +28,7 @@ vi.mock('pdf-lib', () => ({
     create: vi.fn().mockResolvedValue(mockPdfDoc),
     load:   vi.fn().mockResolvedValue(mockPdfDoc),
   },
+  degrees: vi.fn(angle => ({ type: 'degrees', angle })),
 }))
 
 vi.mock('mammoth', () => ({
