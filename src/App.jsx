@@ -1,509 +1,16 @@
-import { useState, useRef, useEffect, createContext, useContext } from "react";
-import { mergePdfs, splitPdf, imagesToPdf, compressPdf, wordToPdf, pdfToWord, pngToJpg, jpgToPng, rotatePdf, excelToPdf } from "./utils/convert";
+import { useState, useEffect } from "react";
 import { useHistory }   from "./hooks/useHistory";
 import { useFreemium }  from "./hooks/useFreemium";
 import { useCounter }   from "./hooks/useCounter";
-
-/* ── i18n ─────────────────────────────────────────────────────────────────── */
-const LANGS = {
-  es: {
-    code:"es", flag:"🇪🇸", name:"Español",
-    tagline:"Sin registro · Sin marcas de agua · 100% privado",
-    hero_h1a:"La forma más rápida de", hero_h1b:"convertir tus archivos.",
-    hero_sub:"PDF, Word, Excel, imágenes. Gratis para archivos de hasta 10 MB. Sin que tus archivos salgan de tu navegador.",
-    hero_cta:"Empezar gratis",
-    hero_drop:"Arrastra cualquier archivo aquí",
-    hero_drop_sub:"Selección automática de herramienta",
-    tools_title:"Herramientas", tools_count:"disponibles",
-    detected:"Detectado",
-    unknown_fmt:"Formato no reconocido",
-    incompat:"Formato no compatible",
-    drag_single:"Arrastra tu archivo aquí",
-    drag_multi:"Arrastra tus archivos aquí",
-    click_hint:"o haz clic",
-    processing:"Procesando…",
-    convert:"Convertir", cancel:"Cancelar",
-    download:"Descargar", other:"Otro archivo",
-    done_title:"Listo para descargar",
-    done_sub_s:"archivo procesado", done_sub_p:"archivos procesados",
-    conv_done:"Conversión completada",
-    dl_started:"Descarga iniciada",
-    pages_label:"Rango de páginas (ej: 1-3, 5, 7-9)",
-    pages_ph:"Vacío = todas las páginas",
-    compress_level:"Nivel de compresión",
-    q_low:"Suave", q_med:"Media", q_high:"Máxima",
-    feat:[ ["Procesado local","Tus archivos no salen del navegador."],
-           ["Formato conservado","Fuentes, márgenes y tablas intactos."],
-           ["Descarga inmediata","Resultado listo en segundos."],
-           ["Sin publicidad","Plan gratuito sin anuncios."] ],
-    max_size:"máx. 200 MB",
-    counter:"archivos convertidos",
-    step_read:"Leyendo archivo…", step_proc:"Procesando…", step_done:"¡Listo!",
-    hist_title:"Conversiones recientes", hist_empty:"Aún no has convertido ningún archivo.", hist_clear:"Borrar historial",
-    free_limit:"El archivo supera el límite de 10 MB del plan gratuito.",
-    free_batch:"El plan gratuito permite unir hasta 2 archivos. Actualiza a Pro para unir archivos ilimitados.",
-    free_size:"El archivo supera el límite de 10 MB del plan gratuito.",
-    upgrade_cta:"Ver planes Pro",
-    upgrade_sub:"Ilimitado · Archivos hasta 200 MB · Sin publicidad",
-    plan_free:"Gratis", plan_pro:"Pro",
-    plan_free_desc:"Para uso ocasional",
-    plan_pro_desc:"Para uso profesional",
-    plan_monthly:"al mes", plan_yearly:"al año",
-    plan_save:"Ahorra 25%",
-    plan_cta_free:"Empezar gratis",
-    plan_cta_pro:"Empezar con Pro",
-    plan_current:"Plan actual",
-    feat_batch:"Unir hasta 2 archivos",
-    merge_hint:"Plan gratuito: máx. 2 archivos. Actualiza a Pro para más.",
-    feat_size_free:"Archivos hasta 10 MB",
-    feat_size_pro:"Archivos hasta 200 MB",
-    feat_tools:"Todas las herramientas",
-    feat_unlimited:"Unir archivos ilimitados",
-    feat_noad:"Sin publicidad",
-    feat_priority:"Procesamiento prioritario",
-    pricing_title:"Planes simples y transparentes",
-    pricing_sub:"Sin contratos. Cancela cuando quieras.",
-    faq_title:"Preguntas frecuentes", faq:[["¿Es completamente gratis?", "El plan gratuito incluye todas las herramientas sin registro, para archivos de hasta 10 MB y puedes unir hasta 2 PDFs a la vez. El plan Pro sube el límite a 200 MB y permite unir archivos ilimitados."], ["¿Mis archivos se suben a algún servidor?", "No. Todo ocurre en tu navegador con WebAssembly. Tus archivos nunca salen de tu dispositivo."], ["¿Qué formatos puedo convertir?", "PDF, Word (DOCX), Excel (XLSX), imágenes (JPG, PNG, WEBP). También puedes unir, dividir, comprimir o rotar PDFs."], ["¿Hay límite de tamaño?", "En el plan gratuito el límite es de 10 MB por archivo. Con Pro puedes convertir archivos de hasta 200 MB."], ["¿Funciona en móvil?", "Sí, en cualquier dispositivo con un navegador moderno: ordenador, tablet o móvil."], ["¿Puedo subir varios archivos a la vez?", "Para unir PDFs sí. El resto de herramientas procesan un archivo cada vez."]],
-    nav_privacy:"Privacidad", nav_api:"API", nav_help:"Ayuda",
-    footer_copy:"morf · © 2025",
-    modal_privacy:"Política de Privacidad", modal_terms:"Términos de Uso",
-    modal_contact:"Contacto", modal_api:"API de morf",
-    err_title:"No se pudo completar la conversión",
-    err_retry:"Reintentar",
-    err_size:"El archivo supera el límite de 200 MB. Prueba con un archivo más pequeño.",
-    err_protected:"El PDF está protegido con contraseña. Desprotégelo antes de convertir.",
-    err_corrupt:"El archivo parece estar dañado o no es un formato válido.",
-    err_range:"El rango de páginas no es válido. Usa el formato 1-3, 5, 7-9.",
-    err_popup:"El navegador bloqueó la ventana emergente. Permite las ventanas emergentes e inténtalo de nuevo.",
-    err_generic:"Ha ocurrido un error inesperado. Comprueba que el archivo no está dañado e inténtalo de nuevo.",
-    err_suggest:"¿Sigue fallando? Escríbenos a hola@morf.app",
-    err_odt:"Formato ODT detectado. Ábrelo en LibreOffice y guárdalo como .docx (Archivo → Guardar como → Word 2007-365) e inténtalo de nuevo.",
-    // tools
-    t:[ {label:"PDF → Word",    desc:"Convierte PDF a documento Word editable."},
-        {label:"Word → PDF",    desc:"Transforma Word a PDF de alta fidelidad."},
-        {label:"Imagen → PDF",  desc:"Agrupa JPG, PNG o WEBP en un único PDF."},
-        {label:"Unir PDFs",     desc:"Fusiona varios PDFs respetando el orden."},
-        {label:"Dividir PDF",   desc:"Extrae páginas o rangos de cualquier PDF."},
-        {label:"Comprimir PDF", desc:"Reduce el tamaño sin pérdida visible de calidad."},
-        {label:"PNG → JPG",     desc:"Convierte imágenes PNG a formato JPG."},
-        {label:"JPG → PNG",     desc:"Convierte imágenes JPG a formato PNG."},
-        {label:"Rotar PDF",     desc:"Rota páginas de un PDF 90°, 180° o 270°."},
-        {label:"Excel → PDF",   desc:"Convierte hojas de cálculo Excel a PDF."} ],
-    // contact
-    con_intro:"¿Tienes alguna duda o incidencia? Escríbenos y te respondemos en menos de 48h laborables.",
-    con_name:"Nombre", con_email:"Email", con_subject:"Asunto", con_msg:"Mensaje",
-    con_name_ph:"Tu nombre", con_email_ph:"tu@email.com", con_msg_ph:"Cuéntanos en detalle...",
-    con_subjects:[["general","Consulta general"],["bug","Reportar un error"],["feature","Sugerencia"],["api","Acceso a la API"],["legal","Asunto legal"]],
-    con_send:"Enviar mensaje", con_sending:"Enviando…", con_cancel:"Cancelar",
-    con_done_title:"Mensaje recibido",
-    con_done_sub:"Respondemos en menos de 48 horas en días laborables.",
-    con_close:"Cerrar", con_required:"Rellena todos los campos",
-    con_sent:"Mensaje enviado",
-    con_resp_t:"Respuesta", con_resp_v:"< 48h laborables",
-    // privacy
-    priv_chips:["Sin seguimiento","Procesado local","Sin almacenamiento"],
-    // api
-    api_beta:"API en beta privada. Solicita acceso desde el formulario de contacto.",
-    api_copy:"Copiar", api_copied:"✓ Copiado",
-    api_plans:[{t:"Free",r:"50 req/mes",s:"10 MB",p:"Gratis"},{t:"Pro",r:"5.000 req/mes",s:"100 MB",p:"€19/mes"},{t:"Business",r:"Ilimitado",s:"500 MB",p:"€99/mes"}],
-  },
-  en: {
-    code:"en", flag:"🇬🇧", name:"English",
-    tagline:"No signup · No watermarks · 100% private",
-    hero_h1a:"The fastest way to", hero_h1b:"convert your files.",
-    hero_sub:"PDF, Word, Excel, images. Free for files up to 10 MB. Your files never leave your browser.",
-    hero_cta:"Start for free",
-    hero_drop:"Drop any file here",
-    hero_drop_sub:"Automatic tool detection",
-    tools_title:"Tools", tools_count:"available",
-    detected:"Detected",
-    unknown_fmt:"Format not recognised",
-    incompat:"Incompatible format",
-    drag_single:"Drop your file here",
-    drag_multi:"Drop your files here",
-    click_hint:"or click to browse",
-    processing:"Processing…",
-    convert:"Convert", cancel:"Cancel",
-    download:"Download", other:"Convert another",
-    done_title:"Ready to download",
-    done_sub_s:"file processed", done_sub_p:"files processed",
-    conv_done:"Conversion complete",
-    dl_started:"Download started",
-    pages_label:"Page range (e.g. 1-3, 5, 7-9)",
-    pages_ph:"Empty = all pages",
-    compress_level:"Compression level",
-    q_low:"Light", q_med:"Medium", q_high:"Maximum",
-    feat:[ ["Local processing","Your files never leave your browser."],
-           ["Format preserved","Fonts, margins and tables intact."],
-           ["Instant download","Result ready in seconds."],
-           ["No ads","Free plan with no advertising."] ],
-    max_size:"max. 200 MB",
-    counter:"files converted",
-    step_read:"Reading file…", step_proc:"Processing…", step_done:"Done!",
-    free_limit:"File exceeds the 10 MB limit of the free plan.",
-    free_batch:"The free plan allows merging up to 2 files. Upgrade to Pro to merge unlimited files.",
-    free_size:"File exceeds the 10 MB limit of the free plan.",
-    upgrade_cta:"See Pro plans",
-    upgrade_sub:"Unlimited · Files up to 200 MB · No ads",
-    plan_free:"Free", plan_pro:"Pro",
-    plan_free_desc:"For occasional use",
-    plan_pro_desc:"For professional use",
-    plan_monthly:"per month", plan_yearly:"per year",
-    plan_save:"Save 25%",
-    plan_cta_free:"Start for free",
-    plan_cta_pro:"Start with Pro",
-    plan_current:"Current plan",
-    feat_batch:"Merge up to 2 files",
-    merge_hint:"Free plan: max. 2 files. Upgrade to Pro for more.",
-    feat_size_free:"Files up to 10 MB",
-    feat_size_pro:"Files up to 200 MB",
-    feat_tools:"All tools included",
-    feat_unlimited:"Merge unlimited files",
-    feat_noad:"No ads",
-    feat_priority:"Priority processing",
-    pricing_title:"Simple, transparent pricing",
-    pricing_sub:"No contracts. Cancel anytime.",
-    faq_title:"Frequently asked questions", faq:[["Is it completely free?", "The free plan includes all tools with no sign-up, for files up to 10 MB and merging up to 2 PDFs at once. Pro raises the limit to 200 MB and allows unlimited merging."], ["Are my files uploaded to a server?", "No. Everything runs in your browser via WebAssembly. Your files never leave your device."], ["What formats can I convert?", "PDF, Word (DOCX), Excel (XLSX), images (JPG, PNG, WEBP). Also merge, split, compress or rotate PDFs."], ["Is there a file size limit?", "On the free plan the limit is 10 MB per file. With Pro you can convert files up to 200 MB."], ["Does it work on mobile?", "Yes, on any device with a modern browser: desktop, tablet or mobile."], ["Can I upload multiple files at once?", "For merging PDFs yes. Other tools process one file at a time."]],
-    hist_title:"Recent conversions", hist_empty:"You haven't converted any files yet.", hist_clear:"Clear history",
-    nav_privacy:"Privacy", nav_api:"API", nav_help:"Help",
-    footer_copy:"morf · © 2025",
-    modal_privacy:"Privacy Policy", modal_terms:"Terms of Use",
-    modal_contact:"Contact", modal_api:"morf API",
-    err_title:"Conversion failed",
-    err_retry:"Try again",
-    err_size:"File exceeds the 200 MB limit. Please use a smaller file.",
-    err_protected:"This PDF is password-protected. Remove the password before converting.",
-    err_corrupt:"The file appears to be corrupted or is not a valid format.",
-    err_range:"Invalid page range. Use the format 1-3, 5, 7-9.",
-    err_popup:"The browser blocked the pop-up window. Allow pop-ups for this site and try again.",
-    err_generic:"An unexpected error occurred. Check the file is not corrupted and try again.",
-    err_suggest:"Still not working? Email us at hola@morf.app",
-    err_odt:"ODT format detected. Open it in LibreOffice and save as .docx (File → Save As → Word 2007-365) then try again.",
-    t:[ {label:"PDF → Word",    desc:"Convert PDF to an editable Word document."},
-        {label:"Word → PDF",    desc:"Turn Word documents into high-fidelity PDFs."},
-        {label:"Image → PDF",   desc:"Bundle JPG, PNG or WEBP files into one PDF."},
-        {label:"Merge PDFs",    desc:"Combine multiple PDFs keeping the order."},
-        {label:"Split PDF",     desc:"Extract pages or ranges from any PDF."},
-        {label:"Compress PDF",  desc:"Reduce file size with no visible quality loss."},
-        {label:"PNG → JPG",     desc:"Convert PNG images to JPG format."},
-        {label:"JPG → PNG",     desc:"Convert JPG images to PNG format."},
-        {label:"Rotate PDF",    desc:"Rotate PDF pages 90°, 180° or 270°."},
-        {label:"Excel → PDF",   desc:"Convert Excel spreadsheets to PDF."} ],
-    con_intro:"Got a question or issue? Write to us and we'll reply within 48 business hours.",
-    con_name:"Name", con_email:"Email", con_subject:"Subject", con_msg:"Message",
-    con_name_ph:"Your name", con_email_ph:"you@email.com", con_msg_ph:"Tell us in detail...",
-    con_subjects:[["general","General enquiry"],["bug","Report a bug"],["feature","Feature request"],["api","API access"],["legal","Legal matter"]],
-    con_send:"Send message", con_sending:"Sending…", con_cancel:"Cancel",
-    con_done_title:"Message received",
-    con_done_sub:"We reply within 48 business hours. Check your spam folder just in case.",
-    con_close:"Close", con_required:"Please fill in all fields",
-    con_sent:"Message sent",
-    con_resp_t:"Response time", con_resp_v:"< 48 business hours",
-    priv_chips:["No tracking","Local processing","No storage"],
-    api_beta:"API is in private beta. Request access from the contact form.",
-    api_copy:"Copy", api_copied:"✓ Copied",
-    api_plans:[{t:"Free",r:"50 req/mo",s:"10 MB",p:"Free"},{t:"Pro",r:"5,000 req/mo",s:"100 MB",p:"€19/mo"},{t:"Business",r:"Unlimited",s:"500 MB",p:"€99/mo"}],
-  },
-  fr: {
-    code:"fr", flag:"🇫🇷", name:"Français",
-    tagline:"Sans inscription · Sans filigrane · 100% privé",
-    hero_h1a:"La façon la plus rapide de", hero_h1b:"convertir vos fichiers.",
-    hero_sub:"PDF, Word, Excel, images. Gratuit pour les fichiers jusqu'à 10 Mo. Vos fichiers restent dans votre navigateur.",
-    hero_cta:"Commencer gratuitement",
-    hero_drop:"Déposez n'importe quel fichier ici",
-    hero_drop_sub:"Détection automatique de l'outil",
-    tools_title:"Outils", tools_count:"disponibles",
-    detected:"Détecté",
-    unknown_fmt:"Format non reconnu",
-    incompat:"Format incompatible",
-    drag_single:"Déposez votre fichier ici",
-    drag_multi:"Déposez vos fichiers ici",
-    click_hint:"ou cliquez pour parcourir",
-    processing:"Traitement…",
-    convert:"Convertir", cancel:"Annuler",
-    download:"Télécharger", other:"Autre fichier",
-    done_title:"Prêt à télécharger",
-    done_sub_s:"fichier traité", done_sub_p:"fichiers traités",
-    conv_done:"Conversion terminée",
-    dl_started:"Téléchargement démarré",
-    pages_label:"Plage de pages (ex : 1-3, 5, 7-9)",
-    pages_ph:"Vide = toutes les pages",
-    compress_level:"Niveau de compression",
-    q_low:"Légère", q_med:"Moyenne", q_high:"Maximum",
-    feat:[ ["Traitement local","Vos fichiers ne quittent pas le navigateur."],
-           ["Format conservé","Polices, marges et tableaux intacts."],
-           ["Téléchargement immédiat","Résultat prêt en quelques secondes."],
-           ["Sans publicité","Plan gratuit sans aucune publicité."] ],
-    max_size:"max. 200 Mo",
-    counter:"fichiers convertis",
-    free_limit:"Le fichier dépasse la limite de 10 Mo du plan gratuit.",
-    free_batch:"Le plan gratuit permet de fusionner jusqu'à 2 fichiers. Passez à Pro pour en fusionner autant que vous voulez.",
-    free_size:"Le fichier dépasse la limite de 10 Mo du plan gratuit.",
-    upgrade_cta:"Voir les plans Pro",
-    upgrade_sub:"Illimité · Fichiers jusqu'à 200 Mo · Sans pub",
-    plan_free:"Gratuit", plan_pro:"Pro",
-    plan_free_desc:"Pour usage occasionnel",
-    plan_pro_desc:"Pour usage professionnel",
-    plan_monthly:"par mois", plan_yearly:"par an",
-    plan_save:"Économisez 25%",
-    plan_cta_free:"Commencer gratuitement",
-    plan_cta_pro:"Commencer avec Pro",
-    plan_current:"Plan actuel",
-    feat_batch:"Fusionner jusqu'à 2 fichiers",
-    merge_hint:"Plan gratuit: max. 2 fichiers. Passez à Pro pour plus.",
-    feat_size_free:"Fichiers jusqu'à 10 Mo",
-    feat_size_pro:"Fichiers jusqu'à 200 Mo",
-    feat_tools:"Tous les outils inclus",
-    feat_unlimited:"Fusion illimitée de fichiers",
-    feat_noad:"Sans publicité",
-    feat_priority:"Traitement prioritaire",
-    pricing_title:"Tarifs simples et transparents",
-    pricing_sub:"Sans engagement. Annulez à tout moment.",
-    faq_title:"Questions fréquentes", faq:[["Est-ce entièrement gratuit ?", "Le plan gratuit inclut tous les outils sans inscription, pour les fichiers jusqu'à 10 Mo et la fusion jusqu'à 2 PDFs. Pro monte la limite à 200 Mo et permet la fusion illimitée."], ["Mes fichiers sont-ils envoyés à un serveur ?", "Non. Tout se passe dans votre navigateur via WebAssembly. Vos fichiers ne quittent jamais votre appareil."], ["Quels formats puis-je convertir ?", "PDF, Word (DOCX), Excel (XLSX), images (JPG, PNG, WEBP). Fusionnez, divisez, compressez ou faites pivoter des PDFs."], ["Y a-t-il une limite de taille ?", "En plan gratuit, la limite est de 10 Mo par fichier. Avec Pro, vous pouvez convertir des fichiers jusqu'à 200 Mo."], ["Fonctionne-t-il sur mobile ?", "Oui, sur tout appareil avec un navigateur moderne : ordinateur, tablette ou mobile."], ["Puis-je uploader plusieurs fichiers à la fois ?", "Pour fusionner des PDFs oui. Les autres outils traitent un fichier à la fois."]],
-    step_read:"Lecture du fichier…", step_proc:"Traitement…", step_done:"Terminé !",
-    hist_title:"Conversions récentes", hist_empty:"Vous n'avez pas encore converti de fichiers.", hist_clear:"Effacer l'historique",
-    nav_privacy:"Confidentialité", nav_api:"API", nav_help:"Aide",
-    footer_copy:"morf · © 2025",
-    modal_privacy:"Politique de confidentialité", modal_terms:"Conditions d'utilisation",
-    modal_contact:"Contact", modal_api:"API morf",
-    err_title:"La conversion a échoué",
-    err_retry:"Réessayer",
-    err_size:"Le fichier dépasse la limite de 200 Mo. Essayez avec un fichier plus petit.",
-    err_protected:"Ce PDF est protégé par un mot de passe. Supprimez-le avant de convertir.",
-    err_corrupt:"Le fichier semble corrompu ou n'est pas dans un format valide.",
-    err_range:"Plage de pages invalide. Utilisez le format 1-3, 5, 7-9.",
-    err_popup:"Le navigateur a bloqué la fenêtre contextuelle. Autorisez les popups et réessayez.",
-    err_generic:"Une erreur inattendue s'est produite. Vérifiez que le fichier n'est pas corrompu.",
-    err_suggest:"Toujours un problème ? Écrivez-nous à hola@morf.app",
-    err_odt:"Format ODT détecté. Ouvrez-le dans LibreOffice et enregistrez-le en .docx (Fichier → Enregistrer sous → Word 2007-365) puis réessayez.",
-    t:[ {label:"PDF → Word",      desc:"Convertit un PDF en document Word éditable."},
-        {label:"Word → PDF",      desc:"Transforme Word en PDF haute fidélité."},
-        {label:"Image → PDF",     desc:"Regroupe JPG, PNG ou WEBP en un seul PDF."},
-        {label:"Fusionner PDFs",  desc:"Combine plusieurs PDFs en respectant l'ordre."},
-        {label:"Diviser PDF",     desc:"Extrait des pages ou plages de n'importe quel PDF."},
-        {label:"Compresser PDF",  desc:"Réduit la taille sans perte visible de qualité."},
-        {label:"PNG → JPG",       desc:"Convertit des images PNG en format JPG."},
-        {label:"JPG → PNG",       desc:"Convertit des images JPG en format PNG."},
-        {label:"Rotation PDF",    desc:"Fait pivoter les pages PDF de 90°, 180° ou 270°."},
-        {label:"Excel → PDF",     desc:"Convertit des feuilles Excel en PDF."} ],
-    con_intro:"Une question ou un problème ? Écrivez-nous et nous répondons en moins de 48h ouvrées.",
-    con_name:"Nom", con_email:"E-mail", con_subject:"Sujet", con_msg:"Message",
-    con_name_ph:"Votre nom", con_email_ph:"vous@email.com", con_msg_ph:"Décrivez en détail...",
-    con_subjects:[["general","Demande générale"],["bug","Signaler un bug"],["feature","Suggestion"],["api","Accès API"],["legal","Question légale"]],
-    con_send:"Envoyer", con_sending:"Envoi…", con_cancel:"Annuler",
-    con_done_title:"Message reçu",
-    con_done_sub:"Nous répondons dans les 48 heures ouvrées.",
-    con_close:"Fermer", con_required:"Veuillez remplir tous les champs",
-    con_sent:"Message envoyé",
-    con_resp_t:"Délai de réponse", con_resp_v:"< 48h ouvrées",
-    priv_chips:["Sans suivi","Traitement local","Sans stockage"],
-    api_beta:"API en bêta privée. Demandez l'accès via le formulaire de contact.",
-    api_copy:"Copier", api_copied:"✓ Copié",
-    api_plans:[{t:"Free",r:"50 req/mois",s:"10 Mo",p:"Gratuit"},{t:"Pro",r:"5 000 req/mois",s:"100 Mo",p:"€19/mois"},{t:"Business",r:"Illimité",s:"500 Mo",p:"€99/mois"}],
-  },
-  de: {
-    code:"de", flag:"🇩🇪", name:"Deutsch",
-    tagline:"Ohne Anmeldung · Kein Wasserzeichen · 100% privat",
-    hero_h1a:"Der schnellste Weg,", hero_h1b:"deine Dateien zu konvertieren.",
-    hero_sub:"PDF, Word, Excel, Bilder. Kostenlos für Dateien bis 10 MB. Deine Dateien verlassen den Browser nicht.",
-    hero_cta:"Kostenlos starten",
-    hero_drop:"Datei hier ablegen",
-    hero_drop_sub:"Automatische Tool-Erkennung",
-    tools_title:"Werkzeuge", tools_count:"verfügbar",
-    detected:"Erkannt",
-    unknown_fmt:"Format nicht erkannt",
-    incompat:"Inkompatibles Format",
-    drag_single:"Datei hier ablegen",
-    drag_multi:"Dateien hier ablegen",
-    click_hint:"oder klicken zum Auswählen",
-    processing:"Verarbeitung…",
-    convert:"Konvertieren", cancel:"Abbrechen",
-    download:"Herunterladen", other:"Weitere Datei",
-    done_title:"Bereit zum Herunterladen",
-    done_sub_s:"Datei verarbeitet", done_sub_p:"Dateien verarbeitet",
-    conv_done:"Konvertierung abgeschlossen",
-    dl_started:"Download gestartet",
-    pages_label:"Seitenbereich (z. B. 1-3, 5, 7-9)",
-    pages_ph:"Leer = alle Seiten",
-    compress_level:"Komprimierungsgrad",
-    q_low:"Leicht", q_med:"Mittel", q_high:"Maximum",
-    feat:[ ["Lokale Verarbeitung","Deine Dateien verlassen den Browser nicht."],
-           ["Format erhalten","Schriften, Ränder und Tabellen intakt."],
-           ["Sofort-Download","Ergebnis in Sekunden bereit."],
-           ["Keine Werbung","Kostenloser Plan ohne Werbung."] ],
-    max_size:"max. 200 MB",
-    free_limit:"Die Datei überschreitet das 10-MB-Limit des kostenlosen Plans.",
-    free_batch:"Im kostenlosen Plan können bis zu 2 Dateien zusammengeführt werden. Upgrade auf Pro für unbegrenzte Dateien.",
-    free_size:"Die Datei überschreitet das 10-MB-Limit des kostenlosen Plans.",
-    upgrade_cta:"Pro-Pläne ansehen",
-    upgrade_sub:"Unbegrenzt · Dateien bis 200 MB · Keine Werbung",
-    plan_free:"Kostenlos", plan_pro:"Pro",
-    plan_free_desc:"Für gelegentliche Nutzung",
-    plan_pro_desc:"Für professionelle Nutzung",
-    plan_monthly:"pro Monat", plan_yearly:"pro Jahr",
-    plan_save:"25% sparen",
-    plan_cta_free:"Kostenlos starten",
-    plan_cta_pro:"Mit Pro starten",
-    plan_current:"Aktueller Plan",
-    feat_batch:"Bis zu 2 Dateien zusammenführen",
-    merge_hint:"Kostenloser Plan: max. 2 Dateien. Upgrade auf Pro für mehr.",
-    feat_size_free:"Dateien bis 10 MB",
-    feat_size_pro:"Dateien bis 200 MB",
-    feat_tools:"Alle Tools inklusive",
-    feat_unlimited:"Unbegrenzte Dateien zusammenführen",
-    feat_noad:"Keine Werbung",
-    feat_priority:"Prioritätsverarbeitung",
-    pricing_title:"Einfache, transparente Preise",
-    pricing_sub:"Keine Verträge. Jederzeit kündbar.",
-    faq_title:"Häufig gestellte Fragen", faq:[["Ist es komplett kostenlos?", "Der kostenlose Plan umfasst alle Tools ohne Anmeldung, für Dateien bis 10 MB und das Zusammenführen von bis zu 2 PDFs. Pro erhöht das Limit auf 200 MB und erlaubt unbegrenzte Zusammenführung."], ["Werden meine Dateien hochgeladen?", "Nein. Alles läuft im Browser via WebAssembly. Deine Dateien verlassen niemals dein Gerät."], ["Welche Formate kann ich konvertieren?", "PDF, Word (DOCX), Excel (XLSX), Bilder (JPG, PNG, WEBP). PDFs zusammenführen, teilen, komprimieren oder drehen."], ["Gibt es ein Dateigrößenlimit?", "Im kostenlosen Plan liegt das Limit bei 10 MB pro Datei. Mit Pro kannst du Dateien bis zu 200 MB konvertieren."], ["Funktioniert es auf dem Handy?", "Ja, auf jedem Gerät mit einem modernen Browser: Desktop, Tablet oder Handy."], ["Kann ich mehrere Dateien gleichzeitig hochladen?", "Beim Zusammenführen von PDFs ja. Andere Tools verarbeiten eine Datei pro Mal."]],
-    counter:"Dateien konvertiert",
-    step_read:"Datei lesen…", step_proc:"Verarbeitung…", step_done:"Fertig!",
-    hist_title:"Letzte Konvertierungen", hist_empty:"Du hast noch keine Dateien konvertiert.", hist_clear:"Verlauf löschen",
-    nav_privacy:"Datenschutz", nav_api:"API", nav_help:"Hilfe",
-    footer_copy:"morf · © 2025",
-    modal_privacy:"Datenschutzerklärung", modal_terms:"Nutzungsbedingungen",
-    modal_contact:"Kontakt", modal_api:"morf API",
-    err_title:"Konvertierung fehlgeschlagen",
-    err_retry:"Erneut versuchen",
-    err_size:"Die Datei überschreitet das 200-MB-Limit. Bitte verwende eine kleinere Datei.",
-    err_protected:"Dieses PDF ist passwortgeschützt. Entferne das Passwort vor der Konvertierung.",
-    err_corrupt:"Die Datei scheint beschädigt oder kein gültiges Format zu sein.",
-    err_range:"Ungültiger Seitenbereich. Verwende das Format 1-3, 5, 7-9.",
-    err_popup:"Der Browser hat das Popup-Fenster blockiert. Erlaube Popups und versuche es erneut.",
-    err_generic:"Ein unerwarteter Fehler ist aufgetreten. Prüfe, ob die Datei nicht beschädigt ist.",
-    err_suggest:"Immer noch Probleme? Schreib uns an hola@morf.app",
-    err_odt:"ODT-Format erkannt. Öffne es in LibreOffice und speichere es als .docx (Datei → Speichern unter → Word 2007-365) und versuche es erneut.",
-    t:[ {label:"PDF → Word",       desc:"Konvertiert PDF in ein bearbeitbares Word-Dokument."},
-        {label:"Word → PDF",       desc:"Wandelt Word in hochwertige PDFs um."},
-        {label:"Bild → PDF",       desc:"Fasst JPG, PNG oder WEBP in eine PDF zusammen."},
-        {label:"PDFs zusammenführen", desc:"Kombiniert mehrere PDFs in der richtigen Reihenfolge."},
-        {label:"PDF teilen",       desc:"Extrahiert Seiten oder Bereiche aus beliebigen PDFs."},
-        {label:"PDF komprimieren", desc:"Reduziert die Dateigröße ohne sichtbaren Qualitätsverlust."},
-        {label:"PNG → JPG",        desc:"Konvertiert PNG-Bilder in das JPG-Format."},
-        {label:"JPG → PNG",        desc:"Konvertiert JPG-Bilder in das PNG-Format."},
-        {label:"PDF drehen",       desc:"Dreht PDF-Seiten um 90°, 180° oder 270°."},
-        {label:"Excel → PDF",      desc:"Konvertiert Excel-Tabellen in PDF."} ],
-    con_intro:"Fragen oder Probleme? Schreib uns und wir antworten innerhalb von 48 Stunden.",
-    con_name:"Name", con_email:"E-Mail", con_subject:"Betreff", con_msg:"Nachricht",
-    con_name_ph:"Dein Name", con_email_ph:"du@email.com", con_msg_ph:"Beschreibe es im Detail...",
-    con_subjects:[["general","Allgemeine Anfrage"],["bug","Fehler melden"],["feature","Verbesserungsvorschlag"],["api","API-Zugang"],["legal","Rechtliche Frage"]],
-    con_send:"Nachricht senden", con_sending:"Senden…", con_cancel:"Abbrechen",
-    con_done_title:"Nachricht erhalten",
-    con_done_sub:"Wir antworten innerhalb von 48 Werktagen.",
-    con_close:"Schließen", con_required:"Bitte alle Felder ausfüllen",
-    con_sent:"Nachricht gesendet",
-    con_resp_t:"Antwortzeit", con_resp_v:"< 48 Werktage",
-    priv_chips:["Kein Tracking","Lokale Verarbeitung","Keine Speicherung"],
-    api_beta:"API in privater Beta. Zugang über das Kontaktformular anfordern.",
-    api_copy:"Kopieren", api_copied:"✓ Kopiert",
-    api_plans:[{t:"Free",r:"50 Req/Monat",s:"10 MB",p:"Kostenlos"},{t:"Pro",r:"5.000 Req/Monat",s:"100 MB",p:"€19/Monat"},{t:"Business",r:"Unbegrenzt",s:"500 MB",p:"€99/Monat"}],
-  },
-  pt: {
-    code:"pt", flag:"🇵🇹", name:"Português",
-    tagline:"Sem registo · Sem marcas de água · 100% privado",
-    hero_h1a:"A forma mais rápida de", hero_h1b:"converter os teus ficheiros.",
-    hero_sub:"PDF, Word, Excel, imagens. Grátis para ficheiros até 10 MB. Os ficheiros ficam sempre no teu browser.",
-    hero_cta:"Começar grátis",
-    hero_drop:"Arrasta qualquer ficheiro para aqui",
-    hero_drop_sub:"Deteção automática da ferramenta",
-    tools_title:"Ferramentas", tools_count:"disponíveis",
-    detected:"Detetado",
-    unknown_fmt:"Formato não reconhecido",
-    incompat:"Formato incompatível",
-    drag_single:"Arrasta o teu ficheiro para aqui",
-    drag_multi:"Arrasta os teus ficheiros para aqui",
-    click_hint:"ou clica para selecionar",
-    processing:"A processar…",
-    convert:"Converter", cancel:"Cancelar",
-    download:"Descarregar", other:"Outro ficheiro",
-    done_title:"Pronto para descarregar",
-    done_sub_s:"ficheiro processado", done_sub_p:"ficheiros processados",
-    conv_done:"Conversão concluída",
-    dl_started:"Download iniciado",
-    pages_label:"Intervalo de páginas (ex: 1-3, 5, 7-9)",
-    pages_ph:"Vazio = todas as páginas",
-    compress_level:"Nível de compressão",
-    q_low:"Leve", q_med:"Média", q_high:"Máxima",
-    feat:[ ["Processamento local","Os teus ficheiros não saem do browser."],
-           ["Formato preservado","Fontes, margens e tabelas intactas."],
-           ["Download imediato","Resultado pronto em segundos."],
-           ["Sem publicidade","Plano gratuito sem anúncios."] ],
-    free_limit:"O ficheiro excede o limite de 10 MB do plano gratuito.",
-    free_batch:"O plano gratuito permite unir até 2 ficheiros. Atualiza para Pro para unir ficheiros ilimitados.",
-    free_size:"O ficheiro excede o limite de 10 MB do plano gratuito.",
-    upgrade_cta:"Ver planos Pro",
-    upgrade_sub:"Ilimitado · Ficheiros até 200 MB · Sem anúncios",
-    plan_free:"Gratuito", plan_pro:"Pro",
-    plan_free_desc:"Para uso ocasional",
-    plan_pro_desc:"Para uso profissional",
-    plan_monthly:"por mês", plan_yearly:"por ano",
-    plan_save:"Poupa 25%",
-    plan_cta_free:"Começar grátis",
-    plan_cta_pro:"Começar com Pro",
-    plan_current:"Plano atual",
-    feat_batch:"Unir até 2 ficheiros",
-    merge_hint:"Plano gratuito: máx. 2 ficheiros. Atualiza para Pro para mais.",
-    feat_size_free:"Ficheiros até 10 MB",
-    feat_size_pro:"Ficheiros até 200 MB",
-    feat_tools:"Todas as ferramentas",
-    feat_unlimited:"Unir ficheiros ilimitados",
-    feat_noad:"Sem anúncios",
-    feat_priority:"Processamento prioritário",
-    pricing_title:"Preços simples e transparentes",
-    pricing_sub:"Sem contratos. Cancela quando quiseres.",
-    faq_title:"Perguntas frequentes", faq:[["É completamente gratuito?", "O plano gratuito inclui todas as ferramentas sem registo, para ficheiros até 10 MB e união de até 2 PDFs. O Pro aumenta o limite para 200 MB e permite união ilimitada."], ["Os meus ficheiros são enviados para um servidor?", "Não. Tudo acontece no browser via WebAssembly. Os teus ficheiros nunca saem do teu dispositivo."], ["Que formatos posso converter?", "PDF, Word (DOCX), Excel (XLSX), imagens (JPG, PNG, WEBP). Une, divide, comprime ou roda PDFs."], ["Existe limite de tamanho?", "No plano gratuito o limite é de 10 MB por ficheiro. Com Pro podes converter ficheiros até 200 MB."], ["Funciona no telemóvel?", "Sim, em qualquer dispositivo com um browser moderno: computador, tablet ou telemóvel."], ["Posso carregar vários ficheiros de uma vez?", "Para unir PDFs sim. As outras ferramentas processam um ficheiro de cada vez."]],
-    max_size:"máx. 200 MB",
-    counter:"ficheiros convertidos",
-    step_read:"A ler ficheiro…", step_proc:"A processar…", step_done:"Pronto!",
-    hist_title:"Conversões recentes", hist_empty:"Ainda não converteste nenhum ficheiro.", hist_clear:"Limpar histórico",
-    nav_privacy:"Privacidade", nav_api:"API", nav_help:"Ajuda",
-    footer_copy:"morf · © 2025",
-    modal_privacy:"Política de Privacidade", modal_terms:"Termos de Utilização",
-    modal_contact:"Contacto", modal_api:"API morf",
-    err_title:"Não foi possível completar a conversão",
-    err_retry:"Tentar novamente",
-    err_size:"O ficheiro excede o limite de 200 MB. Usa um ficheiro mais pequeno.",
-    err_protected:"Este PDF está protegido por palavra-passe. Remove-a antes de converter.",
-    err_corrupt:"O ficheiro parece estar corrompido ou não é um formato válido.",
-    err_range:"Intervalo de páginas inválido. Usa o formato 1-3, 5, 7-9.",
-    err_popup:"O browser bloqueou a janela pop-up. Permite pop-ups e tenta novamente.",
-    err_generic:"Ocorreu um erro inesperado. Verifica se o ficheiro não está corrompido.",
-    err_suggest:"Continua a falhar? Escreve-nos para hola@morf.app",
-    err_odt:"Formato ODT detetado. Abre-o no LibreOffice e guarda como .docx (Ficheiro → Guardar como → Word 2007-365) e tenta novamente.",
-    t:[ {label:"PDF → Word",       desc:"Converte PDF em documento Word editável."},
-        {label:"Word → PDF",       desc:"Transforma Word em PDF de alta fidelidade."},
-        {label:"Imagem → PDF",     desc:"Agrupa JPG, PNG ou WEBP num único PDF."},
-        {label:"Unir PDFs",        desc:"Combina vários PDFs respeitando a ordem."},
-        {label:"Dividir PDF",      desc:"Extrai páginas ou intervalos de qualquer PDF."},
-        {label:"Comprimir PDF",    desc:"Reduz o tamanho sem perda visível de qualidade."},
-        {label:"PNG → JPG",        desc:"Converte imagens PNG para formato JPG."},
-        {label:"JPG → PNG",        desc:"Converte imagens JPG para formato PNG."},
-        {label:"Rodar PDF",        desc:"Roda páginas do PDF 90°, 180° ou 270°."},
-        {label:"Excel → PDF",      desc:"Converte folhas de cálculo Excel em PDF."} ],
-    con_intro:"Tens alguma dúvida? Escreve-nos e respondemos em menos de 48h úteis.",
-    con_name:"Nome", con_email:"E-mail", con_subject:"Assunto", con_msg:"Mensagem",
-    con_name_ph:"O teu nome", con_email_ph:"tu@email.com", con_msg_ph:"Descreve em detalhe...",
-    con_subjects:[["general","Consulta geral"],["bug","Reportar erro"],["feature","Sugestão"],["api","Acesso à API"],["legal","Assunto legal"]],
-    con_send:"Enviar mensagem", con_sending:"A enviar…", con_cancel:"Cancelar",
-    con_done_title:"Mensagem recebida",
-    con_done_sub:"Respondemos em menos de 48 horas úteis.",
-    con_close:"Fechar", con_required:"Preenche todos os campos",
-    con_sent:"Mensagem enviada",
-    con_resp_t:"Resposta", con_resp_v:"< 48h úteis",
-    priv_chips:["Sem rastreio","Processamento local","Sem armazenamento"],
-    api_beta:"API em beta privada. Solicita acesso no formulário de contacto.",
-    api_copy:"Copiar", api_copied:"✓ Copiado",
-    api_plans:[{t:"Free",r:"50 req/mês",s:"10 MB",p:"Grátis"},{t:"Pro",r:"5.000 req/mês",s:"100 MB",p:"€19/mês"},{t:"Business",r:"Ilimitado",s:"500 MB",p:"€99/mês"}],
-  },
-};
-
-function detectLang() {
-  const nav = (navigator.language || navigator.userLanguage || "en").toLowerCase().slice(0,2);
-  return LANGS[nav] ? nav : "en";
-}
-
-const LangCtx = createContext(null);
-const useLang = () => useContext(LangCtx);
+import { LANGS, LangCtx, detectLang } from "./contexts/LangContext";
+import { Ic, Tag } from "./components/icons";
+import FaqItem from "./components/FaqItem";
+import LangPicker from "./components/LangPicker";
+import Modal from "./components/Modal";
+import UpgradeModal from "./components/UpgradeModal";
+import Toast from "./components/Toast";
+import Panel, { TOOL_BASE } from "./components/Panel";
+import { Privacy, Terms, Contact, API } from "./components/ModalContents";
 
 /* ── CSS ──────────────────────────────────────────────────────────────────── */
 const css = `
@@ -685,679 +192,6 @@ const css = `
   .fl:hover{color:var(--t1)}
 `;
 
-/* ── Icons ────────────────────────────────────────────────────────────────── */
-const ic = {
-  upload:   <><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></>,
-  file:     <><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></>,
-  word:     <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><polyline points="8 15 10 9 12 14 14 9 16 15"/></>,
-  pdf:      <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/><line x1="9" y1="11" x2="15" y2="11"/></>,
-  img:      <><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></>,
-  merge:    <><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="18" x2="16" y2="18"/><line x1="4" y1="9" x2="4" y2="15"/><polyline points="2 12 4 15 6 12"/><line x1="20" y1="9" x2="20" y2="15"/><polyline points="18 12 20 9 22 12"/></>,
-  split:    <><line x1="12" y1="2" x2="12" y2="22"/><polyline points="5 9 12 2 19 9"/><polyline points="5 15 12 22 19 15"/></>,
-  compress: <><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="10" y1="20" x2="21" y2="9"/><line x1="3" y1="11" x2="14" y2="0"/></>,
-  arrow:    <><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></>,
-  check:    <polyline points="20 6 9 17 4 12"/>,
-  x:        <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>,
-  download: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></>,
-  logo:     <><rect x="2" y="2" width="9" height="9" rx="2"/><rect x="13" y="2" width="9" height="9" rx="2"/><rect x="2" y="13" width="9" height="9" rx="2"/><path d="M13 18h9"/><path d="M18 13v9"/></>,
-  lock:     <><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>,
-  code:     <><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></>,
-  mail:     <><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></>,
-  zap:      <><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></>,
-  shield:   <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></>,
-  globe:    <><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></>,
-  chevron:  <polyline points="6 9 12 15 18 9"/>,
-  rotate:   <><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></>,
-  excel:    <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><polyline points="8 13 10.5 17 13 13"/><line x1="8" y1="17" x2="13" y2="13"/></>,
-  sun:      <><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></>,
-  moon:     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>,
-};
-const Ic = ({ n, s=17, c="currentColor", sw=1.5 }) => (
-  <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
-    {ic[n]||ic.file}
-  </svg>
-);
-const Tag = ({ type }) => {
-  const m = { pdf:["tpdf","PDF"], docx:["tdocx","DOCX"], img:["timg","IMG"] };
-  const [cls,lbl] = m[type]||["tpdf","PDF"];
-  return <span className={`tag ${cls}`}>{lbl}</span>;
-};
-
-/* ── Upgrade Modal ───────────────────────────────────────────────────────── */
-function UpgradeModal({ reason, billingYear, setBillingYear, onClose, T }) {
-  const monthly = 5.99;
-  const yearly  = (monthly * 12 * 0.75 / 12).toFixed(2);
-  const price   = billingYear ? yearly : monthly;
-
-  return (
-    <div className="ov" onClick={onClose}>
-      <div className="sh" style={{maxWidth:480}} onClick={e=>e.stopPropagation()}>
-        <div className="sh-head">
-          <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <Ic n="zap" s={16} c="var(--ac)"/>
-            <span style={{fontWeight:600,fontSize:14}}>{T.upgrade_cta}</span>
-          </div>
-          <button style={{background:"none",border:"none",cursor:"pointer",padding:4}} onClick={onClose}>
-            <Ic n="x" s={16} c="var(--tm)"/>
-          </button>
-        </div>
-        <div className="sh-body">
-          {/* Reason */}
-          <div style={{background:"#FEF9EC",border:"1px solid #FCD34D",borderRadius:8,padding:"10px 14px",
-            fontSize:13,color:"#92400E",marginBottom:20,display:"flex",gap:8,alignItems:"flex-start"}}>
-            <Ic n="zap" s={14} c="#F59E0B" style={{flexShrink:0,marginTop:1}}/>
-            <span>{reason==='batch' ? T.free_batch : T.free_size}</span>
-          </div>
-
-          {/* Billing toggle */}
-          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,marginBottom:20}}>
-            <span style={{fontSize:13,color:!billingYear?"var(--t1)":"var(--tm)",fontWeight:!billingYear?500:400}}>Mensual</span>
-            <button onClick={()=>setBillingYear(y=>!y)}
-              style={{width:40,height:22,borderRadius:11,border:"none",cursor:"pointer",
-                background:billingYear?"var(--ac)":"var(--bd)",transition:"background .2s",position:"relative",padding:0}}>
-              <span style={{position:"absolute",top:3,left:billingYear?20:3,width:16,height:16,
-                borderRadius:"50%",background:"#fff",transition:"left .2s",display:"block"}}/>
-            </button>
-            <span style={{fontSize:13,color:billingYear?"var(--t1)":"var(--tm)",fontWeight:billingYear?500:400}}>
-              Anual <span style={{fontSize:10,background:"#DCFCE7",color:"#15803D",padding:"1px 5px",borderRadius:3,fontWeight:600}}>{T.plan_save}</span>
-            </span>
-          </div>
-
-          {/* Plans */}
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:20}}>
-            {/* Free */}
-            <div style={{border:"1px solid var(--bd)",borderRadius:10,padding:"16px 14px"}}>
-              <div style={{fontWeight:600,fontSize:13,marginBottom:2}}>{T.plan_free}</div>
-              <div style={{fontSize:11,color:"var(--tm)",marginBottom:12}}>{T.plan_free_desc}</div>
-              <div style={{fontSize:22,fontWeight:700,marginBottom:12}}>€0</div>
-              {[T.feat_batch, T.feat_size_free, T.feat_tools].map((f,i)=>(
-                <div key={i} style={{display:"flex",gap:6,alignItems:"flex-start",fontSize:12,color:"var(--t2)",marginBottom:6}}>
-                  <Ic n="check" s={12} c="var(--tm)"/>{f}
-                </div>
-              ))}
-              <button className="bg" style={{width:"100%",marginTop:12,fontSize:12,padding:"7px 0",textAlign:"center"}} onClick={onClose}>
-                {T.plan_current}
-              </button>
-            </div>
-            {/* Pro */}
-            <div style={{border:"2px solid var(--ac)",borderRadius:10,padding:"16px 14px",background:"var(--al)",position:"relative"}}>
-              <div style={{position:"absolute",top:-10,left:"50%",transform:"translateX(-50%)",
-                background:"var(--ac)",color:"#fff",fontSize:9,fontWeight:600,padding:"2px 8px",borderRadius:10,
-                fontFamily:"'DM Mono',monospace",letterSpacing:".05em",whiteSpace:"nowrap"}}>MÁS POPULAR</div>
-              <div style={{fontWeight:600,fontSize:13,marginBottom:2,color:"var(--ac)"}}>{T.plan_pro}</div>
-              <div style={{fontSize:11,color:"var(--tm)",marginBottom:12}}>{T.plan_pro_desc}</div>
-              <div style={{fontSize:22,fontWeight:700,marginBottom:2,color:"var(--ac)"}}>€{price}</div>
-              <div style={{fontSize:10,color:"var(--tm)",marginBottom:10}}>{billingYear ? T.plan_monthly : T.plan_monthly}</div>
-              {[T.feat_unlimited, T.feat_size_pro, T.feat_tools, T.feat_noad, T.feat_priority].map((f,i)=>(
-                <div key={i} style={{display:"flex",gap:6,alignItems:"flex-start",fontSize:12,color:"var(--t1)",marginBottom:6}}>
-                  <Ic n="check" s={12} c="var(--ok)"/>{f}
-                </div>
-              ))}
-              <button className="bp" style={{width:"100%",marginTop:12,fontSize:12,padding:"8px 0",justifyContent:"center"}}
-                onClick={()=>alert('Pasarela de pago próximamente')}>
-                {T.plan_cta_pro}
-              </button>
-            </div>
-          </div>
-          <div style={{textAlign:"center",fontSize:11,color:"var(--tm)"}}>{T.pricing_sub}</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ── FAQ Item ────────────────────────────────────────────────────────────── */
-function FaqItem({ q, a }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div style={{borderBottom:"1px solid var(--bd)"}}>
-      <button onClick={()=>setOpen(o=>!o)}
-        style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",
-          padding:"14px 0",background:"transparent",border:"none",cursor:"pointer",
-          fontFamily:"'DM Sans',sans-serif",fontSize:14,fontWeight:500,color:"var(--t1)",
-          textAlign:"left",gap:12}}>
-        <span>{q}</span>
-        <span style={{flexShrink:0,transform:open?"rotate(180deg)":"rotate(0deg)",transition:"transform .2s"}}>
-          <Ic n="chevron" s={16} c="var(--tm)"/>
-        </span>
-      </button>
-      {open&&(
-        <div style={{fontSize:13,color:"var(--t2)",lineHeight:1.7,paddingBottom:14,animation:"fu .2s ease both"}}>
-          {a}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ── Language Picker ─────────────────────────────────────────────────────── */
-function LangPicker({ lang, setLang }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef();
-  useEffect(() => {
-    const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, []);
-  const cur = LANGS[lang];
-  return (
-    <div className="lang-wrap" ref={ref}>
-      <button className="lang-btn" onClick={() => setOpen(o => !o)}>
-        <span style={{fontSize:15}}>{cur.flag}</span>
-        <span>{cur.code.toUpperCase()}</span>
-        <Ic n="chevron" s={12} c="var(--tm)"/>
-      </button>
-      {open && (
-        <div className="lang-drop">
-          {Object.values(LANGS).map(l => (
-            <button key={l.code} className={`lang-opt ${lang===l.code?"sel":""}`}
-              onClick={() => { setLang(l.code); setOpen(false); }}>
-              <span style={{fontSize:15}}>{l.flag}</span>
-              <span>{l.name}</span>
-              {lang===l.code && <Ic n="check" s={12} c="var(--ac)" style={{marginLeft:"auto"}}/>}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ── Modal ───────────────────────────────────────────────────────────────── */
-function Modal({ title, icon, onClose, children }) {
-  useEffect(() => {
-    const h = e => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", h);
-    return () => window.removeEventListener("keydown", h);
-  }, []);
-  return (
-    <div className="ov" onClick={e => { if (e.target===e.currentTarget) onClose(); }}>
-      <div className="sh">
-        <div className="sh-head">
-          <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <div style={{width:32,height:32,borderRadius:7,background:"var(--al)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-              <Ic n={icon} s={15} c="var(--ac)"/>
-            </div>
-            <span style={{fontWeight:600,fontSize:14}}>{title}</span>
-          </div>
-          <button className="bg" style={{padding:"5px 9px"}} onClick={onClose}><Ic n="x" s={14}/></button>
-        </div>
-        <div className="sh-body lg">{children}</div>
-      </div>
-    </div>
-  );
-}
-
-/* ── Privacy ─────────────────────────────────────────────────────────────── */
-function Privacy() {
-  const T = useLang();
-  return <>
-    <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:20}}>
-      {[["shield",T.priv_chips[0]],["lock",T.priv_chips[1]],["check",T.priv_chips[2]]].map(([i,l])=>(
-        <span key={l} className="chip"><Ic n={i} s={11} c="var(--ac)"/>{l}</span>
-      ))}
-    </div>
-    <h2>{T.code==="es"?"Qué datos procesamos":T.code==="en"?"What data we process":T.code==="fr"?"Données traitées":T.code==="de"?"Welche Daten wir verarbeiten":"Que dados processamos"}</h2>
-    <p>{T.code==="es"?"morf procesa tus archivos directamente en tu navegador mediante WebAssembly. Ningún archivo es enviado a servidores externos — todo ocurre localmente en tu dispositivo.":T.code==="en"?"morf processes your files directly in your browser using WebAssembly. No file is ever sent to external servers — everything happens locally on your device.":T.code==="fr"?"morf traite vos fichiers directement dans votre navigateur via WebAssembly. Aucun fichier n'est envoyé à des serveurs externes — tout se passe localement sur votre appareil.":T.code==="de"?"morf verarbeitet deine Dateien direkt im Browser per WebAssembly. Keine Datei wird an externe Server gesendet — alles geschieht lokal auf deinem Gerät.":"morf processa os teus ficheiros diretamente no browser via WebAssembly. Nenhum ficheiro é enviado para servidores externos — tudo acontece localmente no teu dispositivo."}</p>
-    <h2>{T.code==="es"?"Qué no recopilamos":T.code==="en"?"What we don't collect":T.code==="fr"?"Ce que nous ne collectons pas":T.code==="de"?"Was wir nicht erfassen":"O que não recolhemos"}</h2>
-    <ul>
-      {(T.code==="es"?["No guardamos ni transmitimos el contenido de tus archivos.","No creamos cuentas ni perfiles de usuario.","No usamos cookies de seguimiento ni píxeles de rastreo.","No compartimos datos con terceros con fines publicitarios."]:T.code==="en"?["We do not save or transmit the content of your files.","We do not create user accounts or profiles.","We do not use tracking cookies or tracking pixels.","We do not share data with third parties for advertising purposes."]:T.code==="fr"?["Nous ne sauvegardons pas le contenu de vos fichiers.","Nous ne créons pas de comptes ni de profils utilisateur.","Nous n'utilisons pas de cookies de suivi.","Nous ne partageons pas de données avec des tiers à des fins publicitaires."]:T.code==="de"?["Wir speichern oder übertragen keine Dateiinhalte.","Wir erstellen keine Benutzerkonten oder Profile.","Wir verwenden keine Tracking-Cookies oder Tracking-Pixel.","Wir teilen keine Daten mit Dritten für Werbezwecke."]:["Não guardamos nem transmitimos o conteúdo dos teus ficheiros.","Não criamos contas nem perfis de utilizador.","Não usamos cookies de rastreio.","Não partilhamos dados com terceiros para fins publicitários."]).map((item,i)=>(
-        <li key={i}>{item}</li>
-      ))}
-    </ul>
-    <div className="divv"/>
-    <h2>{T.code==="es"?"Retención de archivos":T.code==="en"?"File retention":T.code==="fr"?"Conservation des fichiers":T.code==="de"?"Dateispeicherung":"Retenção de ficheiros"}</h2>
-    <p>{T.code==="es"?"Los archivos procesados existen únicamente en memoria temporal durante la sesión activa. Al cerrar la pestaña o el navegador, todos los datos son eliminados automáticamente.":T.code==="en"?"Processed files exist only in temporary browser memory during the active session. When you close the tab or browser, all processing data is automatically deleted.":T.code==="fr"?"Les fichiers traités n'existent que dans la mémoire temporaire du navigateur. Lorsque vous fermez l'onglet, toutes les données sont automatiquement supprimées.":T.code==="de"?"Verarbeitete Dateien existieren nur im temporären Browserspeicher während der aktiven Sitzung. Beim Schließen des Tabs werden alle Daten automatisch gelöscht.":"Os ficheiros processados existem apenas na memória temporária do browser durante a sessão. Ao fechar o separador, todos os dados são eliminados automaticamente."}</p>
-    <div className="divv"/>
-    <p style={{fontSize:11,color:"var(--tm)"}}>{T.code==="es"?"Última actualización: enero 2025 · morf v0.1 Beta":T.code==="en"?"Last updated: January 2025 · morf v0.1 Beta":T.code==="fr"?"Dernière mise à jour : janvier 2025 · morf v0.1 Beta":T.code==="de"?"Letzte Aktualisierung: Januar 2025 · morf v0.1 Beta":"Última atualização: janeiro de 2025 · morf v0.1 Beta"}</p>
-  </>;
-}
-
-/* ── Terms ───────────────────────────────────────────────────────────────── */
-function Terms() {
-  const T = useLang();
-  const isEs = T.code==="es", isEn = T.code==="en", isFr = T.code==="fr", isDe = T.code==="de";
-  return <>
-    <p>{isEs?"Al usar morf aceptas estos términos.":isEn?"By using morf you accept these terms.":isFr?"En utilisant morf, vous acceptez ces conditions.":isDe?"Durch die Nutzung von morf akzeptierst du diese Bedingungen.":"Ao usar o morf aceitas estes termos."}</p>
-    <h2>{isEs?"1. Uso del servicio":isEn?"1. Use of the service":isFr?"1. Utilisation du service":isDe?"1. Nutzung des Dienstes":"1. Utilização do serviço"}</h2>
-    <p>{isEs?"morf es una herramienta de conversión de archivos de uso personal y profesional. Puedes usarla para convertir archivos propios o sobre los que tengas los derechos necesarios.":isEn?"morf is a file conversion tool for personal and professional use. You may use it to convert files you own or have the necessary rights to.":isFr?"morf est un outil de conversion de fichiers à usage personnel et professionnel. Vous pouvez l'utiliser pour convertir des fichiers qui vous appartiennent.":isDe?"morf ist ein Dateikonvertierungstool für den persönlichen und beruflichen Einsatz. Du darfst es für Dateien nutzen, die dir gehören oder für die du die nötigen Rechte hast.":"morf é uma ferramenta de conversão de ficheiros para uso pessoal e profissional."}</p>
-    <h2>{isEs?"2. Propiedad intelectual":isEn?"2. Intellectual property":isFr?"2. Propriété intellectuelle":isDe?"2. Geistiges Eigentum":"2. Propriedade intelectual"}</h2>
-    <p>{isEs?"El software, diseño y marca de morf son propiedad exclusiva de sus creadores. Tus archivos siguen siendo de tu entera propiedad — morf no reclama ningún derecho sobre el contenido que procesas.":isEn?"The software, design and brand of morf are the exclusive property of its creators. Your files remain entirely your property — morf claims no rights over the content you process.":isFr?"Le logiciel, le design et la marque morf sont la propriété exclusive de ses créateurs. Vos fichiers restent entièrement votre propriété.":isDe?"Software, Design und Marke von morf sind ausschließliches Eigentum der Entwickler. Deine Dateien bleiben vollständig dein Eigentum.":"O software, design e marca do morf são propriedade exclusiva dos seus criadores. Os teus ficheiros continuam a ser tua propriedade."}</p>
-    <h2>{isEs?"3. Limitación de responsabilidad":isEn?"3. Limitation of liability":isFr?"3. Limitation de responsabilité":isDe?"3. Haftungsbeschränkung":"3. Limitação de responsabilidade"}</h2>
-    <p>{isEs?"morf no se hace responsable de pérdida de datos o incompatibilidades de formato. Recomendamos mantener siempre una copia de seguridad de los archivos originales.":isEn?"morf is not responsible for data loss or format incompatibilities. We recommend always keeping a backup of your original files.":isFr?"morf n'est pas responsable de la perte de données ou des incompatibilités de format. Conservez toujours une copie de sauvegarde de vos fichiers originaux.":isDe?"morf haftet nicht für Datenverlust oder Formatinkompatibilitäten. Behalte immer eine Sicherungskopie deiner Originaldateien.":"morf não se responsabiliza por perda de dados ou incompatibilidades de formato. Recomendamos manter sempre uma cópia de segurança dos ficheiros originais."}</p>
-    <div className="divv"/>
-    <p style={{fontSize:11,color:"var(--tm)"}}>{isEs?"Última actualización: enero 2025":isEn?"Last updated: January 2025":isFr?"Dernière mise à jour : janvier 2025":isDe?"Letzte Aktualisierung: Januar 2025":"Última atualização: janeiro de 2025"}</p>
-  </>;
-}
-
-/* ── Contact ─────────────────────────────────────────────────────────────── */
-function Contact({ showToast, onClose }) {
-  const T = useLang();
-  const [form, setForm] = useState({ name:"", email:"", subject:"general", msg:"" });
-  const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
-  const set = k => e => setForm(p=>({...p,[k]:e.target.value}));
-
-  const send = () => {
-    if (!form.name||!form.email||!form.msg){ showToast(T.con_required,"err"); return; }
-    setSending(true);
-    setTimeout(()=>{ setSending(false); setSent(true); showToast(T.con_sent); }, 1800);
-  };
-
-  if (sent) return (
-    <div style={{textAlign:"center",padding:"32px 0"}}>
-      <div style={{width:52,height:52,borderRadius:"50%",background:"#F0FDF4",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px"}}>
-        <Ic n="check" s={22} c="var(--ok)"/>
-      </div>
-      <div style={{fontWeight:500,marginBottom:6}}>{T.con_done_title}</div>
-      <p style={{color:"var(--t2)",fontSize:13,maxWidth:300,margin:"0 auto 22px",lineHeight:1.6}}>{T.con_done_sub}</p>
-      <button className="bg" onClick={onClose}>{T.con_close}</button>
-    </div>
-  );
-
-  return <>
-    <p style={{marginBottom:18}}>{T.con_intro}</p>
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
-      <div><label className="fi-label">{T.con_name}</label><input className="fi-inp" placeholder={T.con_name_ph} value={form.name} onChange={set("name")}/></div>
-      <div><label className="fi-label">{T.con_email}</label><input className="fi-inp" type="email" placeholder={T.con_email_ph} value={form.email} onChange={set("email")}/></div>
-    </div>
-    <div style={{marginBottom:12}}>
-      <label className="fi-label">{T.con_subject}</label>
-      <select className="fi-inp" value={form.subject} onChange={set("subject")}>
-        {T.con_subjects.map(([v,l])=><option key={v} value={v}>{l}</option>)}
-      </select>
-    </div>
-    <div style={{marginBottom:16}}>
-      <label className="fi-label">{T.con_msg}</label>
-      <textarea className="fi-inp fi-ta" placeholder={T.con_msg_ph} value={form.msg} onChange={set("msg")}/>
-    </div>
-    <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginBottom:20}}>
-      <button className="bg" onClick={onClose}>{T.con_cancel}</button>
-      <button className="bp" onClick={send} disabled={sending}>
-        {sending?<><div className="spn"/>{T.con_sending}</>:<><Ic n="mail" s={14}/>{T.con_send}</>}
-      </button>
-    </div>
-    <div className="divv"/>
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-      {[{i:"mail",t:"Email",v:"hola@morf.app"},{i:"zap",t:T.con_resp_t,v:T.con_resp_v}].map(r=>(
-        <div key={r.t} style={{display:"flex",gap:10,padding:"12px 14px",background:"#F9F9F8",borderRadius:8,border:"1px solid var(--bd)"}}>
-          <Ic n={r.i} s={14} c="var(--ac)"/>
-          <div><div style={{fontSize:11,fontWeight:500,marginBottom:1}}>{r.t}</div><div style={{fontSize:11,color:"var(--tm)"}}>{r.v}</div></div>
-        </div>
-      ))}
-    </div>
-  </>;
-}
-
-/* ── API ─────────────────────────────────────────────────────────────────── */
-function CB({ id, txt, children, cop, copy, T }) {
-  return (
-    <div className="cb">
-      {children}
-      <button className="cpbtn" onClick={()=>copy(id,txt)}>{cop===id?T.api_copied:T.api_copy}</button>
-    </div>
-  );
-}
-function API() {
-  const T = useLang();
-  const [cop, setCop] = useState(null);
-  const copy = (id, txt) => {
-    try { navigator.clipboard.writeText(txt); } catch {}
-    setCop(id); setTimeout(()=>setCop(null), 1600);
-  };
-  return <>
-    <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",background:"var(--al)",borderRadius:8,marginBottom:20,border:"1px solid #CBD5E1"}}>
-      <Ic n="zap" s={13} c="var(--ac)"/>
-      <span style={{fontSize:12,color:"var(--ac)"}}>{T.api_beta}</span>
-    </div>
-    <h2>Endpoint</h2>
-    <CB id="req" txt="POST https://api.morf.app/v1/convert" cop={cop} copy={copy} T={T}>
-      <span className="fn">POST</span> https://api.morf.app/<span className="kw">v1</span>/convert{"\n\n"}
-      <span className="cm">// multipart/form-data</span>{"\n"}
-      file:          <span className="st">document.pdf</span>{"\n"}
-      output_format: <span className="st">"docx"</span>{"\n"}
-      quality:       <span className="st">"high"</span>   <span className="cm">// low | medium | high</span>
-    </CB>
-    <h2>JavaScript</h2>
-    <CB id="js" txt={`const form = new FormData();\nform.append('file', fileInput.files[0]);\nform.append('output_format', 'docx');\n\nconst res = await fetch('https://api.morf.app/v1/convert', {\n  method: 'POST',\n  headers: { 'Authorization': 'Bearer mk_live_xxx' },\n  body: form\n});\nconst blob = await res.blob();`} cop={cop} copy={copy} T={T}>
-      <span className="kw">const</span> form = <span className="kw">new</span> <span className="fn">FormData</span>();{"\n"}
-      form.<span className="fn">append</span>(<span className="st">'file'</span>, fileInput.files[<span className="kw">0</span>]);{"\n"}
-      form.<span className="fn">append</span>(<span className="st">'output_format'</span>, <span className="st">'docx'</span>);{"\n\n"}
-      <span className="kw">const</span> res = <span className="kw">await</span> <span className="fn">fetch</span>(<span className="st">'https://api.morf.app/v1/convert'</span>, {"{\n"}
-      {"  method: "}<span className="st">'POST'</span>,{"\n"}
-      {"  headers: { "}<span className="st">'Authorization'</span>: <span className="st">'Bearer mk_live_xxx'</span> {" },\n"}
-      {"  body: form\n})"};{"\n"}
-      <span className="kw">const</span> blob = <span className="kw">await</span> res.<span className="fn">blob</span>();
-    </CB>
-    <h2>{T.code==="es"?"Planes":T.code==="en"?"Plans":T.code==="fr"?"Forfaits":T.code==="de"?"Pläne":"Planos"}</h2>
-    <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
-      {T.api_plans.map(p=>(
-        <div key={p.t} style={{padding:"14px",border:"1px solid var(--bd)",borderRadius:8,textAlign:"center"}}>
-          <div style={{fontWeight:600,fontSize:13,marginBottom:8}}>{p.t}</div>
-          <div style={{fontSize:11,color:"var(--tm)",marginBottom:2}}>{p.r}</div>
-          <div style={{fontSize:11,color:"var(--tm)",marginBottom:10}}>Max {p.s}</div>
-          <div style={{fontWeight:500,fontSize:13,color:"var(--ac)"}}>{p.p}</div>
-        </div>
-      ))}
-    </div>
-  </>;
-}
-
-/* ── Tools ───────────────────────────────────────────────────────────────── */
-const TOOL_BASE = [
-  {id:"pdf-word",  icon:"word",     accepts:[".pdf"],                        from:"pdf",  to:"docx"},
-  {id:"word-pdf",  icon:"pdf",      accepts:[".doc",".docx"], mimeTypes:["application/msword","application/vnd.openxmlformats-officedocument.wordprocessingml.document"], from:"docx", to:"pdf"},
-  {id:"img-pdf",   icon:"img",      accepts:[".jpg",".jpeg",".png",".webp"], from:"img",  to:"pdf", multi:true},
-  {id:"merge",     icon:"merge",    accepts:[".pdf"],                        from:"pdf",  to:"pdf", multi:true},
-  {id:"split",     icon:"split",    accepts:[".pdf"],                        from:"pdf",  to:"pdf"},
-  {id:"compress",  icon:"compress", accepts:[".pdf"],                        from:"pdf",  to:"pdf"},
-  {id:"png-jpg",   icon:"img",      accepts:[".png"],                            from:"png",  to:"jpg"},
-  {id:"jpg-png",   icon:"img",      accepts:[".jpg",".jpeg"],                    from:"jpg",  to:"png"},
-  {id:"rotate",    icon:"rotate",   accepts:[".pdf"],                            from:"pdf",  to:"pdf"},
-  {id:"excel-pdf", icon:"excel",    accepts:[".xlsx",".xls"], mimeTypes:["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","application/vnd.ms-excel"], from:"xlsx", to:"pdf"},
-];
-
-function FileRow({ file, onRemove }) {
-  const ext = file.name.split(".").pop().toUpperCase();
-  const kb  = (file.size/1024).toFixed(0);
-  const sz  = kb<1024?`${kb} KB`:`${(kb/1024).toFixed(1)} MB`;
-  return (
-    <div className="fr">
-      <Ic n="file" s={14} c="var(--tm)"/>
-      <span style={{flex:1,fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{file.name}</span>
-      <span style={{fontSize:10,color:"var(--tm)",fontFamily:"'DM Mono',monospace",flexShrink:0}}>{sz}</span>
-      <span style={{fontSize:10,color:"var(--tm)",fontFamily:"'DM Mono',monospace",background:"var(--bd)",padding:"1px 5px",borderRadius:3,flexShrink:0}}>{ext}</span>
-      <button onClick={onRemove} style={{background:"none",border:"none",cursor:"pointer",padding:2,color:"var(--tm)",display:"flex",alignItems:"center"}}>
-        <Ic n="x" s={13}/>
-      </button>
-    </div>
-  );
-}
-
-function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}, checkLimits=()=>true }) {
-  const T = useLang();
-  const [files,setFiles]     = useState([]);
-  const [drag,setDrag]       = useState(false);
-  const [status,setStatus]   = useState("idle"); // idle | proc | done | error
-  const [range,setRange]     = useState("");
-  const [quality,setQuality] = useState("medium");
-  const [rotation,setRotation] = useState(90);
-  const [errMsg,setErrMsg]   = useState("");
-  const [step,setStep]       = useState(0); // 0=idle 1=read 2=proc 3=done
-  const ref = useRef();
-
-  const addFiles = l => {
-    const list = Array.from(l);
-    const hasOdt = list.some(f =>
-      f.name.toLowerCase().endsWith(".odt") ||
-      f.type === "application/vnd.oasis.opendocument.text"
-    );
-    if (hasOdt) { showToast(T.err_odt,"err"); return; }
-    const ok = list.filter(f => {
-      const name = f.name.toLowerCase();
-      const mime = f.type.toLowerCase();
-      const extOk  = (tool.accepts||[]).some(e => name.endsWith(e.replace(".","").toLowerCase()));
-      const mimeOk = (tool.mimeTypes||[]).some(m => mime === m);
-      return extOk || mimeOk;
-    });
-    if (!ok.length){ showToast(T.incompat,"err"); return; }
-    setFiles(p=>tool.multi?[...p,...ok]:[ok[0]]);
-  };
-
-  const getErrMsg = (e) => {
-    const msg = (e.message || "").toLowerCase();
-    if (files[0] && files[0].size > 200 * 1024 * 1024) return T.err_size;
-    if (msg.includes("encrypt") || msg.includes("password") || msg.includes("protected")) return T.err_protected;
-    if (msg.includes("range") || msg.includes("rango")) return T.err_range;
-    if (msg.includes("invalid") || msg.includes("corrupt") || msg.includes("unexpected")) return T.err_corrupt;
-    return T.err_generic;
-  };
-
-  const convert = async () => {
-    // Validar tamaño antes de procesar
-    const maxSize = 200 * 1024 * 1024;
-    if (files.some(f => f.size > maxSize)) {
-      setErrMsg(T.err_size);
-      setStatus("error");
-      return;
-    }
-    // Check freemium limits
-    if (!checkLimits(files, tool.id)) return;
-
-    setStatus("proc");
-    setStep(1); // leyendo
-    setErrMsg("");
-    await new Promise(r => setTimeout(r, 350)); // pequeña pausa para que se vea el paso 1
-    setStep(2); // procesando
-    try {
-      if (tool.id==="merge")         { await mergePdfs(files); }
-      else if (tool.id==="split")    { await splitPdf(files[0], range); }
-      else if (tool.id==="img-pdf")  { await imagesToPdf(files); }
-      else if (tool.id==="compress") { await compressPdf(files[0], quality); }
-      else if (tool.id==="word-pdf") {
-        const f = files[0];
-        const res = await wordToPdf(f);
-        if (res === "popup-blocked") {
-          setErrMsg(T.err_popup);
-          setStatus("error");
-          return;
-        }
-        showToast(T.conv_done);
-        bumpCount();
-          addToHistory(files[0]?.name, tool.label);
-        setStatus("idle"); setFiles([]); return;
-      }
-      else if (tool.id==="pdf-word")  { await pdfToWord(files[0]); }
-      else if (tool.id==="png-jpg")   { await pngToJpg(files[0]); }
-      else if (tool.id==="jpg-png")   { await jpgToPng(files[0]); }
-      else if (tool.id==="rotate")    { await rotatePdf(files[0], rotation); }
-      else if (tool.id==="excel-pdf") {
-        const res = await excelToPdf(files[0]);
-        if (res === "popup-blocked") { setErrMsg(T.err_popup); setStatus("error"); return; }
-        showToast(T.conv_done); bumpCount(); setStatus("idle"); setFiles([]); return;
-      }
-      setStep(3);
-      setStatus("done");
-      showToast(T.conv_done);
-      bumpCount();
-      addToHistory(files[0]?.name, tool.label);
-    } catch(e) {
-      console.error(e);
-      setStep(0);
-      setErrMsg(getErrMsg(e));
-      setStatus("error");
-    }
-  };
-
-  const dl = () => { setStatus("idle"); setFiles([]); };
-
-  return (
-    <div style={{background:"var(--sf)",border:"1px solid var(--bd)",borderRadius:10,overflow:"hidden",animation:"fu .3s ease both"}}>
-      <div style={{padding:"14px 18px",borderBottom:"1px solid var(--bd)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <div style={{width:32,height:32,borderRadius:7,background:"var(--al)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-            <Ic n={tool.icon} s={15} c="var(--ac)"/>
-          </div>
-          <div>
-            <div style={{fontWeight:500,fontSize:13}}>{tool.label}</div>
-            <div style={{fontSize:11,color:"var(--tm)"}}>{tool.desc}</div>
-          </div>
-        </div>
-        <button className="bg" style={{padding:"5px 9px"}} onClick={onClose}><Ic n="x" s={13}/></button>
-      </div>
-      <div style={{padding:18}}>
-        {status==="done"?(
-          <div style={{textAlign:"center",padding:"24px 0"}}>
-            <div style={{width:46,height:46,borderRadius:"50%",background:"#F0FDF4",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px"}}>
-              <Ic n="check" s={20} c="var(--ok)"/>
-            </div>
-            <div style={{fontWeight:500,marginBottom:4}}>{T.conv_done}</div>
-            <div style={{fontSize:12,color:"var(--tm)",marginBottom:18}}>
-              {files.length} {files.length===1?T.done_sub_s:T.done_sub_p}
-            </div>
-            <button className="bg" onClick={dl}>{T.other}</button>
-          </div>
-        ):status==="error"?(
-          <div style={{textAlign:"center",padding:"24px 0"}}>
-            <div style={{width:46,height:46,borderRadius:"50%",background:"#FEF2F2",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px"}}>
-              <Ic n="x" s={20} c="#B91C1C"/>
-            </div>
-            <div style={{fontWeight:600,marginBottom:10,color:"#B91C1C",fontSize:14}}>{T.err_title}</div>
-            <div style={{fontSize:13,color:"var(--t2)",marginBottom:6,maxWidth:340,margin:"0 auto 8px",lineHeight:1.6}}>{errMsg}</div>
-            <div style={{fontSize:11,color:"var(--tm)",marginBottom:20}}>{T.err_suggest}</div>
-            <div style={{display:"flex",gap:8,justifyContent:"center"}}>
-              <button className="bg" onClick={()=>{ setStatus("idle"); setFiles([]); }}>{T.cancel}</button>
-              <button className="bp" onClick={()=>setStatus("idle")}>{T.err_retry}</button>
-            </div>
-          </div>
-        ):(
-          <>
-            {/* Input oculto — se resetea tras cada selección para poder añadir el mismo archivo */}
-            <input ref={ref} type="file" accept={[...(tool.accepts||[]),...(tool.mimeTypes||[])].join(",")} multiple={!!tool.multi}
-              style={{display:"none"}}
-              onChange={e=>{ addFiles(e.target.files); e.target.value=""; }}/>
-
-            {/* Zona drop — solo se muestra si no hay archivos o la herramienta no es multi */}
-            {(!tool.multi || files.length===0) && (
-              <div className={`dz ${drag?"ov":""}`}
-                style={{padding:"28px 18px",textAlign:"center",marginBottom:12}}
-                onDragOver={e=>{e.preventDefault();setDrag(true)}}
-                onDragLeave={()=>setDrag(false)}
-                onDrop={e=>{e.preventDefault();setDrag(false);addFiles(e.dataTransfer.files)}}
-                onClick={()=>ref.current?.click()}>
-                <div style={{display:"flex",justifyContent:"center",marginBottom:8}}>
-                  <Ic n="upload" s={22} c={drag?"var(--ac)":"var(--tm)"}/>
-                </div>
-                <div style={{fontWeight:500,fontSize:13,marginBottom:2,color:drag?"var(--ac)":"var(--t1)"}}>
-                  {tool.multi?T.drag_multi:T.drag_single}
-                </div>
-                <div style={{fontSize:11,color:"var(--tm)"}}>{T.click_hint} · {tool.accepts.join(", ")} · {T.max_size}</div>
-              </div>
-            )}
-
-            {/* Lista de archivos + botón añadir más (solo herramientas multi) */}
-            {files.length>0&&(
-              <div style={{marginBottom:12}}>
-                <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:tool.multi?8:0}}>
-                  {files.map((f,i)=>(
-                    <FileRow key={i} file={f} onRemove={()=>setFiles(p=>p.filter((_,j)=>j!==i))}/>
-                  ))}
-                </div>
-                {tool.multi&&(()=>{
-                  const isFreeLimit = tool.id==='merge' && !localStorage.getItem('morf_pro') && files.length >= 2;
-                  return isFreeLimit ? (
-                    <div style={{padding:"10px 12px",background:"var(--al)",border:"1px solid var(--ac)",
-                      borderRadius:8,display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
-                      <span style={{fontSize:11,color:"var(--ac)"}}>{T.merge_hint}</span>
-                      <button className="bp" style={{fontSize:10,padding:"4px 10px",borderRadius:5}}
-                        onClick={()=>checkLimits([...files,{size:0,name:"x"}],"merge")}>Pro</button>
-                    </div>
-                  ) : (
-                    <div
-                      className={`dz ${drag?"ov":""}`}
-                      style={{padding:"12px",textAlign:"center",cursor:"pointer",borderStyle:"dashed"}}
-                      onDragOver={e=>{e.preventDefault();setDrag(true)}}
-                      onDragLeave={()=>setDrag(false)}
-                      onDrop={e=>{e.preventDefault();setDrag(false);addFiles(e.dataTransfer.files)}}
-                      onClick={()=>ref.current?.click()}>
-                      <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,fontSize:12,color:"var(--t2)"}}>
-                        <Ic n="upload" s={13} c="var(--t2)"/>
-                        Añadir más archivos
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-            )}
-            {tool.id==="split"&&files.length>0&&(
-              <div style={{marginBottom:12}}>
-                <div style={{fontSize:11,fontWeight:500,color:"var(--t2)",marginBottom:5}}>{T.pages_label}</div>
-                <input value={range} onChange={e=>setRange(e.target.value)} placeholder={T.pages_ph}
-                  className="fi-inp" style={{fontFamily:"'DM Mono',monospace",fontSize:12}}
-                  onFocus={e=>e.target.style.borderColor="var(--ac)"}
-                  onBlur={e=>e.target.style.borderColor="var(--bd)"}/>
-              </div>
-            )}
-            {tool.id==="rotate"&&files.length>0&&(
-              <div style={{marginBottom:12}}>
-                <div style={{fontSize:11,fontWeight:500,color:"var(--t2)",marginBottom:6}}>Ángulo de rotación</div>
-                <div style={{display:"flex",gap:6}}>
-                  {[[90,"90°"],[180,"180°"],[270,"270°"]].map(([deg,lbl])=>(
-                    <button key={deg} onClick={()=>setRotation(deg)}
-                      style={{flex:1,padding:"7px 0",border:`1px solid ${rotation===deg?"var(--ac)":"var(--bd)"}`,borderRadius:6,
-                        fontSize:13,fontFamily:"'DM Mono',monospace",background:rotation===deg?"var(--al)":"transparent",
-                        color:rotation===deg?"var(--ac)":"var(--t2)",cursor:"pointer",fontWeight:rotation===deg?500:400,transition:"all .16s"}}>
-                      {lbl}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            {tool.id==="compress"&&files.length>0&&(
-              <div style={{marginBottom:12}}>
-                <div style={{fontSize:11,fontWeight:500,color:"var(--t2)",marginBottom:6}}>{T.compress_level}</div>
-                <div style={{display:"flex",gap:6}}>
-                  {[["low",T.q_low],["medium",T.q_med],["high",T.q_high]].map(([q,l])=>(
-                    <button key={q} onClick={()=>setQuality(q)}
-                      style={{flex:1,padding:"7px 0",border:`1px solid ${quality===q?"var(--ac)":"var(--bd)"}`,borderRadius:6,
-                        fontSize:12,fontFamily:"'DM Sans',sans-serif",background:quality===q?"var(--al)":"transparent",
-                        color:quality===q?"var(--ac)":"var(--t2)",cursor:"pointer",fontWeight:quality===q?500:400,transition:"all .16s"}}>
-                      {l}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            {status==="proc"&&(
-              <div className="m-steps" style={{marginBottom:16,padding:"16px",background:"var(--al)",borderRadius:10,textAlign:"center"}}>
-                {/* Pasos */}
-                <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:0,marginBottom:12}}>
-                  {[T.step_read, T.step_proc].map((label,i)=>{
-                    const idx = i+1;
-                    const isDone = step > idx;
-                    const isActive = step === idx;
-                    return (
-                      <div key={i} style={{display:"flex",alignItems:"center"}}>
-                        <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
-                          <div className={`step-dot ${isActive?"active":isDone?"done":""}`}/>
-                          <span style={{fontSize:10,color:isActive?"var(--ac)":isDone?"var(--ok)":"var(--tm)",fontWeight:isActive?500:400,transition:"color .3s",whiteSpace:"nowrap"}}>
-                            {label}
-                          </span>
-                        </div>
-                        {i<1&&<div style={{width:48,height:1,background:step>idx?"var(--ok)":"var(--bd)",margin:"0 8px",marginBottom:14,transition:"background .3s"}}/>}
-                      </div>
-                    );
-                  })}
-                </div>
-                {/* Barra */}
-                <div className="tr" style={{maxWidth:200,margin:"0 auto"}}>
-                  <div className="fill" style={{animationDuration: step===1?"0.8s":"2s"}}/>
-                </div>
-              </div>
-            )}
-            <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
-              <button className="bg" onClick={onClose}>{T.cancel}</button>
-              <button className="bp" disabled={!files.length||status==="proc"} onClick={convert}>
-                {status==="proc"?<><div className="spn"/>{T.processing}</>:<><Ic n="arrow" s={14}/>{T.convert}</>}
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function Toast({ message, type, onClose }) {
-  useEffect(()=>{ const t=setTimeout(onClose,3200); return ()=>clearTimeout(t); },[]);
-  return (
-    <div className="toast">
-      <Ic n={type==="err"?"x":"check"} s={13} c={type==="err"?"#F87171":"#4ADE80"}/>
-      {message}
-    </div>
-  );
-}
-
 /* ── App ─────────────────────────────────────────────────────────────────── */
 export default function App() {
   const [lang, setLang]       = useState(detectLang);
@@ -1373,6 +207,33 @@ export default function App() {
   useEffect(() => {
     document.body.style.background = dark ? '#0F1117' : '#F9F9F8';
   }, [dark]);
+
+  // Stripe return handling
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('success') === 'true') {
+      const sessionId = params.get('session_id');
+      const verifyPro = async () => {
+        try {
+          const res = await fetch(`/api/verify-session?session_id=${sessionId}`);
+          const data = await res.json();
+          if (data.pro && data.email) {
+            localStorage.setItem('morf_pro', 'true');
+            localStorage.setItem('morf_pro_email', data.email);
+            setToast({ msg: '🎉 ¡Bienvenido a Pro! Ya tienes acceso ilimitado.', type: 'ok' });
+          }
+        } catch {
+          localStorage.setItem('morf_pro', 'true');
+          setToast({ msg: '🎉 ¡Bienvenido a Pro!', type: 'ok' });
+        }
+        window.history.replaceState({}, '', '/');
+      };
+      verifyPro();
+    } else if (params.get('canceled') === 'true') {
+      window.history.replaceState({}, '', '/');
+      setTimeout(() => setToast({ msg: 'Pago cancelado.', type: 'ok' }), 0);
+    }
+  }, []);
 
   // FAQ structured data para SEO
   useEffect(() => {
@@ -1438,17 +299,19 @@ export default function App() {
               <span className="m-logo-text" style={{fontWeight:600,fontSize:15,letterSpacing:"-.02em"}}>morf</span>
               <span style={{fontSize:9,fontFamily:"'DM Mono',monospace",background:"var(--al)",color:"var(--ac)",padding:"2px 6px",borderRadius:3,fontWeight:500}}>BETA</span>
             </div>
-            <nav style={{display:"flex",gap:16,alignItems:"center"}}>
+            <nav aria-label="Menú principal" style={{display:"flex",gap:16,alignItems:"center"}}>
               <button className="nl m-nav-privacy" onClick={()=>setModal("privacy")}>{T.nav_privacy}</button>
               <button className="nl m-nav-labels" onClick={()=>setModal("api")}>{T.nav_api}</button>
               <button className="nl m-nav-labels" onClick={()=>setModal("contact")}>{T.nav_help}</button>
 
               <button onClick={()=>setDark(d=>!d)}
+                aria-label={dark?"Modo claro":"Modo oscuro"}
+                aria-pressed={dark}
+                title={dark?"Modo claro":"Modo oscuro"}
                 style={{background:"transparent",border:"1px solid var(--bd)",borderRadius:6,
                   padding:"5px 8px",cursor:"pointer",color:"var(--t2)",display:"flex",
-                  alignItems:"center",transition:"all .16s"}}
-                title={dark?"Modo claro":"Modo oscuro"}>
-                <Ic n={dark?"sun":"moon"} s={14} c="var(--t2)"/>
+                  alignItems:"center",transition:"all .16s"}}>
+                <Ic n={dark?"sun":"moon"} s={14} c="var(--t2)" aria-hidden="true"/>
               </button>
               <LangPicker lang={lang} setLang={setLang}/>
             </nav>
@@ -1497,13 +360,16 @@ export default function App() {
 
           {/* Hero drop */}
           <div className={`dz fu fu1 m-hero-drop ${heroDrag?"ov":""}`}
+            role="button" tabIndex={0}
+            aria-label={T.hero_drop}
             style={{padding:"40px 32px",textAlign:"center",maxWidth:580,margin:"0 auto 48px",
               background:heroDrag?"var(--al)":"var(--sf)",transition:"all .2s",cursor:"pointer",
               boxShadow:heroDrag?"0 0 0 3px var(--ac)":"0 1px 3px rgba(0,0,0,.06)"}}
             onDragOver={e=>{e.preventDefault();setHeroDrag(true)}}
             onDragLeave={()=>setHeroDrag(false)}
             onDrop={heroDrop}
-            onClick={()=>document.getElementById("tools")?.scrollIntoView({behavior:"smooth"})}>
+            onClick={()=>document.getElementById("tools")?.scrollIntoView({behavior:"smooth"})}
+            onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();document.getElementById("tools")?.scrollIntoView({behavior:"smooth"});}}}>
             {/* Icono animado */}
             <div style={{display:"flex",justifyContent:"center",marginBottom:14}}>
               <div style={{width:60,height:60,borderRadius:14,
@@ -1523,6 +389,39 @@ export default function App() {
             <div style={{fontSize:10,color:"var(--tm)",fontFamily:"'DM Mono',monospace",opacity:.7}}>{T.max_size}</div>
           </div>
 
+          {/* Cómo funciona */}
+          <div style={{marginBottom:48}}>
+            <div style={{textAlign:"center",marginBottom:28}}>
+              <h2 style={{fontSize:17,fontWeight:600,letterSpacing:"-.02em",marginBottom:6}}>{T.how_title}</h2>
+              <p style={{fontSize:13,color:"var(--tm)",maxWidth:440,margin:"0 auto"}}>{T.how_sub}</p>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:2,position:"relative"}}>
+              {T.how_steps.map(([title,desc],i)=>(
+                <div key={i} style={{display:"flex",flexDirection:"column",alignItems:"center",textAlign:"center",
+                  padding:"24px 20px",background:"var(--sf)",border:"1px solid var(--bd)",
+                  borderRadius:i===0?"10px 0 0 10px":i===2?"0 10px 10px 0":"0",
+                  position:"relative"}}>
+                  <div style={{width:36,height:36,borderRadius:"50%",
+                    background:i===0?"var(--ac)":i===1?"var(--ah)":"var(--ok)",
+                    display:"flex",alignItems:"center",justifyContent:"center",marginBottom:14,flexShrink:0}}>
+                    <span style={{fontSize:14,fontWeight:700,color:"#fff",fontFamily:"'DM Mono',monospace"}}>{i+1}</span>
+                  </div>
+                  <div style={{marginBottom:10}}>
+                    <Ic n={["grid","upload","download"][i]} s={20} c={["var(--ac)","var(--ah)","var(--ok)"][i]}/>
+                  </div>
+                  <div style={{fontWeight:600,fontSize:13,marginBottom:6}}>{title}</div>
+                  <div style={{fontSize:12,color:"var(--t2)",lineHeight:1.6}}>{desc}</div>
+                  {i<2&&(
+                    <div style={{position:"absolute",right:-12,top:"50%",transform:"translateY(-50%)",
+                      zIndex:1,background:"var(--sf)",padding:"2px 0",display:"flex",alignItems:"center"}}>
+                      <span style={{display:"block",transform:"rotate(-90deg)"}}><Ic n="chevron" s={16} c="var(--tm)"/></span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Tools */}
           <div id="tools">
             <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",marginBottom:14}}>
@@ -1532,7 +431,11 @@ export default function App() {
             <div className="grid" style={{marginBottom:14}}>
               {TOOLS.map((t,i)=>(
                 <div key={t.id} className={`card fu fu${i+1} ${active?.id===t.id?"on":""}`}
-                  onClick={()=>setActive(p=>p?.id===t.id?null:t)}>
+                  role="button" tabIndex={0}
+                  aria-pressed={active?.id===t.id}
+                  aria-label={t.label}
+                  onClick={()=>setActive(p=>p?.id===t.id?null:t)}
+                  onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();setActive(p=>p?.id===t.id?null:t);}}}>
                   <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:12}}>
                     <div style={{width:34,height:34,borderRadius:7,background:active?.id===t.id?"var(--al)":"#F5F5F3",display:"flex",alignItems:"center",justifyContent:"center",transition:"background .16s"}}>
                       <Ic n={t.icon} s={15} c={active?.id===t.id?"var(--ac)":"var(--t2)"}/>
@@ -1619,7 +522,7 @@ export default function App() {
                   </div>
                 ))}
                 <button className="bp" style={{width:"100%",marginTop:20,fontSize:13,padding:"10px 0",justifyContent:"center"}}
-                  onClick={()=>alert('Pasarela de pago próximamente')}>
+                  onClick={()=>setShowUpgrade(true)}>
                   {T.plan_cta_pro}
                 </button>
               </div>

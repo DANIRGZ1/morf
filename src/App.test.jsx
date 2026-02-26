@@ -95,13 +95,13 @@ describe('language detection', () => {
   it('uses Spanish when navigator.language starts with "es"', () => {
     renderWithLang('es-ES')
     // Spanish tagline contains "Sin registro"
-    expect(screen.getByText(/Sin registro/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/Sin registro/i)[0]).toBeInTheDocument()
   })
 
   it('uses French when navigator.language is "fr"', () => {
     renderWithLang('fr-FR')
     // French tagline contains "Sans inscription"
-    expect(screen.getByText(/Sans inscription/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/Sans inscription/i)[0]).toBeInTheDocument()
   })
 
   it('uses German when navigator.language is "de"', () => {
@@ -113,7 +113,7 @@ describe('language detection', () => {
   it('uses Portuguese when navigator.language is "pt"', () => {
     renderWithLang('pt-PT')
     // Portuguese tagline contains "Sem registo"
-    expect(screen.getByText(/Sem registo/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/Sem registo/i)[0]).toBeInTheDocument()
   })
 })
 
@@ -152,7 +152,7 @@ describe('i18n completeness', () => {
         value: code, configurable: true, writable: true,
       })
       render(<App />)
-      expect(screen.getByText(taglines[code])).toBeInTheDocument()
+      expect(screen.getAllByText(taglines[code])[0]).toBeInTheDocument()
     })
   })
 })
