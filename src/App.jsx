@@ -195,7 +195,6 @@ const css = `
 
 /* ── Tool Page (hash routing + SEO) ─────────────────────────────────────── */
 function ToolPage({ tool, showToast, bumpCount, addToHistory, checkLimits, onBack }) {
-  const T = useLang();
   useEffect(() => {
     document.title = `${tool.label} — morf`;
     const meta = document.querySelector('meta[name="description"]');
