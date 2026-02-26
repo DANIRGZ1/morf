@@ -200,7 +200,7 @@ function ToolPage({ tool, showToast, bumpCount, addToHistory, checkLimits, onBac
     const meta = document.querySelector('meta[name="description"]');
     if (meta) meta.setAttribute('content', tool.desc || '');
     return () => { document.title = 'morf'; };
-  }, [tool.id]);
+  }, [tool.id, tool.label, tool.desc]);
   return (
     <div style={{minHeight:"100vh"}}>
       <div style={{maxWidth:960,margin:"0 auto",padding:"16px 20px"}}>
@@ -229,7 +229,6 @@ function ToolPage({ tool, showToast, bumpCount, addToHistory, checkLimits, onBac
 /* ── App ─────────────────────────────────────────────────────────────────── */
 export default function App() {
   const [lang, setLang]       = useState(detectLang);
-  const [active, setActive]   = useState(null);
   const [toolPage, setToolPage] = useState(() => {
     const hash = window.location.hash.replace(/^#\/?/, '');
     return TOOL_BASE.find(t => t.id === hash) || null;
@@ -238,7 +237,7 @@ export default function App() {
   const [toast, setToast]     = useState(null);
   const [globalDrag, setGlobalDrag] = useState(false);
   const [dark, setDark] = useState(() => window.matchMedia?.('(prefers-color-scheme: dark)').matches);
-  const { count, bumpCount }                          = useCounter();
+  const { bumpCount }                                  = useCounter();
   const { showUpgrade, setShowUpgrade, upgradeReason, checkLimits } = useFreemium();
   const { history, addToHistory, clearHistory }        = useHistory();
   const [billingYear, setBillingYear] = useState(true);
@@ -248,12 +247,12 @@ export default function App() {
   }, [dark]);
 
   useEffect(() => {
-    const onHash = () => {
+    const onPop = () => {
       const hash = window.location.hash.replace(/^#\/?/, '');
       setToolPage(hash ? (TOOL_BASE.find(t => t.id === hash) || null) : null);
     };
-    window.addEventListener('hashchange', onHash);
-    return () => window.removeEventListener('hashchange', onHash);
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
   }, []);
 
   // Stripe return handling
@@ -323,7 +322,7 @@ export default function App() {
       (t.accepts||[]).includes(ext) ||
       (t.mimeTypes||[]).includes(mime)
     );
-    if (found){ setActive(found); showToast(`${T.detected}: ${found.label}`); }
+    if (found){ goToTool(found); showToast(`${T.detected}: ${found.label}`); }
     else showToast(T.unknown_fmt,"err");
   };
 
@@ -334,8 +333,8 @@ export default function App() {
     api:    { title:T.modal_api,     icon:"code"   },
   };
 
-  const goToTool = t => { window.location.hash = t.id; setToolPage(t); };
-  const backHome = () => { window.location.hash = ''; setToolPage(null); };
+  const goToTool = t => { window.history.pushState(null, '', `#${t.id}`); setToolPage(t); };
+  const backHome = () => { window.history.pushState(null, '', location.pathname + location.search); setToolPage(null); };
   const fullToolPage = toolPage ? TOOLS.find(t => t.id === toolPage.id) || toolPage : null;
 
   return (
