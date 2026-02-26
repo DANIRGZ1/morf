@@ -237,7 +237,7 @@ export default function App() {
   const [toast, setToast]     = useState(null);
   const [globalDrag, setGlobalDrag] = useState(false);
   const [dark, setDark] = useState(() => window.matchMedia?.('(prefers-color-scheme: dark)').matches);
-  const { bumpCount }                                  = useCounter();
+  const { count, bumpCount }                           = useCounter();
   const { showUpgrade, setShowUpgrade, upgradeReason, checkLimits } = useFreemium();
   const { history, addToHistory, clearHistory }        = useHistory();
   const [billingYear, setBillingYear] = useState(true);
@@ -410,6 +410,12 @@ export default function App() {
               <Ic n="zap" s={15} c="#fff"/>
               {T.hero_cta}
             </button>
+
+            {count>0&&(
+              <div style={{fontSize:12,color:"var(--tm)",fontFamily:"'DM Mono',monospace"}}>
+                <span>{count.toLocaleString()}</span> {T.counter}
+              </div>
+            )}
 
           </div>
 

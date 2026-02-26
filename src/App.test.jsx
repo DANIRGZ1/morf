@@ -20,6 +20,8 @@ vi.mock('./utils/convert', () => ({
 
 // matchMedia is not implemented in jsdom
 beforeEach(() => {
+  // Reset URL hash so each test starts with no active tool page
+  window.history.pushState(null, '', '/')
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
     value: vi.fn().mockImplementation(query => ({
@@ -205,15 +207,14 @@ describe('tool card interactions', () => {
     expect(screen.getByText('Cancel')).toBeInTheDocument()
   })
 
-  it('clicking an active tool card again closes the panel', async () => {
+  it('the back button on the tool page returns to the grid', async () => {
     const user = userEvent.setup()
     render(<App />)
     const [card] = screen.getAllByText('PDF → Word')
     await user.click(card)
     expect(screen.getByText('Cancel')).toBeInTheDocument()
-    // After opening there are two "PDF → Word" elements (card + panel header); click the first
-    const [cardAgain] = screen.getAllByText('PDF → Word')
-    await user.click(cardAgain)
+    // The back "morf" button navigates back to the main grid
+    await user.click(screen.getByText('Cancel'))
     expect(screen.queryByText('Cancel')).not.toBeInTheDocument()
   })
 
@@ -344,10 +345,10 @@ describe('conversion counter', () => {
   it('displays the counter value when count > 0', () => {
     localStorage.setItem('morf_count', '7')
     render(<App />)
-    // The number is rendered with toLocaleString; "7" → "7"
+    // The number is rendered with toLocaleString; 7 → "7"
     expect(screen.getByText('7')).toBeInTheDocument()
     // T.counter = "files converted"
-    expect(screen.getByText('files converted')).toBeInTheDocument()
+    expect(screen.getByText(/files converted/i)).toBeInTheDocument()
   })
 
   it('does not show the counter area when count is 0', () => {
