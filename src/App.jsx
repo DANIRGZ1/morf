@@ -2,12 +2,15 @@ import { useState, useEffect, useRef } from "react";
 import { useHistory }   from "./hooks/useHistory";
 import { useFreemium }  from "./hooks/useFreemium";
 import { useCounter }   from "./hooks/useCounter";
+import { useAuth }      from "./hooks/useAuth";
+import { supabase }     from "./lib/supabase";
 import { LANGS, LangCtx, detectLang } from "./contexts/LangContext";
 import { Ic, Tag } from "./components/icons";
 import FaqItem from "./components/FaqItem";
 import LangPicker from "./components/LangPicker";
 import Modal from "./components/Modal";
 import UpgradeModal from "./components/UpgradeModal";
+import AuthModal from "./components/AuthModal";
 import Toast from "./components/Toast";
 import Panel, { TOOL_BASE } from "./components/Panel";
 import { Privacy, Terms, Contact, API } from "./components/ModalContents";
@@ -264,7 +267,9 @@ export default function App() {
   const [dark, setDark] = useState(() => window.matchMedia?.('(prefers-color-scheme: dark)').matches);
   const { count, bumpCount }                           = useCounter();
   const { showUpgrade, setShowUpgrade, upgradeReason, checkLimits } = useFreemium();
-  const { history, addToHistory, clearHistory }        = useHistory();
+  const { user, signOut }                              = useAuth();
+  const { history, addToHistory, clearHistory }        = useHistory(user?.id);
+  const [showAuth, setShowAuth]                        = useState(false);
   const [billingYear, setBillingYear] = useState(true);
   const [showAllTools, setShowAllTools] = useState(false);
   useEffect(() => {
@@ -403,6 +408,33 @@ export default function App() {
                 <Ic n={dark?"sun":"moon"} s={14} c="var(--t2)" aria-hidden="true"/>
               </button>
               <LangPicker lang={lang} setLang={setLang}/>
+              {supabase && (
+                user ? (
+                  <button
+                    onClick={()=>signOut()}
+                    title={user.email}
+                    style={{display:"inline-flex",alignItems:"center",gap:5,
+                      background:"var(--al)",border:"1px solid var(--ac)",
+                      borderRadius:6,padding:"4px 9px",cursor:"pointer",
+                      fontSize:11,color:"var(--ac)",fontFamily:"'DM Sans',sans-serif"}}>
+                    <Ic n="user" s={13} c="var(--ac)" aria-hidden="true"/>
+                    <span className="m-nav-labels">{user.email?.split("@")[0]}</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={()=>setShowAuth(true)}
+                    style={{display:"inline-flex",alignItems:"center",gap:5,
+                      background:"transparent",border:"1px solid var(--bd)",
+                      borderRadius:6,padding:"4px 9px",cursor:"pointer",
+                      fontSize:11,color:"var(--t2)",fontFamily:"'DM Sans',sans-serif",
+                      transition:"border-color .16s"}}
+                    onMouseEnter={e=>e.currentTarget.style.borderColor="var(--ac)"}
+                    onMouseLeave={e=>e.currentTarget.style.borderColor="var(--bd)"}>
+                    <Ic n="user" s={13} c="var(--t2)" aria-hidden="true"/>
+                    <span className="m-nav-labels">Entrar</span>
+                  </button>
+                )
+              )}
             </nav>
           </div>
         </header>
@@ -759,6 +791,7 @@ export default function App() {
         </footer>
 
         {/* Modals */}
+        {showAuth&&<AuthModal onClose={()=>setShowAuth(false)}/>}
         {showUpgrade&&(
           <UpgradeModal reason={upgradeReason} billingYear={billingYear} setBillingYear={setBillingYear}
             onClose={()=>setShowUpgrade(false)} T={T}/>

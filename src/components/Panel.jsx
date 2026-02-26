@@ -1,7 +1,12 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Ic } from "./icons";
 import { useLang } from "../contexts/LangContext";
-import { mergePdfs, splitPdf, imagesToPdf, compressPdf, wordToPdf, pdfToWord, pngToJpg, jpgToPng, rotatePdf, excelToPdf } from "../utils/convert";
+import {
+  mergePdfs, splitPdf, imagesToPdf, compressPdf, wordToPdf, pdfToWord,
+  pngToJpg, jpgToPng, rotatePdf, excelToPdf,
+  compressPdfToBlob, rotatePdfToBlob, pngToJpgBlob, jpgToPngBlob,
+  downloadAsZip, basename,
+} from "../utils/convert";
 
 /* ── Tools ───────────────────────────────────────────────────────────────── */
 // eslint-disable-next-line react-refresh/only-export-components
@@ -11,14 +16,186 @@ export const TOOL_BASE = [
   {id:"img-pdf",   icon:"img",      accepts:[".jpg",".jpeg",".png",".webp"], from:"img",  to:"pdf", multi:true},
   {id:"merge",     icon:"merge",    accepts:[".pdf"],                        from:"pdf",  to:"pdf", multi:true, popular:true},
   {id:"split",     icon:"split",    accepts:[".pdf"],                        from:"pdf",  to:"pdf"},
-  {id:"compress",  icon:"compress", accepts:[".pdf"],                        from:"pdf",  to:"pdf", popular:true},
-  {id:"png-jpg",   icon:"img",      accepts:[".png"],                            from:"png",  to:"jpg"},
-  {id:"jpg-png",   icon:"img",      accepts:[".jpg",".jpeg"],                    from:"jpg",  to:"png"},
-  {id:"rotate",    icon:"rotate",   accepts:[".pdf"],                            from:"pdf",  to:"pdf"},
+  {id:"compress",  icon:"compress", accepts:[".pdf"],                        from:"pdf",  to:"pdf", popular:true, batch:true},
+  {id:"png-jpg",   icon:"img",      accepts:[".png"],                        from:"png",  to:"jpg", batch:true},
+  {id:"jpg-png",   icon:"img",      accepts:[".jpg",".jpeg"],                from:"jpg",  to:"png", batch:true},
+  {id:"rotate",    icon:"rotate",   accepts:[".pdf"],                        from:"pdf",  to:"pdf", batch:true},
   {id:"excel-pdf", icon:"excel",    accepts:[".xlsx",".xls"], mimeTypes:["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","application/vnd.ms-excel"], from:"xlsx", to:"pdf"},
 ];
 
-function FileRow({ file, onRemove, showHandle=false, index=0 }) {
+/* ── Preview modal ───────────────────────────────────────────────────────── */
+function FilePreviewModal({ file, onClose }) {
+  const [url, setUrl] = useState(null);
+  useEffect(() => {
+    const u = URL.createObjectURL(file);
+    setUrl(u);
+    return () => URL.revokeObjectURL(u);
+  }, [file]);
+  const isPdf   = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+  const isImage = file.type.startsWith("image/");
+  return (
+    <div
+      style={{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",zIndex:200,
+        display:"flex",alignItems:"center",justifyContent:"center"}}
+      onClick={onClose}>
+      <div
+        style={{background:"var(--sf)",borderRadius:12,width:"92vw",maxWidth:820,
+          maxHeight:"92vh",display:"flex",flexDirection:"column",
+          border:"1px solid var(--bd)",overflow:"hidden"}}
+        onClick={e=>e.stopPropagation()}>
+        <div style={{padding:"10px 14px",borderBottom:"1px solid var(--bd)",
+          display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
+          <span style={{fontWeight:500,fontSize:13,overflow:"hidden",
+            textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>{file.name}</span>
+          <button className="bg" style={{padding:"4px 8px",flexShrink:0}}
+            onClick={onClose} aria-label="Cerrar vista previa">
+            <Ic n="x" s={13} aria-hidden="true"/>
+          </button>
+        </div>
+        <div style={{flex:1,overflow:"auto",minHeight:200,background:"var(--bg)"}}>
+          {url && isPdf && (
+            <embed src={url} type="application/pdf"
+              style={{width:"100%",height:"75vh",border:"none",display:"block"}}/>
+          )}
+          {url && isImage && (
+            <img src={url} alt={file.name}
+              style={{maxWidth:"100%",maxHeight:"75vh",display:"block",
+                margin:"auto",padding:16,objectFit:"contain"}}/>
+          )}
+          {url && !isPdf && !isImage && (
+            <div style={{padding:24,textAlign:"center",color:"var(--tm)",fontSize:13}}>
+              Vista previa no disponible para este tipo de archivo.
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Dropbox import button ───────────────────────────────────────────────── */
+// Requiere: VITE_DROPBOX_APP_KEY en .env
+// Registra tu app en: https://www.dropbox.com/developers/apps
+function DropboxImportButton({ onFiles, accepts }) {
+  const [busy, setBusy] = useState(false);
+  const appKey = import.meta.env.VITE_DROPBOX_APP_KEY;
+  if (!appKey) return null;
+  const handle = async () => {
+    setBusy(true);
+    if (!window.Dropbox) {
+      await new Promise((res, rej) => {
+        if (document.getElementById("dropboxjs")) { res(); return; }
+        const s = document.createElement("script");
+        s.src = "https://www.dropbox.com/static/api/2/dropins.js";
+        s.id  = "dropboxjs";
+        s.setAttribute("data-app-key", appKey);
+        s.onload = res;
+        s.onerror = () => rej(new Error("Dropbox SDK error"));
+        document.head.appendChild(s);
+      });
+    }
+    setBusy(false);
+    window.Dropbox.choose({
+      linkType: "direct",
+      multiselect: true,
+      extensions: accepts,
+      success: async (dbFiles) => {
+        const files = await Promise.all(
+          dbFiles.map(async ({ link, name }) => {
+            const res  = await fetch(link);
+            const blob = await res.blob();
+            return new File([blob], name, { type: blob.type });
+          })
+        );
+        onFiles(files);
+      },
+    });
+  };
+  return (
+    <button onClick={handle} disabled={busy}
+      style={{display:"inline-flex",alignItems:"center",gap:5,padding:"5px 10px",
+        border:"1px solid var(--bd)",borderRadius:6,background:"transparent",
+        cursor:"pointer",fontSize:11,color:"var(--t2)",fontFamily:"'DM Sans',sans-serif"}}>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="#0061FF">
+        <path d="M6 2l6 4-6 4-6-4zm12 0l6 4-6 4-6-4zm-12 9l6 4-6 4-6-4zm12 0l6 4-6 4-6-4zM6 20l6-4 6 4"/>
+      </svg>
+      Dropbox
+    </button>
+  );
+}
+
+/* ── Google Drive import button ──────────────────────────────────────────── */
+// Requiere: VITE_GOOGLE_API_KEY y VITE_GOOGLE_CLIENT_ID en .env
+// Configura en: https://console.cloud.google.com
+// Habilita: Google Drive API + Google Picker API
+// Añade tu dominio como origen JS autorizado en el OAuth Client ID
+function GoogleDriveImportButton({ onFiles }) {
+  const [busy, setBusy] = useState(false);
+  const apiKey   = import.meta.env.VITE_GOOGLE_API_KEY;
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  if (!apiKey || !clientId) return null;
+
+  const loadScript = (src) =>
+    new Promise((res, rej) => {
+      if (document.querySelector(`script[src="${src}"]`)) { res(); return; }
+      const s = document.createElement("script");
+      s.src = src; s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+
+  const handle = async () => {
+    setBusy(true);
+    try {
+      await loadScript("https://apis.google.com/js/api.js");
+      await loadScript("https://accounts.google.com/gsi/client");
+      await new Promise(res => window.gapi.load("picker", res));
+
+      const tokenClient = window.google.accounts.oauth2.initTokenClient({
+        client_id: clientId,
+        scope: "https://www.googleapis.com/auth/drive.readonly",
+        callback: async (resp) => {
+          if (resp.error) { setBusy(false); return; }
+          const token = resp.access_token;
+          const picker = new window.google.picker.PickerBuilder()
+            .setOAuthToken(token)
+            .setDeveloperKey(apiKey)
+            .addView(new window.google.picker.DocsView().setIncludeFolders(false))
+            .setCallback(async (data) => {
+              if (data.action !== "picked") { setBusy(false); return; }
+              const doc = data.docs[0];
+              const r   = await fetch(
+                `https://www.googleapis.com/drive/v3/files/${doc.id}?alt=media`,
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
+              const blob = await r.blob();
+              onFiles([new File([blob], doc.name, { type: blob.type })]);
+              setBusy(false);
+            })
+            .build();
+          picker.setVisible(true);
+        },
+      });
+      tokenClient.requestAccessToken({ prompt: "" });
+    } catch { setBusy(false); }
+  };
+  return (
+    <button onClick={handle} disabled={busy}
+      style={{display:"inline-flex",alignItems:"center",gap:5,padding:"5px 10px",
+        border:"1px solid var(--bd)",borderRadius:6,background:"transparent",
+        cursor:"pointer",fontSize:11,color:"var(--t2)",fontFamily:"'DM Sans',sans-serif"}}>
+      <svg width="13" height="13" viewBox="0 0 24 24">
+        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+      </svg>
+      Google Drive
+    </button>
+  );
+}
+
+/* ── FileRow ─────────────────────────────────────────────────────────────── */
+function FileRow({ file, onRemove, onPreview=null, showHandle=false, index=0 }) {
   const ext = file.name.split(".").pop().toUpperCase();
   const kb  = (file.size/1024).toFixed(0);
   const sz  = kb<1024?`${kb} KB`:`${(kb/1024).toFixed(1)} MB`;
@@ -43,26 +220,41 @@ function FileRow({ file, onRemove, showHandle=false, index=0 }) {
       <span style={{flex:1,fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{file.name}</span>
       <span style={{fontSize:10,color:"var(--tm)",fontFamily:"'DM Mono',monospace",flexShrink:0}}>{sz}</span>
       <span style={{fontSize:10,color:"var(--tm)",fontFamily:"'DM Mono',monospace",background:"var(--bd)",padding:"1px 5px",borderRadius:3,flexShrink:0}}>{ext}</span>
-      <button onClick={onRemove} aria-label={`Eliminar ${file.name}`} style={{background:"none",border:"none",cursor:"pointer",padding:2,color:"var(--tm)",display:"flex",alignItems:"center"}}>
+      {onPreview&&(
+        <button onClick={onPreview} aria-label={`Vista previa ${file.name}`}
+          style={{background:"none",border:"none",cursor:"pointer",padding:2,
+            color:"var(--tm)",display:"flex",alignItems:"center"}}>
+          <Ic n="eye" s={13} aria-hidden="true"/>
+        </button>
+      )}
+      <button onClick={onRemove} aria-label={`Eliminar ${file.name}`}
+        style={{background:"none",border:"none",cursor:"pointer",padding:2,
+          color:"var(--tm)",display:"flex",alignItems:"center"}}>
         <Ic n="x" s={13} aria-hidden="true"/>
       </button>
     </div>
   );
 }
 
+/* ── Panel ───────────────────────────────────────────────────────────────── */
+const BATCH_TOOL_IDS = new Set(["merge","compress","png-jpg","jpg-png","rotate"]);
+
 function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}, checkLimits=()=>true }) {
   const T = useLang();
-  const [files,setFiles]     = useState([]);
-  const [drag,setDrag]       = useState(false);
-  const [status,setStatus]   = useState("idle"); // idle | proc | done | error
-  const [range,setRange]     = useState("");
-  const [quality,setQuality] = useState("medium");
+  const [files,setFiles]       = useState([]);
+  const [drag,setDrag]         = useState(false);
+  const [status,setStatus]     = useState("idle"); // idle | proc | done | error
+  const [range,setRange]       = useState("");
+  const [quality,setQuality]   = useState("medium");
   const [rotation,setRotation] = useState(90);
-  const [dragIdx,setDragIdx] = useState(null);
-  const [errMsg,setErrMsg]   = useState("");
+  const [dragIdx,setDragIdx]   = useState(null);
+  const [errMsg,setErrMsg]     = useState("");
   const [progress,setProgress] = useState(0);
+  const [previewFile,setPreviewFile] = useState(null);
   const ref = useRef();
   const progressTimer = useRef(null);
+
+  const isMulti = !!(tool.multi || tool.batch);
 
   const addFiles = l => {
     const list = Array.from(l);
@@ -79,7 +271,7 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
       return extOk || mimeOk;
     });
     if (!ok.length){ showToast(T.incompat,"err"); return; }
-    setFiles(p=>tool.multi?[...p,...ok]:[ok[0]]);
+    setFiles(p => isMulti ? [...p,...ok] : [ok[0]]);
   };
 
   const getErrMsg = (e) => {
@@ -91,24 +283,10 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
     return T.err_generic;
   };
 
-  const convert = async () => {
-    // Validar tamaño antes de procesar
-    const maxSize = 200 * 1024 * 1024;
-    if (files.some(f => f.size > maxSize)) {
-      setErrMsg(T.err_size);
-      setStatus("error");
-      return;
-    }
-    // Check freemium limits
-    if (!checkLimits(files, tool.id)) return;
-
-    setStatus("proc");
+  const startProgress = () => {
     setProgress(0);
-    setErrMsg("");
-
-    // Simulated progress proportional to file size (reaches ~88% while awaiting)
-    const totalKB = files.reduce((s, f) => s + f.size, 0) / 1024;
-    const duration = Math.max(1200, Math.min(totalKB * 0.5, 10000));
+    const totalKB   = files.reduce((s, f) => s + f.size, 0) / 1024;
+    const duration  = Math.max(1200, Math.min(totalKB * 0.5, 10000));
     const startTime = Date.now();
     if (progressTimer.current) clearInterval(progressTimer.current);
     progressTimer.current = setInterval(() => {
@@ -117,24 +295,66 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
       setProgress(pct);
       if (pct >= 88) clearInterval(progressTimer.current);
     }, 50);
+  };
+
+  const finishOk = (histName) => {
+    clearInterval(progressTimer.current);
+    setProgress(100);
+    setStatus("done");
+    showToast(T.conv_done);
+    bumpCount();
+    addToHistory(histName ?? files[0]?.name, tool.label);
+  };
+
+  const convert = async () => {
+    const maxSize = 200 * 1024 * 1024;
+    if (files.some(f => f.size > maxSize)) { setErrMsg(T.err_size); setStatus("error"); return; }
+    if (!checkLimits(files, tool.id)) return;
+
+    setStatus("proc");
+    setErrMsg("");
+    startProgress();
 
     try {
+      /* ── Batch: múltiples archivos con tool.batch → ZIP ───────────────── */
+      if (tool.batch && files.length > 1) {
+        const items = [];
+        for (let i = 0; i < files.length; i++) {
+          setProgress(Math.round(10 + (i / files.length) * 75));
+          const f = files[i];
+          let blob, outName;
+          if (tool.id === "compress") {
+            blob = await compressPdfToBlob(f, quality);
+            outName = `${basename(f)}-comprimido.pdf`;
+          } else if (tool.id === "rotate") {
+            blob = await rotatePdfToBlob(f, rotation);
+            outName = `${basename(f)}-rotado.pdf`;
+          } else if (tool.id === "png-jpg") {
+            blob = await pngToJpgBlob(f);
+            outName = `${basename(f)}.jpg`;
+          } else if (tool.id === "jpg-png") {
+            blob = await jpgToPngBlob(f);
+            outName = `${basename(f)}.png`;
+          }
+          if (blob) items.push({ filename: outName, blob });
+        }
+        clearInterval(progressTimer.current);
+        setProgress(90);
+        await downloadAsZip(items);
+        finishOk(`${files.length} archivos`);
+        return;
+      }
+
+      /* ── Conversiones individuales ─────────────────────────────────────── */
       if (tool.id==="merge")         { await mergePdfs(files); }
       else if (tool.id==="split")    { await splitPdf(files[0], range); }
       else if (tool.id==="img-pdf")  { await imagesToPdf(files); }
       else if (tool.id==="compress") { await compressPdf(files[0], quality); }
       else if (tool.id==="word-pdf") {
-        const f = files[0];
-        const res = await wordToPdf(f);
+        const res = await wordToPdf(files[0]);
         clearInterval(progressTimer.current);
-        if (res === "popup-blocked") {
-          setErrMsg(T.err_popup);
-          setStatus("error");
-          return;
-        }
-        setProgress(100);
-        showToast(T.conv_done);
-        bumpCount();
+        if (res === "popup-blocked") { setErrMsg(T.err_popup); setStatus("error"); return; }
+        setProgress(100); showToast(T.conv_done); bumpCount();
         addToHistory(files[0]?.name, tool.label);
         setStatus("idle"); setFiles([]); return;
       }
@@ -146,15 +366,12 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
         const res = await excelToPdf(files[0]);
         clearInterval(progressTimer.current);
         if (res === "popup-blocked") { setErrMsg(T.err_popup); setStatus("error"); return; }
-        setProgress(100);
-        showToast(T.conv_done); bumpCount(); setStatus("idle"); setFiles([]); return;
+        setProgress(100); showToast(T.conv_done); bumpCount();
+        addToHistory(files[0]?.name, tool.label);
+        setStatus("idle"); setFiles([]); return;
       }
-      clearInterval(progressTimer.current);
-      setProgress(100);
-      setStatus("done");
-      showToast(T.conv_done);
-      bumpCount();
-      addToHistory(files[0]?.name, tool.label);
+
+      finishOk();
     } catch(e) {
       clearInterval(progressTimer.current);
       console.error(e);
@@ -167,182 +384,204 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
   const dl = () => { setStatus("idle"); setFiles([]); };
 
   return (
-    <div style={{background:"var(--sf)",border:"1px solid var(--bd)",borderRadius:10,overflow:"hidden",animation:"fu .3s ease both"}}>
-      <div style={{padding:"14px 18px",borderBottom:"1px solid var(--bd)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <div style={{width:32,height:32,borderRadius:7,background:"var(--al)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-            <Ic n={tool.icon} s={15} c="var(--ac)"/>
+    <>
+      <div style={{background:"var(--sf)",border:"1px solid var(--bd)",borderRadius:10,overflow:"hidden",animation:"fu .3s ease both"}}>
+        <div style={{padding:"14px 18px",borderBottom:"1px solid var(--bd)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <div style={{width:32,height:32,borderRadius:7,background:"var(--al)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <Ic n={tool.icon} s={15} c="var(--ac)"/>
+            </div>
+            <div>
+              <div style={{fontWeight:500,fontSize:13}}>{tool.label}</div>
+              <div style={{fontSize:11,color:"var(--tm)"}}>{tool.desc}</div>
+            </div>
           </div>
-          <div>
-            <div style={{fontWeight:500,fontSize:13}}>{tool.label}</div>
-            <div style={{fontSize:11,color:"var(--tm)"}}>{tool.desc}</div>
-          </div>
+          <button className="bg" style={{padding:"5px 9px"}} onClick={onClose} aria-label="Cerrar panel"><Ic n="x" s={13} aria-hidden="true"/></button>
         </div>
-        <button className="bg" style={{padding:"5px 9px"}} onClick={onClose} aria-label="Cerrar panel"><Ic n="x" s={13} aria-hidden="true"/></button>
-      </div>
-      <div style={{padding:18}}>
-        {status==="done"?(
-          <div style={{textAlign:"center",padding:"24px 0"}}>
-            <div style={{width:46,height:46,borderRadius:"50%",background:"#F0FDF4",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px"}}>
-              <Ic n="check" s={20} c="var(--ok)"/>
-            </div>
-            <div style={{fontWeight:500,marginBottom:4}}>{T.conv_done}</div>
-            <div style={{fontSize:12,color:"var(--tm)",marginBottom:18}}>
-              {files.length} {files.length===1?T.done_sub_s:T.done_sub_p}
-            </div>
-            <button className="bg" onClick={dl}>{T.other}</button>
-          </div>
-        ):status==="error"?(
-          <div style={{textAlign:"center",padding:"24px 0"}}>
-            <div style={{width:46,height:46,borderRadius:"50%",background:"#FEF2F2",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px"}}>
-              <Ic n="x" s={20} c="#B91C1C"/>
-            </div>
-            <div style={{fontWeight:600,marginBottom:10,color:"#B91C1C",fontSize:14}}>{T.err_title}</div>
-            <div style={{fontSize:13,color:"var(--t2)",marginBottom:6,maxWidth:340,margin:"0 auto 8px",lineHeight:1.6}}>{errMsg}</div>
-            <div style={{fontSize:11,color:"var(--tm)",marginBottom:20}}>{T.err_suggest}</div>
-            <div style={{display:"flex",gap:8,justifyContent:"center"}}>
-              <button className="bg" onClick={()=>{ setStatus("idle"); setFiles([]); }}>{T.cancel}</button>
-              <button className="bp" onClick={()=>setStatus("idle")}>{T.err_retry}</button>
-            </div>
-          </div>
-        ):(
-          <>
-            {/* Input oculto — se resetea tras cada selección para poder añadir el mismo archivo */}
-            <input ref={ref} type="file" accept={[...(tool.accepts||[]),...(tool.mimeTypes||[])].join(",")} multiple={!!tool.multi}
-              style={{display:"none"}}
-              onChange={e=>{ addFiles(e.target.files); e.target.value=""; }}/>
-
-            {/* Zona drop — solo se muestra si no hay archivos o la herramienta no es multi */}
-            {(!tool.multi || files.length===0) && (
-              <div className={`dz ${drag?"ov":""}`}
-                role="button" tabIndex={0}
-                aria-label={tool.multi?T.drag_multi:T.drag_single}
-                style={{padding:"28px 18px",textAlign:"center",marginBottom:12}}
-                onDragOver={e=>{e.preventDefault();setDrag(true)}}
-                onDragLeave={()=>setDrag(false)}
-                onDrop={e=>{e.preventDefault();setDrag(false);addFiles(e.dataTransfer.files)}}
-                onClick={()=>ref.current?.click()}
-                onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();ref.current?.click();}}}>
-                <div style={{display:"flex",justifyContent:"center",marginBottom:8}}>
-                  <Ic n="upload" s={22} c={drag?"var(--ac)":"var(--tm)"}/>
-                </div>
-                <div style={{fontWeight:500,fontSize:13,marginBottom:2,color:drag?"var(--ac)":"var(--t1)"}}>
-                  {tool.multi?T.drag_multi:T.drag_single}
-                </div>
-                <div style={{fontSize:11,color:"var(--tm)"}}>{T.click_hint} · {tool.accepts.join(", ")} · {T.max_size}</div>
+        <div style={{padding:18}}>
+          {status==="done"?(
+            <div style={{textAlign:"center",padding:"24px 0"}}>
+              <div style={{width:46,height:46,borderRadius:"50%",background:"#F0FDF4",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px"}}>
+                <Ic n="check" s={20} c="var(--ok)"/>
               </div>
-            )}
+              <div style={{fontWeight:500,marginBottom:4}}>{T.conv_done}</div>
+              <div style={{fontSize:12,color:"var(--tm)",marginBottom:18}}>
+                {files.length} {files.length===1?T.done_sub_s:T.done_sub_p}
+              </div>
+              <button className="bg" onClick={dl}>{T.other}</button>
+            </div>
+          ):status==="error"?(
+            <div style={{textAlign:"center",padding:"24px 0"}}>
+              <div style={{width:46,height:46,borderRadius:"50%",background:"#FEF2F2",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px"}}>
+                <Ic n="x" s={20} c="#B91C1C"/>
+              </div>
+              <div style={{fontWeight:600,marginBottom:10,color:"#B91C1C",fontSize:14}}>{T.err_title}</div>
+              <div style={{fontSize:13,color:"var(--t2)",marginBottom:6,maxWidth:340,margin:"0 auto 8px",lineHeight:1.6}}>{errMsg}</div>
+              <div style={{fontSize:11,color:"var(--tm)",marginBottom:20}}>{T.err_suggest}</div>
+              <div style={{display:"flex",gap:8,justifyContent:"center"}}>
+                <button className="bg" onClick={()=>{ setStatus("idle"); setFiles([]); }}>{T.cancel}</button>
+                <button className="bp" onClick={()=>setStatus("idle")}>{T.err_retry}</button>
+              </div>
+            </div>
+          ):(
+            <>
+              <input ref={ref} type="file"
+                accept={[...(tool.accepts||[]),...(tool.mimeTypes||[])].join(",")}
+                multiple={isMulti}
+                style={{display:"none"}}
+                onChange={e=>{ addFiles(e.target.files); e.target.value=""; }}/>
 
-            {/* Lista de archivos + botón añadir más (solo herramientas multi) */}
-            {files.length>0&&(
-              <div style={{marginBottom:12}}>
-                <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:tool.multi?8:0}}>
-                  {files.map((f,i)=>(
-                    <div key={i}
-                      draggable={!!tool.multi}
-                      onDragStart={()=>setDragIdx(i)}
-                      onDragOver={e=>e.preventDefault()}
-                      onDrop={e=>{
-                        e.preventDefault();
-                        if(dragIdx===null||dragIdx===i)return;
-                        setFiles(p=>{const n=[...p];const[m]=n.splice(dragIdx,1);n.splice(i,0,m);return n;});
-                        setDragIdx(null);
-                      }}
-                      onDragEnd={()=>setDragIdx(null)}
-                      style={{opacity:dragIdx===i?.4:1,transition:"opacity .15s",cursor:tool.multi?"grab":"default"}}>
-                      <FileRow file={f} onRemove={()=>setFiles(p=>p.filter((_,j)=>j!==i))}
-                        showHandle={!!tool.multi} index={i}/>
+              {/* Drop zone — visible si no hay archivos o herramienta no es multi/batch */}
+              {(!isMulti || files.length===0) && (
+                <div className={`dz ${drag?"ov":""}`}
+                  role="button" tabIndex={0}
+                  aria-label={isMulti?T.drag_multi:T.drag_single}
+                  style={{padding:"28px 18px",textAlign:"center",marginBottom:12}}
+                  onDragOver={e=>{e.preventDefault();setDrag(true)}}
+                  onDragLeave={()=>setDrag(false)}
+                  onDrop={e=>{e.preventDefault();setDrag(false);addFiles(e.dataTransfer.files)}}
+                  onClick={()=>ref.current?.click()}
+                  onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();ref.current?.click();}}}>
+                  <div style={{display:"flex",justifyContent:"center",marginBottom:8}}>
+                    <Ic n="upload" s={22} c={drag?"var(--ac)":"var(--tm)"}/>
+                  </div>
+                  <div style={{fontWeight:500,fontSize:13,marginBottom:2,color:drag?"var(--ac)":"var(--t1)"}}>
+                    {isMulti?T.drag_multi:T.drag_single}
+                  </div>
+                  <div style={{fontSize:11,color:"var(--tm)"}}>{T.click_hint} · {tool.accepts.join(", ")} · {T.max_size}</div>
+                  {/* Importar desde la nube */}
+                  {(import.meta.env.VITE_DROPBOX_APP_KEY || import.meta.env.VITE_GOOGLE_CLIENT_ID) && (
+                    <div style={{marginTop:12,display:"flex",gap:6,justifyContent:"center",flexWrap:"wrap"}}
+                      onClick={e=>e.stopPropagation()}>
+                      <span style={{fontSize:10,color:"var(--tm)",alignSelf:"center"}}>o importa desde</span>
+                      <DropboxImportButton onFiles={l=>{addFiles(l);}} accepts={tool.accepts}/>
+                      <GoogleDriveImportButton onFiles={l=>{addFiles(l);}}/>
                     </div>
-                  ))}
+                  )}
                 </div>
-                {tool.multi&&(()=>{
-                  const isFreeLimit = tool.id==='merge' && !localStorage.getItem('morf_pro') && files.length >= 2;
-                  return isFreeLimit ? (
-                    <div style={{padding:"10px 12px",background:"var(--al)",border:"1px solid var(--ac)",
-                      borderRadius:8,display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
-                      <span style={{fontSize:11,color:"var(--ac)"}}>{T.merge_hint}</span>
-                      <button className="bp" style={{fontSize:10,padding:"4px 10px",borderRadius:5}}
-                        onClick={()=>checkLimits([...files,{size:0,name:"x"}],"merge")}>Pro</button>
-                    </div>
-                  ) : (
-                    <div
-                      className={`dz ${drag?"ov":""}`}
-                      style={{padding:"12px",textAlign:"center",cursor:"pointer",borderStyle:"dashed"}}
-                      onDragOver={e=>{e.preventDefault();setDrag(true)}}
-                      onDragLeave={()=>setDrag(false)}
-                      onDrop={e=>{e.preventDefault();setDrag(false);addFiles(e.dataTransfer.files)}}
-                      onClick={()=>ref.current?.click()}>
-                      <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,fontSize:12,color:"var(--t2)"}}>
-                        <Ic n="upload" s={13} c="var(--t2)"/>
-                        Añadir más archivos
+              )}
+
+              {/* Lista de archivos */}
+              {files.length>0&&(
+                <div style={{marginBottom:12}}>
+                  <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:isMulti?8:0}}>
+                    {files.map((f,i)=>(
+                      <div key={i}
+                        draggable={isMulti}
+                        onDragStart={()=>setDragIdx(i)}
+                        onDragOver={e=>e.preventDefault()}
+                        onDrop={e=>{
+                          e.preventDefault();
+                          if(dragIdx===null||dragIdx===i)return;
+                          setFiles(p=>{const n=[...p];const[m]=n.splice(dragIdx,1);n.splice(i,0,m);return n;});
+                          setDragIdx(null);
+                        }}
+                        onDragEnd={()=>setDragIdx(null)}
+                        style={{opacity:dragIdx===i?.4:1,transition:"opacity .15s",cursor:isMulti?"grab":"default"}}>
+                        <FileRow file={f}
+                          onRemove={()=>setFiles(p=>p.filter((_,j)=>j!==i))}
+                          onPreview={()=>setPreviewFile(f)}
+                          showHandle={isMulti} index={i}/>
                       </div>
-                    </div>
-                  );
-                })()}
-              </div>
-            )}
-            {tool.id==="split"&&files.length>0&&(
-              <div style={{marginBottom:12}}>
-                <div style={{fontSize:11,fontWeight:500,color:"var(--t2)",marginBottom:5}}>{T.pages_label}</div>
-                <input value={range} onChange={e=>setRange(e.target.value)} placeholder={T.pages_ph}
-                  className="fi-inp" style={{fontFamily:"'DM Mono',monospace",fontSize:12}}
-                  onFocus={e=>e.target.style.borderColor="var(--ac)"}
-                  onBlur={e=>e.target.style.borderColor="var(--bd)"}/>
-              </div>
-            )}
-            {tool.id==="rotate"&&files.length>0&&(
-              <div style={{marginBottom:12}}>
-                <div style={{fontSize:11,fontWeight:500,color:"var(--t2)",marginBottom:6}}>Ángulo de rotación</div>
-                <div style={{display:"flex",gap:6}}>
-                  {[[90,"90°"],[180,"180°"],[270,"270°"]].map(([deg,lbl])=>(
-                    <button key={deg} onClick={()=>setRotation(deg)}
-                      style={{flex:1,padding:"7px 0",border:`1px solid ${rotation===deg?"var(--ac)":"var(--bd)"}`,borderRadius:6,
-                        fontSize:13,fontFamily:"'DM Mono',monospace",background:rotation===deg?"var(--al)":"transparent",
-                        color:rotation===deg?"var(--ac)":"var(--t2)",cursor:"pointer",fontWeight:rotation===deg?500:400,transition:"all .16s"}}>
-                      {lbl}
-                    </button>
-                  ))}
+                    ))}
+                  </div>
+                  {isMulti&&(()=>{
+                    const isFreeLimit = BATCH_TOOL_IDS.has(tool.id) && !localStorage.getItem("morf_pro") && files.length >= 2;
+                    return isFreeLimit ? (
+                      <div style={{padding:"10px 12px",background:"var(--al)",border:"1px solid var(--ac)",
+                        borderRadius:8,display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
+                        <span style={{fontSize:11,color:"var(--ac)"}}>{T.merge_hint}</span>
+                        <button className="bp" style={{fontSize:10,padding:"4px 10px",borderRadius:5}}
+                          onClick={()=>checkLimits([...files,{size:0,name:"x"}],tool.id)}>Pro</button>
+                      </div>
+                    ) : (
+                      <div className={`dz ${drag?"ov":""}`}
+                        style={{padding:"12px",textAlign:"center",cursor:"pointer",borderStyle:"dashed"}}
+                        onDragOver={e=>{e.preventDefault();setDrag(true)}}
+                        onDragLeave={()=>setDrag(false)}
+                        onDrop={e=>{e.preventDefault();setDrag(false);addFiles(e.dataTransfer.files)}}
+                        onClick={()=>ref.current?.click()}>
+                        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,fontSize:12,color:"var(--t2)"}}>
+                          <Ic n="upload" s={13} c="var(--t2)"/>
+                          Añadir más archivos
+                          {tool.batch && files.length > 0 && (
+                            <span style={{fontSize:10,color:"var(--tm)"}}>({files.length} seleccionados → ZIP)</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
-              </div>
-            )}
-            {tool.id==="compress"&&files.length>0&&(
-              <div style={{marginBottom:12}}>
-                <div style={{fontSize:11,fontWeight:500,color:"var(--t2)",marginBottom:6}}>{T.compress_level}</div>
-                <div style={{display:"flex",gap:6}}>
-                  {[["low",T.q_low],["medium",T.q_med],["high",T.q_high]].map(([q,l])=>(
-                    <button key={q} onClick={()=>setQuality(q)}
-                      style={{flex:1,padding:"7px 0",border:`1px solid ${quality===q?"var(--ac)":"var(--bd)"}`,borderRadius:6,
-                        fontSize:12,fontFamily:"'DM Sans',sans-serif",background:quality===q?"var(--al)":"transparent",
-                        color:quality===q?"var(--ac)":"var(--t2)",cursor:"pointer",fontWeight:quality===q?500:400,transition:"all .16s"}}>
-                      {l}
-                    </button>
-                  ))}
+              )}
+
+              {tool.id==="split"&&files.length>0&&(
+                <div style={{marginBottom:12}}>
+                  <div style={{fontSize:11,fontWeight:500,color:"var(--t2)",marginBottom:5}}>{T.pages_label}</div>
+                  <input value={range} onChange={e=>setRange(e.target.value)} placeholder={T.pages_ph}
+                    className="fi-inp" style={{fontFamily:"'DM Mono',monospace",fontSize:12}}
+                    onFocus={e=>e.target.style.borderColor="var(--ac)"}
+                    onBlur={e=>e.target.style.borderColor="var(--bd)"}/>
                 </div>
-              </div>
-            )}
-            {status==="proc"&&(
-              <div style={{marginBottom:16,padding:"14px 16px",background:"var(--al)",borderRadius:10}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-                  <span style={{fontSize:11,color:"var(--tm)"}}>
-                    {files.length} {files.length===1?"archivo":"archivos"} · {(files.reduce((s,f)=>s+f.size,0)/1048576).toFixed(1)} MB
-                  </span>
-                  <span style={{fontSize:12,fontWeight:700,color:"var(--ac)",fontFamily:"'DM Mono',monospace"}}>{progress}%</span>
+              )}
+              {tool.id==="rotate"&&files.length>0&&(
+                <div style={{marginBottom:12}}>
+                  <div style={{fontSize:11,fontWeight:500,color:"var(--t2)",marginBottom:6}}>Ángulo de rotación</div>
+                  <div style={{display:"flex",gap:6}}>
+                    {[[90,"90°"],[180,"180°"],[270,"270°"]].map(([deg,lbl])=>(
+                      <button key={deg} onClick={()=>setRotation(deg)}
+                        style={{flex:1,padding:"7px 0",border:`1px solid ${rotation===deg?"var(--ac)":"var(--bd)"}`,borderRadius:6,
+                          fontSize:13,fontFamily:"'DM Mono',monospace",background:rotation===deg?"var(--al)":"transparent",
+                          color:rotation===deg?"var(--ac)":"var(--t2)",cursor:"pointer",fontWeight:rotation===deg?500:400,transition:"all .16s"}}>
+                        {lbl}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div style={{height:4,background:"var(--bd)",borderRadius:2,overflow:"hidden"}}>
-                  <div style={{height:"100%",width:`${progress}%`,background:"var(--ac)",borderRadius:2,transition:"width .08s linear"}}/>
+              )}
+              {tool.id==="compress"&&files.length>0&&(
+                <div style={{marginBottom:12}}>
+                  <div style={{fontSize:11,fontWeight:500,color:"var(--t2)",marginBottom:6}}>{T.compress_level}</div>
+                  <div style={{display:"flex",gap:6}}>
+                    {[["low",T.q_low],["medium",T.q_med],["high",T.q_high]].map(([q,l])=>(
+                      <button key={q} onClick={()=>setQuality(q)}
+                        style={{flex:1,padding:"7px 0",border:`1px solid ${quality===q?"var(--ac)":"var(--bd)"}`,borderRadius:6,
+                          fontSize:12,fontFamily:"'DM Sans',sans-serif",background:quality===q?"var(--al)":"transparent",
+                          color:quality===q?"var(--ac)":"var(--t2)",cursor:"pointer",fontWeight:quality===q?500:400,transition:"all .16s"}}>
+                        {l}
+                      </button>
+                    ))}
+                  </div>
                 </div>
+              )}
+              {status==="proc"&&(
+                <div style={{marginBottom:16,padding:"14px 16px",background:"var(--al)",borderRadius:10}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                    <span style={{fontSize:11,color:"var(--tm)"}}>
+                      {files.length} {files.length===1?"archivo":"archivos"} · {(files.reduce((s,f)=>s+f.size,0)/1048576).toFixed(1)} MB
+                      {tool.batch && files.length > 1 && " → ZIP"}
+                    </span>
+                    <span style={{fontSize:12,fontWeight:700,color:"var(--ac)",fontFamily:"'DM Mono',monospace"}}>{progress}%</span>
+                  </div>
+                  <div style={{height:4,background:"var(--bd)",borderRadius:2,overflow:"hidden"}}>
+                    <div style={{height:"100%",width:`${progress}%`,background:"var(--ac)",borderRadius:2,transition:"width .08s linear"}}/>
+                  </div>
+                </div>
+              )}
+              <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+                <button className="bg" onClick={onClose}>{T.cancel}</button>
+                <button className="bp" disabled={!files.length||status==="proc"} onClick={convert}>
+                  {status==="proc"
+                    ? <><div className="spn"/>{T.processing}</>
+                    : <><Ic n="arrow" s={14}/>{tool.batch&&files.length>1?`Convertir ${files.length} archivos`:T.convert}</>
+                  }
+                </button>
               </div>
-            )}
-            <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
-              <button className="bg" onClick={onClose}>{T.cancel}</button>
-              <button className="bp" disabled={!files.length||status==="proc"} onClick={convert}>
-                {status==="proc"?<><div className="spn"/>{T.processing}</>:<><Ic n="arrow" s={14}/>{T.convert}</>}
-              </button>
-            </div>
-          </>
-        )}
+            </>
+          )}
+        </div>
       </div>
-    </div>
+      {previewFile&&<FilePreviewModal file={previewFile} onClose={()=>setPreviewFile(null)}/>}
+    </>
   );
 }
 

@@ -390,6 +390,87 @@ export async function odtToPdf(file: File): Promise<string> {
 }
 
 // ─────────────────────────────────────────────────────────────────
+// BATCH HELPERS — devuelven Blob en lugar de descargar
+// ─────────────────────────────────────────────────────────────────
+export async function compressPdfToBlob(file: File, level: string): Promise<Blob> {
+  const bytes = await file.arrayBuffer();
+  const doc   = await PDFDocument.load(bytes, { ignoreEncryption: true });
+  const out   = await doc.save({
+    useObjectStreams: level !== "low",
+    addDefaultPage:  false,
+    objectsPerTick:  level === "high" ? 100 : level === "medium" ? 50 : 20,
+  });
+  return pdfBlob(out);
+}
+
+export async function rotatePdfToBlob(file: File, degrees = 90): Promise<Blob> {
+  const bytes = await file.arrayBuffer();
+  const doc   = await PDFDocument.load(bytes, { ignoreEncryption: true });
+  doc.getPages().forEach(page => {
+    const current = page.getRotation().angle;
+    page.setRotation(pdfDegrees((current + degrees) % 360));
+  });
+  const out = await doc.save();
+  return pdfBlob(out);
+}
+
+export async function pngToJpgBlob(file: File, quality = 0.92): Promise<Blob> {
+  const bytes = await file.arrayBuffer();
+  const blob  = new Blob([bytes], { type: "image/png" });
+  const url   = URL.createObjectURL(blob);
+  const img   = new Image();
+  await new Promise<void>((res, rej) => {
+    img.onload = () => res();
+    img.onerror = () => rej(new Error("Image load error"));
+    img.src = url;
+  });
+  const cv = document.createElement("canvas");
+  cv.width = img.naturalWidth; cv.height = img.naturalHeight;
+  const ctx = cv.getContext("2d")!;
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.drawImage(img, 0, 0);
+  URL.revokeObjectURL(url);
+  return new Promise<Blob>(r => cv.toBlob(b => r(b!), "image/jpeg", quality));
+}
+
+export async function jpgToPngBlob(file: File): Promise<Blob> {
+  const bytes = await file.arrayBuffer();
+  const blob  = new Blob([bytes], { type: "image/jpeg" });
+  const url   = URL.createObjectURL(blob);
+  const img   = new Image();
+  await new Promise<void>((res, rej) => {
+    img.onload = () => res();
+    img.onerror = () => rej(new Error("Image load error"));
+    img.src = url;
+  });
+  const cv = document.createElement("canvas");
+  cv.width = img.naturalWidth; cv.height = img.naturalHeight;
+  cv.getContext("2d")!.drawImage(img, 0, 0);
+  URL.revokeObjectURL(url);
+  return new Promise<Blob>(r => cv.toBlob(b => r(b!), "image/png"));
+}
+
+/** Empaqueta varios Blobs en un ZIP y lo descarga como "morf_lote.zip" */
+export async function downloadAsZip(items: Array<{ filename: string; blob: Blob }>): Promise<void> {
+  if (!window.JSZip) {
+    await new Promise<void>((res, rej) => {
+      const s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
+      s.onload = () => res();
+      s.onerror = () => rej(new Error("JSZip load error"));
+      document.head.appendChild(s);
+    });
+  }
+  const zip = new window.JSZip();
+  for (const { filename, blob } of items) {
+    zip.file(filename, await blob.arrayBuffer());
+  }
+  const zipBlob = await zip.generateAsync({ type: "blob" });
+  download(zipBlob, "morf_lote.zip");
+}
+
+// ─────────────────────────────────────────────────────────────────
 // 8. PNG → JPG
 // ─────────────────────────────────────────────────────────────────
 export async function pngToJpg(file: File, quality = 0.92): Promise<void> {
