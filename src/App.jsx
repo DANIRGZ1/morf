@@ -64,6 +64,7 @@ const css = `
 
   .dz{border:1.5px dashed var(--bd);border-radius:10px;background:var(--sf);transition:all .16s;cursor:pointer}
   .dz:hover,.dz.ov{border-color:var(--ac);background:var(--al)}
+  .global-drag::after{content:"";position:fixed;inset:0;border:3px solid var(--ac);border-radius:12px;pointer-events:none;z-index:9999;background:rgba(28,48,66,.06);}
 
   .tr{height:3px;background:var(--bd);border-radius:2px;overflow:hidden}
   .fill{height:100%;background:var(--ac);border-radius:2px;animation:pr 2.4s cubic-bezier(.4,0,.2,1) forwards}
@@ -198,7 +199,7 @@ export default function App() {
   const [active, setActive]   = useState(null);
   const [modal, setModal]     = useState(null);
   const [toast, setToast]     = useState(null);
-  const [heroDrag, setHeroDrag] = useState(false);
+  const [globalDrag, setGlobalDrag] = useState(false);
   const [dark, setDark] = useState(() => window.matchMedia?.('(prefers-color-scheme: dark)').matches);
   const { count, bumpCount }                          = useCounter();
   const { showUpgrade, setShowUpgrade, upgradeReason, checkLimits } = useFreemium();
@@ -262,7 +263,7 @@ export default function App() {
   const TOOLS = TOOL_BASE.map((t,i) => ({ ...t, ...T.t[i] }));
 
   const heroDrop = e => {
-    e.preventDefault(); setHeroDrag(false);
+    e.preventDefault(); setGlobalDrag(false);
     const file = e.dataTransfer.files[0];
     if (!file) return;
     const ext = "."+file.name.split(".").pop().toLowerCase();
@@ -288,7 +289,10 @@ export default function App() {
 
   return (
     <LangCtx.Provider value={T}>
-      <div className={`m${dark?" dark":""}`}>
+      <div className={`m${dark?" dark":""}${globalDrag?" global-drag":""}`}
+        onDragOver={e=>{e.preventDefault();setGlobalDrag(true)}}
+        onDragLeave={e=>{if(!e.currentTarget.contains(e.relatedTarget))setGlobalDrag(false)}}
+        onDrop={heroDrop}>
         <style>{css}</style>
 
         {/* Header */}
@@ -347,47 +351,8 @@ export default function App() {
               {T.hero_cta}
             </button>
 
-            {/* Contador */}
-            {count>0&&(
-              <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,marginTop:4}}>
-                <span style={{fontSize:13,fontFamily:"'DM Mono',monospace",fontWeight:600,color:"var(--ac)"}}>
-                  {count.toLocaleString()}
-                </span>
-                <span style={{fontSize:12,color:"var(--tm)"}}>{T.counter}</span>
-              </div>
-            )}
           </div>
 
-          {/* Hero drop */}
-          <div className={`dz fu fu1 m-hero-drop ${heroDrag?"ov":""}`}
-            role="button" tabIndex={0}
-            aria-label={T.hero_drop}
-            style={{padding:"40px 32px",textAlign:"center",maxWidth:580,margin:"0 auto 48px",
-              background:heroDrag?"var(--al)":"var(--sf)",transition:"all .2s",cursor:"pointer",
-              boxShadow:heroDrag?"0 0 0 3px var(--ac)":"0 1px 3px rgba(0,0,0,.06)"}}
-            onDragOver={e=>{e.preventDefault();setHeroDrag(true)}}
-            onDragLeave={()=>setHeroDrag(false)}
-            onDrop={heroDrop}
-            onClick={()=>document.getElementById("tools")?.scrollIntoView({behavior:"smooth"})}
-            onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();document.getElementById("tools")?.scrollIntoView({behavior:"smooth"});}}}>
-            {/* Icono animado */}
-            <div style={{display:"flex",justifyContent:"center",marginBottom:14}}>
-              <div style={{width:60,height:60,borderRadius:14,
-                background:heroDrag?"var(--ac)":"linear-gradient(135deg,#E8EDF2,#F5F5F3)",
-                display:"flex",alignItems:"center",justifyContent:"center",transition:"all .2s",
-                boxShadow:heroDrag?"0 4px 16px rgba(28,48,66,.3)":"0 2px 8px rgba(0,0,0,.08)"}}>
-                <Ic n="upload" s={24} c={heroDrag?"#fff":"var(--ac)"}/>
-              </div>
-            </div>
-            <div style={{fontWeight:600,marginBottom:6,fontSize:15,color:heroDrag?"var(--ac)":"var(--t1)",transition:"color .2s"}}>
-              {T.hero_drop}
-            </div>
-            <div style={{fontSize:13,color:"var(--t2)",marginBottom:10,lineHeight:1.5}}>{T.hero_drop_sub}</div>
-            <div style={{display:"flex",gap:5,justifyContent:"center",marginBottom:10}}>
-              <Tag type="pdf"/><Tag type="docx"/><Tag type="img"/>
-            </div>
-            <div style={{fontSize:10,color:"var(--tm)",fontFamily:"'DM Mono',monospace",opacity:.7}}>{T.max_size}</div>
-          </div>
 
           {/* Cómo funciona */}
           <div style={{marginBottom:48}}>
