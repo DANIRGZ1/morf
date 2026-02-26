@@ -313,7 +313,7 @@ describe('conversion history', () => {
       { filename: 'report.pdf', tool: 'PDF → Word', date: new Date().toISOString() }
     ]))
     render(<App />)
-    expect(screen.getByText('report.pdf')).toBeInTheDocument()
+    expect(screen.getAllByText('report.pdf').length).toBeGreaterThan(0)
     // T.hist_title = "Recent conversions"
     expect(screen.getByText('Recent conversions')).toBeInTheDocument()
   })
@@ -324,7 +324,7 @@ describe('conversion history', () => {
       { filename: 'doc.pdf', tool: 'PDF → Word', date: new Date().toISOString() }
     ]))
     render(<App />)
-    expect(screen.getByText('doc.pdf')).toBeInTheDocument()
+    expect(screen.getAllByText('doc.pdf').length).toBeGreaterThan(0)
     // T.hist_clear = "Clear history"
     await user.click(screen.getByText('Clear history'))
     expect(screen.queryByText('doc.pdf')).not.toBeInTheDocument()

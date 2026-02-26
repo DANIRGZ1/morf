@@ -469,44 +469,48 @@ export default function App() {
             </div>
           </div>
 
-          {/* Before / After */}
-          <div style={{marginBottom:48}}>
-            <div style={{textAlign:"center",marginBottom:20}}>
-              <h2 style={{fontSize:17,fontWeight:600,letterSpacing:"-.02em",marginBottom:4}}>Antes / Después</h2>
-              <p style={{fontSize:13,color:"var(--tm)"}}>Comprime, convierte y transforma en segundos</p>
-            </div>
-            <div style={{display:"flex",flexDirection:"column",gap:8,maxWidth:600,margin:"0 auto"}}>
-              {[
-                {before:{name:"informe-2024.pdf",   size:"4.2 MB"}, after:{name:"informe-2024.docx", size:"1.1 MB"}},
-                {before:{name:"doc1.pdf + doc2.pdf",size:"1.8 MB"}, after:{name:"combinado.pdf",      size:"3.2 MB"}},
-                {before:{name:"presentacion.pdf",   size:"12.4 MB"},after:{name:"presentacion.pdf",   size:"2.1 MB"}},
-              ].map((row,i)=>(
-                <div key={i} style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",gap:10,alignItems:"center"}}>
-                  <div style={{padding:"11px 13px",background:"var(--sf)",border:"1px solid var(--bd)",
-                    borderRadius:8,display:"flex",alignItems:"center",gap:9}}>
-                    <Ic n="file" s={15} c="var(--tm)"/>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:12,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",
-                        whiteSpace:"nowrap"}}>{row.before.name}</div>
-                      <div style={{fontSize:10,color:"var(--tm)",fontFamily:"'DM Mono',monospace"}}>{row.before.size}</div>
+          {/* Before / After — only shown when user has real history */}
+          {history.length > 0 && (
+            <div style={{marginBottom:48}}>
+              <div style={{textAlign:"center",marginBottom:20}}>
+                <h2 style={{fontSize:17,fontWeight:600,letterSpacing:"-.02em",marginBottom:4}}>Tus últimas conversiones</h2>
+                <p style={{fontSize:13,color:"var(--tm)"}}>Solo visible para ti en este dispositivo</p>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:8,maxWidth:600,margin:"0 auto"}}>
+                {history.slice(0,3).map((h,i)=>{
+                  const tool = TOOLS.find(t=>t.label===h.tool);
+                  const extMap = {pdf:".pdf",docx:".docx",jpg:".jpg",png:".png",xlsx:".xlsx",img:".pdf"};
+                  const outExt = tool ? (extMap[tool.to]||"") : "";
+                  const outName = h.filename.replace(/\.[^.]+$/,"") + outExt;
+                  return (
+                    <div key={i} style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",gap:10,alignItems:"center"}}>
+                      <div style={{padding:"11px 13px",background:"var(--sf)",border:"1px solid var(--bd)",
+                        borderRadius:8,display:"flex",alignItems:"center",gap:9}}>
+                        <Ic n="file" s={15} c="var(--tm)"/>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontSize:12,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",
+                            whiteSpace:"nowrap"}}>{h.filename}</div>
+                          <div style={{fontSize:10,color:"var(--tm)",fontFamily:"'DM Mono',monospace"}}>{h.tool}</div>
+                        </div>
+                      </div>
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                        <Ic n="logo" s={18} c="var(--ac)" sw={1.6}/>
+                      </div>
+                      <div style={{padding:"11px 13px",background:"var(--sf)",border:"1px solid var(--ok)",
+                        borderRadius:8,display:"flex",alignItems:"center",gap:9}}>
+                        <Ic n="file" s={15} c="var(--ok)"/>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontSize:12,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",
+                            whiteSpace:"nowrap"}}>{outName}</div>
+                          <div style={{fontSize:10,color:"var(--ok)",fontFamily:"'DM Mono',monospace",fontWeight:500}}>listo ✓</div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                    <Ic n="logo" s={18} c="var(--ac)" sw={1.6}/>
-                  </div>
-                  <div style={{padding:"11px 13px",background:"var(--sf)",border:"1px solid var(--ok)",
-                    borderRadius:8,display:"flex",alignItems:"center",gap:9}}>
-                    <Ic n="file" s={15} c="var(--ok)"/>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:12,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",
-                        whiteSpace:"nowrap"}}>{row.after.name}</div>
-                      <div style={{fontSize:10,color:"var(--ok)",fontFamily:"'DM Mono',monospace",fontWeight:500}}>{row.after.size}</div>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Tools */}
           <div id="tools">
