@@ -419,6 +419,22 @@ export default function App() {
 
           </div>
 
+          {/* Stats grid */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:48}}>
+            {[
+              {value:"10",                                    label:T.tools_count},
+              {value:count>0?count.toLocaleString():"1000+", label:"archivos procesados"},
+              {value:"<3s",                                   label:"velocidad media"},
+              {value:"100%",                                  label:"privado siempre"},
+            ].map((s,i)=>(
+              <div key={i} style={{textAlign:"center",padding:"16px 12px",background:"var(--sf)",
+                border:"1px solid var(--bd)",borderRadius:10}}>
+                <div style={{fontSize:22,fontWeight:700,color:"var(--ac)",
+                  fontFamily:"'DM Mono',monospace",marginBottom:4,letterSpacing:"-.02em"}}>{s.value}</div>
+                <div style={{fontSize:11,color:"var(--tm)",lineHeight:1.4}}>{s.label}</div>
+              </div>
+            ))}
+          </div>
 
           {/* Cómo funciona */}
           <div style={{marginBottom:48}}>
@@ -448,6 +464,45 @@ export default function App() {
                       <span style={{display:"block",transform:"rotate(-90deg)"}}><Ic n="chevron" s={16} c="var(--tm)"/></span>
                     </div>
                   )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Before / After */}
+          <div style={{marginBottom:48}}>
+            <div style={{textAlign:"center",marginBottom:20}}>
+              <h2 style={{fontSize:17,fontWeight:600,letterSpacing:"-.02em",marginBottom:4}}>Antes / Después</h2>
+              <p style={{fontSize:13,color:"var(--tm)"}}>Comprime, convierte y transforma en segundos</p>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:8,maxWidth:600,margin:"0 auto"}}>
+              {[
+                {before:{name:"informe-2024.pdf",   size:"4.2 MB"}, after:{name:"informe-2024.docx", size:"1.1 MB"}},
+                {before:{name:"doc1.pdf + doc2.pdf",size:"1.8 MB"}, after:{name:"combinado.pdf",      size:"3.2 MB"}},
+                {before:{name:"presentacion.pdf",   size:"12.4 MB"},after:{name:"presentacion.pdf",   size:"2.1 MB"}},
+              ].map((row,i)=>(
+                <div key={i} style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",gap:10,alignItems:"center"}}>
+                  <div style={{padding:"11px 13px",background:"var(--sf)",border:"1px solid var(--bd)",
+                    borderRadius:8,display:"flex",alignItems:"center",gap:9}}>
+                    <Ic n="file" s={15} c="var(--tm)"/>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:12,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",
+                        whiteSpace:"nowrap"}}>{row.before.name}</div>
+                      <div style={{fontSize:10,color:"var(--tm)",fontFamily:"'DM Mono',monospace"}}>{row.before.size}</div>
+                    </div>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                    <Ic n="logo" s={18} c="var(--ac)" sw={1.6}/>
+                  </div>
+                  <div style={{padding:"11px 13px",background:"var(--sf)",border:"1px solid var(--ok)",
+                    borderRadius:8,display:"flex",alignItems:"center",gap:9}}>
+                    <Ic n="file" s={15} c="var(--ok)"/>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:12,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",
+                        whiteSpace:"nowrap"}}>{row.after.name}</div>
+                      <div style={{fontSize:10,color:"var(--ok)",fontFamily:"'DM Mono',monospace",fontWeight:500}}>{row.after.size}</div>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
