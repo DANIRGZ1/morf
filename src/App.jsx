@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useHistory }   from "./hooks/useHistory";
 import { useFreemium }  from "./hooks/useFreemium";
 import { useCounter }   from "./hooks/useCounter";
@@ -193,6 +193,27 @@ const css = `
   .fl:hover{color:var(--t1)}
 `;
 
+/* ── AdSense Unit ────────────────────────────────────────────────────────── */
+// TODO: reemplaza cada data-ad-slot con el ID real de tu panel AdSense
+// (AdSense > Anuncios > Por bloque de anuncios > Crear bloque)
+function AdUnit({ slot, style={} }) {
+  const pushed = useRef(false);
+  useEffect(() => {
+    if (pushed.current) return;
+    pushed.current = true;
+    try { (window.adsbygoogle = window.adsbygoogle || []).push({}); }
+    catch(e) { /* AdSense no disponible */ }
+  }, []);
+  return (
+    <ins className="adsbygoogle"
+      style={{display:"block",overflow:"hidden",...style}}
+      data-ad-client="ca-pub-1101880383290833"
+      data-ad-slot={slot}
+      data-ad-format="auto"
+      data-full-width-responsive="true"/>
+  );
+}
+
 /* ── Tool Page (hash routing + SEO) ─────────────────────────────────────── */
 function ToolPage({ tool, showToast, bumpCount, addToHistory, checkLimits, onBack }) {
   useEffect(() => {
@@ -218,9 +239,13 @@ function ToolPage({ tool, showToast, bumpCount, addToHistory, checkLimits, onBac
         <h1 style={{fontSize:"clamp(22px,4vw,36px)",fontWeight:700,letterSpacing:"-.02em",marginBottom:8}}>{tool.label}</h1>
         <p style={{fontSize:15,color:"var(--t2)",maxWidth:440,margin:"0 auto"}}>{tool.desc}</p>
       </div>
-      <div style={{maxWidth:560,margin:"0 auto",padding:"0 20px 80px"}}>
+      <div style={{maxWidth:560,margin:"0 auto",padding:"0 20px 32px"}}>
         <Panel tool={tool} onClose={onBack} showToast={showToast}
           bumpCount={bumpCount} addToHistory={addToHistory} checkLimits={checkLimits}/>
+      </div>
+      {/* Anuncio 4 — post-conversión */}
+      <div style={{maxWidth:560,margin:"0 auto",padding:"0 20px 48px"}}>
+        <AdUnit slot="4444444444" style={{minHeight:90}}/>
       </div>
     </div>
   );
@@ -436,6 +461,11 @@ export default function App() {
             ))}
           </div>
 
+          {/* Anuncio 1 — tras propuesta de valor */}
+          <div style={{marginBottom:48}}>
+            <AdUnit slot="1111111111" style={{minHeight:90}}/>
+          </div>
+
           {/* Cómo funciona */}
           <div style={{marginBottom:48}}>
             <div style={{textAlign:"center",marginBottom:28}}>
@@ -577,6 +607,9 @@ export default function App() {
             )}
           </div>
 
+          {/* Anuncio 2 — tras herramientas */}
+          <AdUnit slot="2222222222" style={{marginTop:32,minHeight:90}}/>
+
           {/* Features */}
           <div className="m-feat" style={{borderTop:"1px solid var(--bd)",marginTop:48,paddingTop:36,display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:20}}>
             {T.feat.map(([title,desc],i)=>(
@@ -665,6 +698,11 @@ export default function App() {
               ))}
             </div>
           </div>
+        </div>
+
+        {/* Anuncio 3 — tras FAQ */}
+        <div style={{maxWidth:960,margin:"0 auto",padding:"0 20px 32px"}}>
+          <AdUnit slot="3333333333" style={{minHeight:90}}/>
         </div>
 
         {/* Historial */}
