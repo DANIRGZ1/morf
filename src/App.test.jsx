@@ -345,8 +345,8 @@ describe('conversion counter', () => {
   it('displays the counter value when count > 0', () => {
     localStorage.setItem('morf_count', '7')
     render(<App />)
-    // The number is rendered with toLocaleString; 7 → "7"
-    expect(screen.getByText('7')).toBeInTheDocument()
+    // The number is rendered in multiple places (hero counter + stats grid); 7 → "7"
+    expect(screen.getAllByText('7').length).toBeGreaterThan(0)
     // T.counter = "files converted"
     expect(screen.getByText(/files converted/i)).toBeInTheDocument()
   })

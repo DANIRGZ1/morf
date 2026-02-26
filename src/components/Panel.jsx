@@ -60,8 +60,9 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
   const [rotation,setRotation] = useState(90);
   const [dragIdx,setDragIdx] = useState(null);
   const [errMsg,setErrMsg]   = useState("");
-  const [step,setStep]       = useState(0); // 0=idle 1=read 2=proc 3=done
+  const [progress,setProgress] = useState(0);
   const ref = useRef();
+  const progressTimer = useRef(null);
 
   const addFiles = l => {
     const list = Array.from(l);
@@ -102,10 +103,21 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
     if (!checkLimits(files, tool.id)) return;
 
     setStatus("proc");
-    setStep(1); // leyendo
+    setProgress(0);
     setErrMsg("");
-    await new Promise(r => setTimeout(r, 350)); // pequeña pausa para que se vea el paso 1
-    setStep(2); // procesando
+
+    // Simulated progress proportional to file size (reaches ~88% while awaiting)
+    const totalKB = files.reduce((s, f) => s + f.size, 0) / 1024;
+    const duration = Math.max(1200, Math.min(totalKB * 0.5, 10000));
+    const startTime = Date.now();
+    if (progressTimer.current) clearInterval(progressTimer.current);
+    progressTimer.current = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const pct = Math.min(88, Math.round((elapsed / duration) * 88));
+      setProgress(pct);
+      if (pct >= 88) clearInterval(progressTimer.current);
+    }, 50);
+
     try {
       if (tool.id==="merge")         { await mergePdfs(files); }
       else if (tool.id==="split")    { await splitPdf(files[0], range); }
@@ -114,14 +126,16 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
       else if (tool.id==="word-pdf") {
         const f = files[0];
         const res = await wordToPdf(f);
+        clearInterval(progressTimer.current);
         if (res === "popup-blocked") {
           setErrMsg(T.err_popup);
           setStatus("error");
           return;
         }
+        setProgress(100);
         showToast(T.conv_done);
         bumpCount();
-          addToHistory(files[0]?.name, tool.label);
+        addToHistory(files[0]?.name, tool.label);
         setStatus("idle"); setFiles([]); return;
       }
       else if (tool.id==="pdf-word")  { await pdfToWord(files[0]); }
@@ -130,17 +144,21 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
       else if (tool.id==="rotate")    { await rotatePdf(files[0], rotation); }
       else if (tool.id==="excel-pdf") {
         const res = await excelToPdf(files[0]);
+        clearInterval(progressTimer.current);
         if (res === "popup-blocked") { setErrMsg(T.err_popup); setStatus("error"); return; }
+        setProgress(100);
         showToast(T.conv_done); bumpCount(); setStatus("idle"); setFiles([]); return;
       }
-      setStep(3);
+      clearInterval(progressTimer.current);
+      setProgress(100);
       setStatus("done");
       showToast(T.conv_done);
       bumpCount();
       addToHistory(files[0]?.name, tool.label);
     } catch(e) {
+      clearInterval(progressTimer.current);
       console.error(e);
-      setStep(0);
+      setProgress(0);
       setErrMsg(getErrMsg(e));
       setStatus("error");
     }
@@ -303,29 +321,15 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
               </div>
             )}
             {status==="proc"&&(
-              <div className="m-steps" style={{marginBottom:16,padding:"16px",background:"var(--al)",borderRadius:10,textAlign:"center"}}>
-                {/* Pasos */}
-                <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:0,marginBottom:12}}>
-                  {[T.step_read, T.step_proc].map((label,i)=>{
-                    const idx = i+1;
-                    const isDone = step > idx;
-                    const isActive = step === idx;
-                    return (
-                      <div key={i} style={{display:"flex",alignItems:"center"}}>
-                        <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
-                          <div className={`step-dot ${isActive?"active":isDone?"done":""}`}/>
-                          <span style={{fontSize:10,color:isActive?"var(--ac)":isDone?"var(--ok)":"var(--tm)",fontWeight:isActive?500:400,transition:"color .3s",whiteSpace:"nowrap"}}>
-                            {label}
-                          </span>
-                        </div>
-                        {i<1&&<div style={{width:48,height:1,background:step>idx?"var(--ok)":"var(--bd)",margin:"0 8px",marginBottom:14,transition:"background .3s"}}/>}
-                      </div>
-                    );
-                  })}
+              <div style={{marginBottom:16,padding:"14px 16px",background:"var(--al)",borderRadius:10}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                  <span style={{fontSize:11,color:"var(--tm)"}}>
+                    {files.length} {files.length===1?"archivo":"archivos"} · {(files.reduce((s,f)=>s+f.size,0)/1048576).toFixed(1)} MB
+                  </span>
+                  <span style={{fontSize:12,fontWeight:700,color:"var(--ac)",fontFamily:"'DM Mono',monospace"}}>{progress}%</span>
                 </div>
-                {/* Barra */}
-                <div className="tr" style={{maxWidth:200,margin:"0 auto"}}>
-                  <div className="fill" style={{animationDuration: step===1?"0.8s":"2s"}}/>
+                <div style={{height:4,background:"var(--bd)",borderRadius:2,overflow:"hidden"}}>
+                  <div style={{height:"100%",width:`${progress}%`,background:"var(--ac)",borderRadius:2,transition:"width .08s linear"}}/>
                 </div>
               </div>
             )}
