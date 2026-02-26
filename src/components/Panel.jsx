@@ -6,12 +6,12 @@ import { mergePdfs, splitPdf, imagesToPdf, compressPdf, wordToPdf, pdfToWord, pn
 /* ── Tools ───────────────────────────────────────────────────────────────── */
 // eslint-disable-next-line react-refresh/only-export-components
 export const TOOL_BASE = [
-  {id:"pdf-word",  icon:"word",     accepts:[".pdf"],                        from:"pdf",  to:"docx"},
-  {id:"word-pdf",  icon:"pdf",      accepts:[".doc",".docx"], mimeTypes:["application/msword","application/vnd.openxmlformats-officedocument.wordprocessingml.document"], from:"docx", to:"pdf"},
+  {id:"pdf-word",  icon:"word",     accepts:[".pdf"],                        from:"pdf",  to:"docx", popular:true},
+  {id:"word-pdf",  icon:"pdf",      accepts:[".doc",".docx"], mimeTypes:["application/msword","application/vnd.openxmlformats-officedocument.wordprocessingml.document"], from:"docx", to:"pdf", popular:true},
+  {id:"merge",     icon:"merge",    accepts:[".pdf"],                        from:"pdf",  to:"pdf", multi:true, popular:true},
+  {id:"compress",  icon:"compress", accepts:[".pdf"],                        from:"pdf",  to:"pdf", popular:true},
   {id:"img-pdf",   icon:"img",      accepts:[".jpg",".jpeg",".png",".webp"], from:"img",  to:"pdf", multi:true},
-  {id:"merge",     icon:"merge",    accepts:[".pdf"],                        from:"pdf",  to:"pdf", multi:true},
   {id:"split",     icon:"split",    accepts:[".pdf"],                        from:"pdf",  to:"pdf"},
-  {id:"compress",  icon:"compress", accepts:[".pdf"],                        from:"pdf",  to:"pdf"},
   {id:"png-jpg",   icon:"img",      accepts:[".png"],                            from:"png",  to:"jpg"},
   {id:"jpg-png",   icon:"img",      accepts:[".jpg",".jpeg"],                    from:"jpg",  to:"png"},
   {id:"rotate",    icon:"rotate",   accepts:[".pdf"],                            from:"pdf",  to:"pdf"},
