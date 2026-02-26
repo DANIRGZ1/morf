@@ -208,6 +208,33 @@ export default function App() {
     document.body.style.background = dark ? '#0F1117' : '#F9F9F8';
   }, [dark]);
 
+  // Stripe return handling
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('success') === 'true') {
+      const sessionId = params.get('session_id');
+      const verifyPro = async () => {
+        try {
+          const res = await fetch(`/api/verify-session?session_id=${sessionId}`);
+          const data = await res.json();
+          if (data.pro && data.email) {
+            localStorage.setItem('morf_pro', 'true');
+            localStorage.setItem('morf_pro_email', data.email);
+            setToast({ msg: '🎉 ¡Bienvenido a Pro! Ya tienes acceso ilimitado.', type: 'ok' });
+          }
+        } catch {
+          localStorage.setItem('morf_pro', 'true');
+          setToast({ msg: '🎉 ¡Bienvenido a Pro!', type: 'ok' });
+        }
+        window.history.replaceState({}, '', '/');
+      };
+      verifyPro();
+    } else if (params.get('canceled') === 'true') {
+      window.history.replaceState({}, '', '/');
+      setTimeout(() => setToast({ msg: 'Pago cancelado.', type: 'ok' }), 0);
+    }
+  }, []);
+
   // FAQ structured data para SEO
   useEffect(() => {
     const existing = document.getElementById('faq-schema');
@@ -362,6 +389,39 @@ export default function App() {
             <div style={{fontSize:10,color:"var(--tm)",fontFamily:"'DM Mono',monospace",opacity:.7}}>{T.max_size}</div>
           </div>
 
+          {/* Cómo funciona */}
+          <div style={{marginBottom:48}}>
+            <div style={{textAlign:"center",marginBottom:28}}>
+              <h2 style={{fontSize:17,fontWeight:600,letterSpacing:"-.02em",marginBottom:6}}>{T.how_title}</h2>
+              <p style={{fontSize:13,color:"var(--tm)",maxWidth:440,margin:"0 auto"}}>{T.how_sub}</p>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:2,position:"relative"}}>
+              {T.how_steps.map(([title,desc],i)=>(
+                <div key={i} style={{display:"flex",flexDirection:"column",alignItems:"center",textAlign:"center",
+                  padding:"24px 20px",background:"var(--sf)",border:"1px solid var(--bd)",
+                  borderRadius:i===0?"10px 0 0 10px":i===2?"0 10px 10px 0":"0",
+                  position:"relative"}}>
+                  <div style={{width:36,height:36,borderRadius:"50%",
+                    background:i===0?"var(--ac)":i===1?"var(--ah)":"var(--ok)",
+                    display:"flex",alignItems:"center",justifyContent:"center",marginBottom:14,flexShrink:0}}>
+                    <span style={{fontSize:14,fontWeight:700,color:"#fff",fontFamily:"'DM Mono',monospace"}}>{i+1}</span>
+                  </div>
+                  <div style={{marginBottom:10}}>
+                    <Ic n={["grid","upload","download"][i]} s={20} c={["var(--ac)","var(--ah)","var(--ok)"][i]}/>
+                  </div>
+                  <div style={{fontWeight:600,fontSize:13,marginBottom:6}}>{title}</div>
+                  <div style={{fontSize:12,color:"var(--t2)",lineHeight:1.6}}>{desc}</div>
+                  {i<2&&(
+                    <div style={{position:"absolute",right:-12,top:"50%",transform:"translateY(-50%)",
+                      zIndex:1,background:"var(--sf)",padding:"2px 0",display:"flex",alignItems:"center"}}>
+                      <span style={{display:"block",transform:"rotate(-90deg)"}}><Ic n="chevron" s={16} c="var(--tm)"/></span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Tools */}
           <div id="tools">
             <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",marginBottom:14}}>
@@ -462,7 +522,7 @@ export default function App() {
                   </div>
                 ))}
                 <button className="bp" style={{width:"100%",marginTop:20,fontSize:13,padding:"10px 0",justifyContent:"center"}}
-                  onClick={()=>alert('Pasarela de pago próximamente')}>
+                  onClick={()=>setShowUpgrade(true)}>
                   {T.plan_cta_pro}
                 </button>
               </div>

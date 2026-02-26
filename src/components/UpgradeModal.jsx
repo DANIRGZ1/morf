@@ -1,20 +1,51 @@
+import { useState } from "react";
 import { Ic } from "./icons";
+
+const PRICE_MONTHLY = 'price_1T44W83sk2Fy1VINm9ziKPV1';
+const PRICE_YEARLY  = 'price_1T44XP3sk2Fy1VINdMircInl';
 
 /* ── Upgrade Modal ───────────────────────────────────────────────────────── */
 function UpgradeModal({ reason, billingYear, setBillingYear, onClose, T }) {
   const monthly = 5.99;
   const yearly  = (monthly * 12 * 0.75 / 12).toFixed(2);
   const price   = billingYear ? yearly : monthly;
+  const [email, setEmail]       = useState('');
+  const [loading, setLoading]   = useState(false);
+  const [emailErr, setEmailErr] = useState('');
+
+  const startCheckout = async () => {
+    if (!email || !email.includes('@')) { setEmailErr('Introduce un email válido'); return; }
+    setEmailErr('');
+    setLoading(true);
+    try {
+      const priceId = billingYear ? PRICE_YEARLY : PRICE_MONTHLY;
+      const res = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ priceId, email }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setEmailErr(data.error || 'Error al conectar con Stripe');
+        setLoading(false);
+      }
+    } catch {
+      setEmailErr('Error de red. Inténtalo de nuevo.');
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="ov" role="presentation" onClick={onClose}>
-      <div className="sh" role="dialog" aria-modal="true" aria-labelledby="upgrade-title" style={{maxWidth:480}} onClick={e=>e.stopPropagation()}>
+    <div className="ov" onClick={onClose}>
+      <div className="sh" style={{maxWidth:480}} onClick={e=>e.stopPropagation()}>
         <div className="sh-head">
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <Ic n="zap" s={16} c="var(--ac)"/>
-            <span id="upgrade-title" style={{fontWeight:600,fontSize:14}}>{T.upgrade_cta}</span>
+            <span style={{fontWeight:600,fontSize:14}}>{T.upgrade_cta}</span>
           </div>
-          <button style={{background:"none",border:"none",cursor:"pointer",padding:4}} onClick={onClose} aria-label="Cerrar">
+          <button style={{background:"none",border:"none",cursor:"pointer",padding:4}} onClick={onClose}>
             <Ic n="x" s={16} c="var(--tm)"/>
           </button>
         </div>
@@ -70,10 +101,23 @@ function UpgradeModal({ reason, billingYear, setBillingYear, onClose, T }) {
                   <Ic n="check" s={12} c="var(--ok)"/>{f}
                 </div>
               ))}
-              <button className="bp" style={{width:"100%",marginTop:12,fontSize:12,padding:"8px 0",justifyContent:"center"}}
-                onClick={()=>alert('Pasarela de pago próximamente')}>
-                {T.plan_cta_pro}
-              </button>
+              <div style={{marginTop:12}}>
+                <input
+                  type="email"
+                  placeholder="tu@email.com"
+                  value={email}
+                  onChange={e=>{setEmail(e.target.value);setEmailErr('');}}
+                  style={{width:"100%",padding:"8px 10px",border:`1px solid ${emailErr?"#F87171":"var(--bd)"}`,
+                    borderRadius:6,fontSize:12,background:"var(--bg)",color:"var(--t1)",
+                    fontFamily:"'DM Sans',sans-serif",marginBottom:6,outline:"none"}}
+                />
+                {emailErr&&<div style={{fontSize:10,color:"#EF4444",marginBottom:6}}>{emailErr}</div>}
+                <button className="bp" style={{width:"100%",fontSize:12,padding:"8px 0",justifyContent:"center",
+                  opacity:loading?0.7:1,pointerEvents:loading?"none":"auto"}}
+                  onClick={startCheckout}>
+                  {loading ? <><div className="spn"/></> : T.plan_cta_pro}
+                </button>
+              </div>
             </div>
           </div>
           <div style={{textAlign:"center",fontSize:11,color:"var(--tm)"}}>{T.pricing_sub}</div>
