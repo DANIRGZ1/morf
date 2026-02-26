@@ -205,6 +205,7 @@ export default function App() {
   const { showUpgrade, setShowUpgrade, upgradeReason, checkLimits } = useFreemium();
   const { history, addToHistory, clearHistory }        = useHistory();
   const [billingYear, setBillingYear] = useState(true);
+  const [showAllTools, setShowAllTools] = useState(false);
   useEffect(() => {
     document.body.style.background = dark ? '#0F1117' : '#F9F9F8';
   }, [dark]);
@@ -393,8 +394,9 @@ export default function App() {
               <span style={{fontSize:13,fontWeight:600}}>{T.tools_title}</span>
               <span style={{fontSize:11,color:"var(--tm)",fontFamily:"'DM Mono',monospace"}}>{TOOLS.length} {T.tools_count}</span>
             </div>
-            <div className="grid" style={{marginBottom:14}}>
-              {TOOLS.map((t,i)=>(
+            {/* Popular tools (always visible) */}
+            <div className="grid" style={{marginBottom:10}}>
+              {TOOLS.filter(t=>t.popular).map((t,i)=>(
                 <div key={t.id} className={`card fu fu${i+1} ${active?.id===t.id?"on":""}`}
                   role="button" tabIndex={0}
                   aria-pressed={active?.id===t.id}
@@ -414,6 +416,43 @@ export default function App() {
                 </div>
               ))}
             </div>
+            {/* More tools toggle */}
+            <button
+              onClick={()=>setShowAllTools(s=>!s)}
+              style={{display:"flex",alignItems:"center",gap:5,background:"none",border:"none",
+                cursor:"pointer",color:"var(--tm)",fontSize:12,padding:"4px 0",marginBottom:10,
+                fontFamily:"'DM Sans',sans-serif",transition:"color .16s"}}
+              onMouseEnter={e=>e.currentTarget.style.color="var(--t2)"}
+              onMouseLeave={e=>e.currentTarget.style.color="var(--tm)"}>
+              <span style={{display:"inline-flex",transform:showAllTools?"rotate(180deg)":"rotate(0deg)",transition:"transform .2s"}}>
+                <Ic n="chevron" s={12} c="var(--tm)"/>
+              </span>
+              {showAllTools ? T.tools_less ?? "Menos herramientas" : T.tools_more ?? `+${TOOLS.filter(t=>!t.popular).length} más herramientas`}
+            </button>
+            {/* Extra tools (collapsible) */}
+            {showAllTools&&(
+              <div className="grid fu" style={{marginBottom:14}}>
+                {TOOLS.filter(t=>!t.popular).map((t,i)=>(
+                  <div key={t.id} className={`card fu fu${i+1} ${active?.id===t.id?"on":""}`}
+                    role="button" tabIndex={0}
+                    aria-pressed={active?.id===t.id}
+                    aria-label={t.label}
+                    onClick={()=>setActive(p=>p?.id===t.id?null:t)}
+                    onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();setActive(p=>p?.id===t.id?null:t);}}}>
+                    <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:12}}>
+                      <div style={{width:34,height:34,borderRadius:7,background:active?.id===t.id?"var(--al)":"#F5F5F3",display:"flex",alignItems:"center",justifyContent:"center",transition:"background .16s"}}>
+                        <Ic n={t.icon} s={15} c={active?.id===t.id?"var(--ac)":"var(--t2)"}/>
+                      </div>
+                      <div style={{display:"flex",gap:3,alignItems:"center"}}>
+                        <Tag type={t.from}/><span style={{color:"var(--tm)",fontSize:10}}>→</span><Tag type={t.to}/>
+                      </div>
+                    </div>
+                    <div style={{fontWeight:500,fontSize:13,marginBottom:3}}>{t.label}</div>
+                    <div style={{fontSize:11,color:"var(--t2)",lineHeight:1.5}}>{t.desc}</div>
+                  </div>
+                ))}
+              </div>
+            )}
             {active&&<Panel tool={active} onClose={()=>setActive(null)} showToast={showToast} bumpCount={bumpCount} addToHistory={addToHistory} checkLimits={checkLimits}/>}
           </div>
 
