@@ -347,15 +347,6 @@ export default function App() {
               {T.hero_cta}
             </button>
 
-            {/* Contador */}
-            {count>0&&(
-              <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,marginTop:4}}>
-                <span style={{fontSize:13,fontFamily:"'DM Mono',monospace",fontWeight:600,color:"var(--ac)"}}>
-                  {count.toLocaleString()}
-                </span>
-                <span style={{fontSize:12,color:"var(--tm)"}}>{T.counter}</span>
-              </div>
-            )}
           </div>
 
           {/* Hero drop */}
