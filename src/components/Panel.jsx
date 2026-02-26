@@ -18,12 +18,27 @@ export const TOOL_BASE = [
   {id:"excel-pdf", icon:"excel",    accepts:[".xlsx",".xls"], mimeTypes:["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","application/vnd.ms-excel"], from:"xlsx", to:"pdf"},
 ];
 
-function FileRow({ file, onRemove }) {
+function FileRow({ file, onRemove, showHandle=false, index=0 }) {
   const ext = file.name.split(".").pop().toUpperCase();
   const kb  = (file.size/1024).toFixed(0);
   const sz  = kb<1024?`${kb} KB`:`${(kb/1024).toFixed(1)} MB`;
   return (
-    <div className="fr">
+    <div className="fr" style={{gap:8}}>
+      {showHandle&&(
+        <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
+          <svg width="10" height="14" viewBox="0 0 10 14" fill="none" style={{opacity:.35,cursor:"grab"}}>
+            <circle cx="3" cy="2.5" r="1.2" fill="currentColor"/>
+            <circle cx="7" cy="2.5" r="1.2" fill="currentColor"/>
+            <circle cx="3" cy="7"   r="1.2" fill="currentColor"/>
+            <circle cx="7" cy="7"   r="1.2" fill="currentColor"/>
+            <circle cx="3" cy="11.5" r="1.2" fill="currentColor"/>
+            <circle cx="7" cy="11.5" r="1.2" fill="currentColor"/>
+          </svg>
+          <span style={{fontSize:9,fontWeight:700,fontFamily:"'DM Mono',monospace",
+            color:"var(--ac)",background:"var(--al)",borderRadius:3,padding:"1px 5px",
+            minWidth:16,textAlign:"center"}}>{index+1}</span>
+        </div>
+      )}
       <Ic n="file" s={14} c="var(--tm)"/>
       <span style={{flex:1,fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{file.name}</span>
       <span style={{fontSize:10,color:"var(--tm)",fontFamily:"'DM Mono',monospace",flexShrink:0}}>{sz}</span>
@@ -43,6 +58,7 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
   const [range,setRange]     = useState("");
   const [quality,setQuality] = useState("medium");
   const [rotation,setRotation] = useState(90);
+  const [dragIdx,setDragIdx] = useState(null);
   const [errMsg,setErrMsg]   = useState("");
   const [step,setStep]       = useState(0); // 0=idle 1=read 2=proc 3=done
   const ref = useRef();
@@ -204,7 +220,21 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
               <div style={{marginBottom:12}}>
                 <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:tool.multi?8:0}}>
                   {files.map((f,i)=>(
-                    <FileRow key={i} file={f} onRemove={()=>setFiles(p=>p.filter((_,j)=>j!==i))}/>
+                    <div key={i}
+                      draggable={!!tool.multi}
+                      onDragStart={()=>setDragIdx(i)}
+                      onDragOver={e=>e.preventDefault()}
+                      onDrop={e=>{
+                        e.preventDefault();
+                        if(dragIdx===null||dragIdx===i)return;
+                        setFiles(p=>{const n=[...p];const[m]=n.splice(dragIdx,1);n.splice(i,0,m);return n;});
+                        setDragIdx(null);
+                      }}
+                      onDragEnd={()=>setDragIdx(null)}
+                      style={{opacity:dragIdx===i?.4:1,transition:"opacity .15s",cursor:tool.multi?"grab":"default"}}>
+                      <FileRow file={f} onRemove={()=>setFiles(p=>p.filter((_,j)=>j!==i))}
+                        showHandle={!!tool.multi} index={i}/>
+                    </div>
                   ))}
                 </div>
                 {tool.multi&&(()=>{

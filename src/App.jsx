@@ -193,10 +193,48 @@ const css = `
   .fl:hover{color:var(--t1)}
 `;
 
+/* ── Tool Page (hash routing + SEO) ─────────────────────────────────────── */
+function ToolPage({ tool, showToast, bumpCount, addToHistory, checkLimits, onBack }) {
+  const T = useLang();
+  useEffect(() => {
+    document.title = `${tool.label} — morf`;
+    const meta = document.querySelector('meta[name="description"]');
+    if (meta) meta.setAttribute('content', tool.desc || '');
+    return () => { document.title = 'morf'; };
+  }, [tool.id]);
+  return (
+    <div style={{minHeight:"100vh"}}>
+      <div style={{maxWidth:960,margin:"0 auto",padding:"16px 20px"}}>
+        <button onClick={onBack} className="nl"
+          style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:13,color:"var(--t2)"}}>
+          <span style={{display:"inline-flex",transform:"rotate(90deg)"}}><Ic n="chevron" s={14} c="var(--t2)"/></span>
+          morf
+        </button>
+      </div>
+      <div style={{maxWidth:960,margin:"0 auto",padding:"0 20px 32px",textAlign:"center"}}>
+        <div style={{width:52,height:52,borderRadius:14,background:"var(--al)",
+          display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px"}}>
+          <Ic n={tool.icon} s={22} c="var(--ac)"/>
+        </div>
+        <h1 style={{fontSize:"clamp(22px,4vw,36px)",fontWeight:700,letterSpacing:"-.02em",marginBottom:8}}>{tool.label}</h1>
+        <p style={{fontSize:15,color:"var(--t2)",maxWidth:440,margin:"0 auto"}}>{tool.desc}</p>
+      </div>
+      <div style={{maxWidth:560,margin:"0 auto",padding:"0 20px 80px"}}>
+        <Panel tool={tool} onClose={onBack} showToast={showToast}
+          bumpCount={bumpCount} addToHistory={addToHistory} checkLimits={checkLimits}/>
+      </div>
+    </div>
+  );
+}
+
 /* ── App ─────────────────────────────────────────────────────────────────── */
 export default function App() {
   const [lang, setLang]       = useState(detectLang);
   const [active, setActive]   = useState(null);
+  const [toolPage, setToolPage] = useState(() => {
+    const hash = window.location.hash.replace(/^#\/?/, '');
+    return TOOL_BASE.find(t => t.id === hash) || null;
+  });
   const [modal, setModal]     = useState(null);
   const [toast, setToast]     = useState(null);
   const [globalDrag, setGlobalDrag] = useState(false);
@@ -209,6 +247,15 @@ export default function App() {
   useEffect(() => {
     document.body.style.background = dark ? '#0F1117' : '#F9F9F8';
   }, [dark]);
+
+  useEffect(() => {
+    const onHash = () => {
+      const hash = window.location.hash.replace(/^#\/?/, '');
+      setToolPage(hash ? (TOOL_BASE.find(t => t.id === hash) || null) : null);
+    };
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
 
   // Stripe return handling
   useEffect(() => {
@@ -288,6 +335,10 @@ export default function App() {
     api:    { title:T.modal_api,     icon:"code"   },
   };
 
+  const goToTool = t => { window.location.hash = t.id; setToolPage(t); };
+  const backHome = () => { window.location.hash = ''; setToolPage(null); };
+  const fullToolPage = toolPage ? TOOLS.find(t => t.id === toolPage.id) || toolPage : null;
+
   return (
     <LangCtx.Provider value={T}>
       <div className={`m${dark?" dark":""}${globalDrag?" global-drag":""}`}
@@ -295,6 +346,16 @@ export default function App() {
         onDragLeave={e=>{if(!e.currentTarget.contains(e.relatedTarget))setGlobalDrag(false)}}
         onDrop={heroDrop}>
         <style>{css}</style>
+
+        {/* Tool page (hash routing) */}
+        {fullToolPage&&(
+          <ToolPage tool={fullToolPage} showToast={showToast}
+            bumpCount={bumpCount} addToHistory={addToHistory} checkLimits={checkLimits}
+            onBack={backHome}/>
+        )}
+
+        {/* Main app — hidden (not unmounted) when tool page is active */}
+        <div style={{display:fullToolPage?'none':'block'}}>
 
         {/* Header */}
         <header style={{borderBottom:"1px solid var(--bd)",background:"var(--sf)",position:"sticky",top:0,zIndex:100}}>
@@ -397,15 +458,14 @@ export default function App() {
             {/* Popular tools (always visible) */}
             <div className="grid" style={{marginBottom:10}}>
               {TOOLS.filter(t=>t.popular).map((t,i)=>(
-                <div key={t.id} className={`card fu fu${i+1} ${active?.id===t.id?"on":""}`}
+                <div key={t.id} className={`card fu fu${i+1}`}
                   role="button" tabIndex={0}
-                  aria-pressed={active?.id===t.id}
                   aria-label={t.label}
-                  onClick={()=>setActive(p=>p?.id===t.id?null:t)}
-                  onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();setActive(p=>p?.id===t.id?null:t);}}}>
+                  onClick={()=>goToTool(t)}
+                  onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();goToTool(t);}}}>
                   <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:12}}>
-                    <div style={{width:34,height:34,borderRadius:7,background:active?.id===t.id?"var(--al)":"#F5F5F3",display:"flex",alignItems:"center",justifyContent:"center",transition:"background .16s"}}>
-                      <Ic n={t.icon} s={15} c={active?.id===t.id?"var(--ac)":"var(--t2)"}/>
+                    <div style={{width:34,height:34,borderRadius:7,background:"#F5F5F3",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                      <Ic n={t.icon} s={15} c="var(--t2)"/>
                     </div>
                     <div style={{display:"flex",gap:3,alignItems:"center"}}>
                       <Tag type={t.from}/><span style={{color:"var(--tm)",fontSize:10}}>→</span><Tag type={t.to}/>
@@ -433,15 +493,14 @@ export default function App() {
             {showAllTools&&(
               <div className="grid fu" style={{marginBottom:14}}>
                 {TOOLS.filter(t=>!t.popular).map((t,i)=>(
-                  <div key={t.id} className={`card fu fu${i+1} ${active?.id===t.id?"on":""}`}
+                  <div key={t.id} className={`card fu fu${i+1}`}
                     role="button" tabIndex={0}
-                    aria-pressed={active?.id===t.id}
                     aria-label={t.label}
-                    onClick={()=>setActive(p=>p?.id===t.id?null:t)}
-                    onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();setActive(p=>p?.id===t.id?null:t);}}}>
+                    onClick={()=>goToTool(t)}
+                    onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();goToTool(t);}}}>
                     <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:12}}>
-                      <div style={{width:34,height:34,borderRadius:7,background:active?.id===t.id?"var(--al)":"#F5F5F3",display:"flex",alignItems:"center",justifyContent:"center",transition:"background .16s"}}>
-                        <Ic n={t.icon} s={15} c={active?.id===t.id?"var(--ac)":"var(--t2)"}/>
+                      <div style={{width:34,height:34,borderRadius:7,background:"#F5F5F3",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                        <Ic n={t.icon} s={15} c="var(--t2)"/>
                       </div>
                       <div style={{display:"flex",gap:3,alignItems:"center"}}>
                         <Tag type={t.from}/><span style={{color:"var(--tm)",fontSize:10}}>→</span><Tag type={t.to}/>
@@ -453,7 +512,6 @@ export default function App() {
                 ))}
               </div>
             )}
-            {active&&<Panel tool={active} onClose={()=>setActive(null)} showToast={showToast} bumpCount={bumpCount} addToHistory={addToHistory} checkLimits={checkLimits}/>}
           </div>
 
           {/* Features */}
@@ -581,8 +639,10 @@ export default function App() {
           </div>
         )}
 
+        </div>{/* /Main app */}
+
         {/* Footer */}
-        <footer style={{borderTop:"1px solid var(--bd)",background:"var(--sf)"}}>
+        <footer style={{display:fullToolPage?'none':'block',borderTop:"1px solid var(--bd)",background:"var(--sf)"}}>
           <div style={{maxWidth:960,margin:"0 auto",padding:"18px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10}}>
             <div style={{display:"flex",alignItems:"center",gap:7}}>
               <Ic n="logo" s={13} c="var(--tm)" sw={1.5}/>
