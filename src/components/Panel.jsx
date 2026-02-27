@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Ic } from "./icons";
 import { useLang } from "../contexts/LangContext";
 import {
-  mergePdfs, splitPdf, imagesToPdf, compressPdf, wordToPdf, pdfToWord,
+  mergePdfs, splitPdf, imagesToPdf, wordToPdf, pdfToWord,
   pngToJpg, jpgToPng, rotatePdf, excelToPdf,
   compressPdfToBlob, rotatePdfToBlob, pngToJpgBlob, jpgToPngBlob,
   downloadAsZip, basename,
@@ -41,12 +41,8 @@ export const TOOL_BASE = [
 
 /* ── Preview modal ───────────────────────────────────────────────────────── */
 function FilePreviewModal({ file, onClose }) {
-  const [url, setUrl] = useState(null);
-  useEffect(() => {
-    const u = URL.createObjectURL(file);
-    setUrl(u);
-    return () => URL.revokeObjectURL(u);
-  }, [file]);
+  const url = useMemo(() => URL.createObjectURL(file), [file]);
+  useEffect(() => () => URL.revokeObjectURL(url), [url]);
   const isPdf   = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
   const isImage = file.type.startsWith("image/");
   return (
