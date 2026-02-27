@@ -223,8 +223,26 @@ function ToolPage({ tool, showToast, bumpCount, addToHistory, checkLimits, onBac
     document.title = `${tool.label} — morf`;
     const meta = document.querySelector('meta[name="description"]');
     if (meta) meta.setAttribute('content', tool.desc || '');
-    return () => { document.title = 'morf'; };
-  }, [tool.id, tool.label, tool.desc]);
+    // JSON-LD per tool for Google rich results
+    const existing = document.getElementById('ld-tool');
+    const s = existing || document.createElement('script');
+    s.id = 'ld-tool';
+    s.type = 'application/ld+json';
+    s.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": `morf — ${tool.label}`,
+      "url": `https://morf-three.vercel.app/#${tool.id}`,
+      "description": tool.desc,
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "Web",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+      "isAccessibleForFree": !tool.pro,
+      "browserRequirements": "Requires JavaScript"
+    });
+    if (!existing) document.head.appendChild(s);
+    return () => { document.title = 'morf'; document.getElementById('ld-tool')?.remove(); };
+  }, [tool.id, tool.label, tool.desc, tool.pro]);
   return (
     <div style={{minHeight:"100vh"}}>
       <div style={{maxWidth:960,margin:"0 auto",padding:"16px 20px"}}>

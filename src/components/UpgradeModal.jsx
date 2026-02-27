@@ -121,6 +121,12 @@ function UpgradeModal({ reason, billingYear, setBillingYear, onClose, T }) {
             </div>
           </div>
           <div style={{textAlign:"center",fontSize:11,color:"var(--tm)"}}>{T.pricing_sub}</div>
+          <div style={{textAlign:"center",marginTop:10}}>
+            <a href="mailto:hola@morf.app?subject=Quiero%20contratar%20el%20plan%20Pro&body=Hola%2C%20me%20interesa%20el%20plan%20Pro%20de%20morf.%20Mi%20email%20es%3A%20"
+              style={{fontSize:10,color:"var(--tm)",textDecoration:"underline",textDecorationColor:"var(--bd)"}}>
+              ¿Problemas con el pago? Escríbenos
+            </a>
+          </div>
         </div>
       </div>
     </div>

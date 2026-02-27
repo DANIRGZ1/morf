@@ -1,0 +1,20 @@
+{
+  "name": "morf — Convertir archivos PDF",
+  "short_name": "morf",
+  "description": "Convierte PDF a Word, une, comprime y más. Sin registro, sin marcas de agua. Todo en tu navegador.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1C3042",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "lang": "es"
+}
