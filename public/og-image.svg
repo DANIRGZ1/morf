@@ -8,17 +8,11 @@
   </pattern>
   <rect width="1200" height="630" fill="url(#dots)"/>
 
-  <!-- Logo (4 cuadrados) centrado arriba -->
-  <g transform="translate(540, 200)">
-    <!-- Cuadrado superior izquierdo -->
-    <rect x="0" y="0" width="44" height="44" rx="8" fill="none" stroke="white" stroke-width="3"/>
-    <!-- Cuadrado superior derecho -->
-    <rect x="56" y="0" width="44" height="44" rx="8" fill="none" stroke="white" stroke-width="3"/>
-    <!-- Cuadrado inferior izquierdo -->
-    <rect x="0" y="56" width="44" height="44" rx="8" fill="none" stroke="white" stroke-width="3"/>
-    <!-- Cruz (inferior derecho) -->
-    <line x1="56" y1="78" x2="100" y2="78" stroke="white" stroke-width="3" stroke-linecap="round"/>
-    <line x1="78" y1="56" x2="78" y2="100" stroke="white" stroke-width="3" stroke-linecap="round"/>
+  <!-- Logo: lettermark «m» centrado arriba -->
+  <g transform="translate(556, 195)">
+    <path d="M0 90 V40 C0 10 44 10 44 40 V90 M44 40 C44 10 88 10 88 40 V90"
+      stroke="white" stroke-width="7" fill="none"
+      stroke-linecap="round" stroke-linejoin="round"/>
   </g>
 
   <!-- Nombre -->
