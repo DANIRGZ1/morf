@@ -23,4 +23,13 @@ const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
  * ─────────────────────────────────────────────────────────────
  */
 export const supabase: SupabaseClient | null =
-  url && key ? createClient(url, key) : null;
+  url && key
+    ? createClient(url, key, {
+        auth: {
+          flowType: "implicit",
+          detectSessionInUrl: true,
+          persistSession: true,
+          autoRefreshToken: true,
+        },
+      })
+    : null;

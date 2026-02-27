@@ -6,6 +6,12 @@ import {
   pngToJpg, jpgToPng, rotatePdf, excelToPdf,
   compressPdfToBlob, rotatePdfToBlob, pngToJpgBlob, jpgToPngBlob,
   downloadAsZip, basename,
+  unlockPdf, unlockPdfToBlob,
+  watermarkPdf, watermarkPdfToBlob,
+  numberPagesPdf, numberPagesPdfToBlob,
+  cropPdf, cropPdfToBlob,
+  grayscalePdf, grayscalePdfToBlob,
+  pdfToPptx, pdfToExcel, signPdf, ocrPdf,
 } from "../utils/convert";
 
 /* ── Tools ───────────────────────────────────────────────────────────────── */
@@ -20,7 +26,17 @@ export const TOOL_BASE = [
   {id:"png-jpg",   icon:"img",      accepts:[".png"],                        from:"png",  to:"jpg", batch:true},
   {id:"jpg-png",   icon:"img",      accepts:[".jpg",".jpeg"],                from:"jpg",  to:"png", batch:true},
   {id:"rotate",    icon:"rotate",   accepts:[".pdf"],                        from:"pdf",  to:"pdf", batch:true},
-  {id:"excel-pdf", icon:"excel",    accepts:[".xlsx",".xls"], mimeTypes:["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","application/vnd.ms-excel"], from:"xlsx", to:"pdf"},
+  {id:"excel-pdf",     icon:"excel",     accepts:[".xlsx",".xls"], mimeTypes:["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","application/vnd.ms-excel"], from:"xlsx", to:"pdf"},
+  {id:"pdf-pptx",      icon:"pptx",      accepts:[".pdf"],                        from:"pdf",  to:"pptx"},
+  {id:"pdf-excel",     icon:"excel",     accepts:[".pdf"],                        from:"pdf",  to:"xlsx"},
+  {id:"watermark-pdf", icon:"watermark", accepts:[".pdf"],                        from:"pdf",  to:"pdf", batch:true},
+  {id:"number-pages",  icon:"number",    accepts:[".pdf"],                        from:"pdf",  to:"pdf", batch:true},
+  {id:"crop-pdf",      icon:"crop",      accepts:[".pdf"],                        from:"pdf",  to:"pdf", batch:true},
+  {id:"grayscale-pdf", icon:"grayscale", accepts:[".pdf"],                        from:"pdf",  to:"pdf", batch:true},
+  {id:"unlock-pdf",    icon:"unlock",    accepts:[".pdf"],                        from:"pdf",  to:"pdf", batch:true},
+  {id:"sign-pdf",      icon:"sign",      accepts:[".pdf"],                        from:"pdf",  to:"pdf"},
+  {id:"ocr-pdf",       icon:"ocr",       accepts:[".pdf"],                        from:"pdf",  to:"txt",  pro:true},
+  {id:"protect-pdf",   icon:"protect",   accepts:[".pdf"],                        from:"pdf",  to:"pdf",  comingSoon:true},
 ];
 
 /* ── Preview modal ───────────────────────────────────────────────────────── */
@@ -267,8 +283,81 @@ function FileRow({ file, onRemove, onPreview=null, showHandle=false, index=0 }) 
   );
 }
 
+/* ── SignaturePad ────────────────────────────────────────────────────────── */
+function SignaturePad({ onChange }) {
+  const canvasRef  = useRef();
+  const drawing    = useRef(false);
+  const [hasData, setHasData] = useState(false);
+
+  const getPos = (e, canvas) => {
+    const rect = canvas.getBoundingClientRect();
+    const src  = e.touches ? e.touches[0] : e;
+    return {
+      x: (src.clientX - rect.left) * (canvas.width  / rect.width),
+      y: (src.clientY - rect.top)  * (canvas.height / rect.height),
+    };
+  };
+
+  const start = e => {
+    e.preventDefault();
+    drawing.current = true;
+    const cv  = canvasRef.current;
+    const ctx = cv.getContext("2d");
+    const pos = getPos(e, cv);
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
+  };
+
+  const move = e => {
+    if (!drawing.current) return;
+    e.preventDefault();
+    const cv  = canvasRef.current;
+    const ctx = cv.getContext("2d");
+    ctx.lineWidth   = 2.5;
+    ctx.lineCap     = "round";
+    ctx.lineJoin    = "round";
+    ctx.strokeStyle = "#1C3042";
+    const pos = getPos(e, cv);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+    ctx.moveTo(pos.x, pos.y);
+    setHasData(true);
+  };
+
+  const stop = () => {
+    drawing.current = false;
+    if (hasData) onChange(canvasRef.current.toDataURL("image/png"));
+  };
+
+  const clear = () => {
+    const cv  = canvasRef.current;
+    cv.getContext("2d").clearRect(0, 0, cv.width, cv.height);
+    setHasData(false);
+    onChange(null);
+  };
+
+  return (
+    <div>
+      <canvas ref={canvasRef} width={500} height={160}
+        style={{border:"1px solid var(--bd)",borderRadius:6,background:"#fff",
+          width:"100%",display:"block",cursor:"crosshair",touchAction:"none"}}
+        onMouseDown={start} onMouseMove={move} onMouseUp={stop} onMouseLeave={stop}
+        onTouchStart={start} onTouchMove={move} onTouchEnd={stop}/>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:6}}>
+        <span style={{fontSize:10,color:"var(--tm)"}}>Dibuja tu firma con el ratón o el dedo</span>
+        {hasData&&(
+          <button onClick={clear} style={{fontSize:10,color:"var(--tm)",background:"none",
+            border:"1px solid var(--bd)",borderRadius:4,padding:"2px 8px",cursor:"pointer"}}>
+            Borrar
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ── Panel ───────────────────────────────────────────────────────────────── */
-const BATCH_TOOL_IDS = new Set(["merge","compress","png-jpg","jpg-png","rotate"]);
+const BATCH_TOOL_IDS = new Set(["merge","compress","png-jpg","jpg-png","rotate","watermark-pdf","number-pages","crop-pdf","grayscale-pdf","unlock-pdf"]);
 
 function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}, checkLimits=()=>true }) {
   const T = useLang();
@@ -281,7 +370,12 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
   const [dragIdx,setDragIdx]   = useState(null);
   const [errMsg,setErrMsg]     = useState("");
   const [progress,setProgress] = useState(0);
-  const [previewFile,setPreviewFile] = useState(null);
+  const [previewFile,setPreviewFile]   = useState(null);
+  const [watermarkText,setWatermarkText] = useState("CONFIDENCIAL");
+  const [cropMargins,setCropMargins]   = useState({top:10,bottom:10,left:10,right:10});
+  const [signatureDataUrl,setSignatureDataUrl] = useState(null);
+  const [compressResult,setCompressResult]     = useState(null); // {before,after}
+  const [ocrLang,setOcrLang]                  = useState("eng");
   const ref = useRef();
   const progressTimer = useRef(null);
 
@@ -366,6 +460,21 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
           } else if (tool.id === "jpg-png") {
             blob = await jpgToPngBlob(f);
             outName = `${basename(f)}.png`;
+          } else if (tool.id === "watermark-pdf") {
+            blob = await watermarkPdfToBlob(f, watermarkText);
+            outName = `${basename(f)}-watermark.pdf`;
+          } else if (tool.id === "number-pages") {
+            blob = await numberPagesPdfToBlob(f);
+            outName = `${basename(f)}-numerado.pdf`;
+          } else if (tool.id === "crop-pdf") {
+            blob = await cropPdfToBlob(f, cropMargins);
+            outName = `${basename(f)}-recortado.pdf`;
+          } else if (tool.id === "grayscale-pdf") {
+            blob = await grayscalePdfToBlob(f);
+            outName = `${basename(f)}-grises.pdf`;
+          } else if (tool.id === "unlock-pdf") {
+            blob = await unlockPdfToBlob(f);
+            outName = `${basename(f)}-unlocked.pdf`;
           }
           if (blob) items.push({ filename: outName, blob });
         }
@@ -380,7 +489,15 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
       if (tool.id==="merge")         { await mergePdfs(files); }
       else if (tool.id==="split")    { await splitPdf(files[0], range); }
       else if (tool.id==="img-pdf")  { await imagesToPdf(files); }
-      else if (tool.id==="compress") { await compressPdf(files[0], quality); }
+      else if (tool.id==="compress") {
+        const blob = await compressPdfToBlob(files[0], quality);
+        setCompressResult({before: files[0].size, after: blob.size});
+        const url = URL.createObjectURL(blob);
+        const a   = document.createElement("a");
+        a.href = url; a.download = `${basename(files[0])}-comprimido.pdf`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+      }
       else if (tool.id==="word-pdf") {
         const res = await wordToPdf(files[0]);
         clearInterval(progressTimer.current);
@@ -401,6 +518,20 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
         addToHistory(files[0]?.name, tool.label);
         setStatus("idle"); setFiles([]); return;
       }
+      else if (tool.id==="pdf-pptx")      { await pdfToPptx(files[0]); }
+      else if (tool.id==="pdf-excel")     { await pdfToExcel(files[0]); }
+      else if (tool.id==="watermark-pdf") { await watermarkPdf(files[0], watermarkText); }
+      else if (tool.id==="number-pages")  { await numberPagesPdf(files[0]); }
+      else if (tool.id==="crop-pdf")      { await cropPdf(files[0], cropMargins); }
+      else if (tool.id==="grayscale-pdf") { await grayscalePdf(files[0]); }
+      else if (tool.id==="unlock-pdf")    { await unlockPdf(files[0]); }
+      else if (tool.id==="sign-pdf") {
+        if (!signatureDataUrl) { setErrMsg("Dibuja tu firma antes de continuar."); setStatus("error"); return; }
+        await signPdf(files[0], signatureDataUrl);
+      }
+      else if (tool.id==="ocr-pdf") {
+        await ocrPdf(files[0], ocrLang, pct => setProgress(pct));
+      }
 
       finishOk();
     } catch(e) {
@@ -412,7 +543,7 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
     }
   };
 
-  const dl = () => { setStatus("idle"); setFiles([]); };
+  const dl = () => { setStatus("idle"); setFiles([]); setCompressResult(null); setSignatureDataUrl(null); };
 
   return (
     <>
@@ -436,9 +567,23 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
                 <Ic n="check" s={20} c="var(--ok)"/>
               </div>
               <div style={{fontWeight:500,marginBottom:4}}>{T.conv_done}</div>
-              <div style={{fontSize:12,color:"var(--tm)",marginBottom:18}}>
+              <div style={{fontSize:12,color:"var(--tm)",marginBottom:compressResult?8:18}}>
                 {files.length} {files.length===1?T.done_sub_s:T.done_sub_p}
               </div>
+              {compressResult&&(()=>{
+                const saving = Math.round((1 - compressResult.after / compressResult.before) * 100);
+                const fmt = b => b < 1048576 ? `${(b/1024).toFixed(0)} KB` : `${(b/1048576).toFixed(1)} MB`;
+                return (
+                  <div style={{marginBottom:18,padding:"8px 14px",background:"var(--al)",borderRadius:8,
+                    display:"inline-flex",alignItems:"center",gap:8,fontSize:12}}>
+                    <span style={{color:"var(--tm)"}}>{fmt(compressResult.before)}</span>
+                    <span style={{color:"var(--tm)"}}>→</span>
+                    <span style={{fontWeight:600,color:"var(--ac)"}}>{fmt(compressResult.after)}</span>
+                    {saving > 0 && <span style={{fontSize:10,background:"#F0FDF4",color:"var(--ok)",
+                      borderRadius:4,padding:"1px 6px",fontWeight:600}}>-{saving}%</span>}
+                  </div>
+                );
+              })()}
               <button className="bg" onClick={dl}>{T.other}</button>
             </div>
           ):status==="error"?(
@@ -456,6 +601,16 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
             </div>
           ):(
             <>
+              {tool.comingSoon ? (
+                <div style={{textAlign:"center",padding:"28px 0"}}>
+                  <div style={{width:46,height:46,borderRadius:"50%",background:"var(--al)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px"}}>
+                    <Ic n={tool.icon} s={22} c="var(--ac)"/>
+                  </div>
+                  <div style={{fontWeight:600,fontSize:14,marginBottom:6,color:"var(--ac)"}}>Próximamente</div>
+                  <div style={{fontSize:13,color:"var(--t2)",maxWidth:300,margin:"0 auto 18px",lineHeight:1.6}}>{T.coming_soon_desc||"Estamos trabajando en esta herramienta. Disponible muy pronto."}</div>
+                  <button className="bg" onClick={onClose}>{T.cancel}</button>
+                </div>
+              ) : (<>
               <input ref={ref} type="file"
                 accept={[...(tool.accepts||[]),...(tool.mimeTypes||[])].join(",")}
                 multiple={isMulti}
@@ -582,6 +737,57 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
                   </div>
                 </div>
               )}
+              {tool.id==="watermark-pdf"&&files.length>0&&(
+                <div style={{marginBottom:12}}>
+                  <div style={{fontSize:11,fontWeight:500,color:"var(--t2)",marginBottom:5}}>{T.watermark_label||"Texto de marca de agua"}</div>
+                  <input value={watermarkText} onChange={e=>setWatermarkText(e.target.value)}
+                    placeholder="CONFIDENCIAL" className="fi-inp" style={{fontSize:13}}
+                    onFocus={e=>e.target.style.borderColor="var(--ac)"}
+                    onBlur={e=>e.target.style.borderColor="var(--bd)"}/>
+                </div>
+              )}
+              {tool.id==="crop-pdf"&&files.length>0&&(
+                <div style={{marginBottom:12}}>
+                  <div style={{fontSize:11,fontWeight:500,color:"var(--t2)",marginBottom:6}}>{T.crop_label||"Márgenes a recortar (mm)"}</div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                    {[["top",T.crop_top||"Arriba"],["bottom",T.crop_bottom||"Abajo"],
+                      ["left",T.crop_left||"Izquierda"],["right",T.crop_right||"Derecha"]].map(([k,l])=>(
+                      <div key={k}>
+                        <div style={{fontSize:10,color:"var(--tm)",marginBottom:3}}>{l}</div>
+                        <input type="number" min="0" max="100"
+                          value={cropMargins[k]}
+                          onChange={e=>setCropMargins(p=>({...p,[k]:Math.max(0,Number(e.target.value))}))}
+                          className="fi-inp" style={{fontSize:13,textAlign:"center"}}
+                          onFocus={e=>e.target.style.borderColor="var(--ac)"}
+                          onBlur={e=>e.target.style.borderColor="var(--bd)"}/>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {tool.id==="sign-pdf"&&files.length>0&&(
+                <div style={{marginBottom:12}}>
+                  <div style={{fontSize:11,fontWeight:500,color:"var(--t2)",marginBottom:6}}>{T.sign_label||"Dibuja tu firma"}</div>
+                  <SignaturePad onChange={setSignatureDataUrl}/>
+                  <div style={{fontSize:10,color:"var(--tm)",marginTop:5}}>{T.sign_hint||"La firma se añadirá en la esquina inferior derecha de la última página."}</div>
+                </div>
+              )}
+              {tool.id==="ocr-pdf"&&files.length>0&&(
+                <div style={{marginBottom:12}}>
+                  <div style={{fontSize:11,fontWeight:500,color:"var(--t2)",marginBottom:6}}>{T.ocr_lang_label||"Idioma del documento"}</div>
+                  <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                    {[["eng","English"],["spa","Español"],["fra","Français"],["deu","Deutsch"],["por","Português"]].map(([code,name])=>(
+                      <button key={code} onClick={()=>setOcrLang(code)}
+                        style={{padding:"5px 12px",border:`1px solid ${ocrLang===code?"var(--ac)":"var(--bd)"}`,borderRadius:6,
+                          fontSize:11,background:ocrLang===code?"var(--al)":"transparent",
+                          color:ocrLang===code?"var(--ac)":"var(--t2)",cursor:"pointer",fontWeight:ocrLang===code?500:400,transition:"all .16s"}}>
+                        {name}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{fontSize:10,color:"var(--tm)",marginTop:6}}>{T.ocr_hint||"La primera ejecución descarga ~14 MB de datos de idioma."}</div>
+                </div>
+              )}
               {status==="proc"&&(
                 <div style={{marginBottom:16,padding:"14px 16px",background:"var(--al)",borderRadius:10}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
@@ -598,13 +804,14 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
               )}
               <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
                 <button className="bg" onClick={onClose}>{T.cancel}</button>
-                <button className="bp" disabled={!files.length||status==="proc"} onClick={convert}>
+                <button className="bp" disabled={!files.length||status==="proc"||(tool.id==="sign-pdf"&&!signatureDataUrl)} onClick={convert}>
                   {status==="proc"
                     ? <><div className="spn"/>{T.processing}</>
                     : <><Ic n="arrow" s={14}/>{tool.batch&&files.length>1?`Convertir ${files.length} archivos`:T.convert}</>
                   }
                 </button>
               </div>
+            </>)}
             </>
           )}
         </div>

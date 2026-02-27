@@ -2,7 +2,7 @@
 // Conversiones reales 100% en el navegador. Sin servidor, sin APIs de pago.
 // Librerías: pdf-lib, mammoth (instaladas vía npm)
 
-import { PDFDocument, degrees as pdfDegrees } from "pdf-lib";
+import { PDFDocument, degrees as pdfDegrees, rgb, StandardFonts } from "pdf-lib";
 import mammoth from "mammoth";
 
 /** Wrap pdf-lib Uint8Array output (which uses ArrayBufferLike) into a Blob. */
@@ -536,6 +536,23 @@ export async function rotatePdf(file: File, degrees = 90): Promise<void> {
 }
 
 // ─────────────────────────────────────────────────────────────────
+// Helper: cargar pdf.js dinámicamente
+// ─────────────────────────────────────────────────────────────────
+async function ensurePdfJs(): Promise<void> {
+  if (!window.pdfjsLib) {
+    await new Promise<void>((res, rej) => {
+      const s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+      s.onload = () => res();
+      s.onerror = () => rej(new Error("pdf.js load error"));
+      document.head.appendChild(s);
+    });
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
 // 11. EXCEL → PDF
 // ─────────────────────────────────────────────────────────────────
 export async function excelToPdf(file: File): Promise<string> {
@@ -597,4 +614,415 @@ export async function excelToPdf(file: File): Promise<string> {
   win.document.write(htmlDoc);
   win.document.close();
   return "print-dialog";
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 12. DESBLOQUEAR PDF (quitar restricciones de propietario)
+// ─────────────────────────────────────────────────────────────────
+export async function unlockPdf(file: File): Promise<void> {
+  const bytes = await file.arrayBuffer();
+  const doc   = await PDFDocument.load(bytes, { ignoreEncryption: true });
+  const out   = await doc.save();
+  download(pdfBlob(out), `${basename(file)}-unlocked.pdf`);
+}
+
+export async function unlockPdfToBlob(file: File): Promise<Blob> {
+  const bytes = await file.arrayBuffer();
+  const doc   = await PDFDocument.load(bytes, { ignoreEncryption: true });
+  const out   = await doc.save();
+  return pdfBlob(out);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 13. MARCA DE AGUA PDF
+// ─────────────────────────────────────────────────────────────────
+export async function watermarkPdf(file: File, text: string, opacity = 0.15): Promise<void> {
+  const bytes = await file.arrayBuffer();
+  const doc   = await PDFDocument.load(bytes, { ignoreEncryption: true });
+  const font  = await doc.embedFont(StandardFonts.HelveticaBold);
+
+  for (const page of doc.getPages()) {
+    const { width, height } = page.getSize();
+    const fontSize  = Math.max(20, Math.min(width, height) * 0.07);
+    const textWidth = font.widthOfTextAtSize(text, fontSize);
+    page.drawText(text, {
+      x:       (width  - textWidth) / 2,
+      y:       (height - fontSize)  / 2,
+      size:    fontSize,
+      font,
+      color:   rgb(0.5, 0.5, 0.5),
+      opacity,
+      rotate:  pdfDegrees(45),
+    });
+  }
+
+  const out = await doc.save();
+  download(pdfBlob(out), `${basename(file)}-watermark.pdf`);
+}
+
+export async function watermarkPdfToBlob(file: File, text: string, opacity = 0.15): Promise<Blob> {
+  const bytes = await file.arrayBuffer();
+  const doc   = await PDFDocument.load(bytes, { ignoreEncryption: true });
+  const font  = await doc.embedFont(StandardFonts.HelveticaBold);
+
+  for (const page of doc.getPages()) {
+    const { width, height } = page.getSize();
+    const fontSize  = Math.max(20, Math.min(width, height) * 0.07);
+    const textWidth = font.widthOfTextAtSize(text, fontSize);
+    page.drawText(text, {
+      x:       (width  - textWidth) / 2,
+      y:       (height - fontSize)  / 2,
+      size:    fontSize,
+      font,
+      color:   rgb(0.5, 0.5, 0.5),
+      opacity,
+      rotate:  pdfDegrees(45),
+    });
+  }
+
+  const out = await doc.save();
+  return pdfBlob(out);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 14. NUMERAR PÁGINAS PDF
+// ─────────────────────────────────────────────────────────────────
+export async function numberPagesPdf(file: File): Promise<void> {
+  const bytes = await file.arrayBuffer();
+  const doc   = await PDFDocument.load(bytes, { ignoreEncryption: true });
+  const font  = await doc.embedFont(StandardFonts.Helvetica);
+  const pages = doc.getPages();
+  const total = pages.length;
+
+  for (let i = 0; i < pages.length; i++) {
+    const page     = pages[i];
+    const { width } = page.getSize();
+    const text      = `${i + 1} / ${total}`;
+    const fontSize  = 9;
+    const textWidth = font.widthOfTextAtSize(text, fontSize);
+    page.drawText(text, {
+      x:    (width - textWidth) / 2,
+      y:    20,
+      size: fontSize,
+      font,
+      color: rgb(0.4, 0.4, 0.4),
+    });
+  }
+
+  const out = await doc.save();
+  download(pdfBlob(out), `${basename(file)}-numerado.pdf`);
+}
+
+export async function numberPagesPdfToBlob(file: File): Promise<Blob> {
+  const bytes = await file.arrayBuffer();
+  const doc   = await PDFDocument.load(bytes, { ignoreEncryption: true });
+  const font  = await doc.embedFont(StandardFonts.Helvetica);
+  const pages = doc.getPages();
+  const total = pages.length;
+
+  for (let i = 0; i < pages.length; i++) {
+    const page      = pages[i];
+    const { width } = page.getSize();
+    const text      = `${i + 1} / ${total}`;
+    const fontSize  = 9;
+    const textWidth = font.widthOfTextAtSize(text, fontSize);
+    page.drawText(text, {
+      x:    (width - textWidth) / 2,
+      y:    20,
+      size: fontSize,
+      font,
+      color: rgb(0.4, 0.4, 0.4),
+    });
+  }
+
+  const out = await doc.save();
+  return pdfBlob(out);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 15. RECORTAR PDF (crop)
+// ─────────────────────────────────────────────────────────────────
+interface CropMargins { top: number; bottom: number; left: number; right: number; }
+const MM = 2.8346; // 1 mm en puntos PDF
+
+export async function cropPdf(file: File, margins: CropMargins): Promise<void> {
+  const bytes = await file.arrayBuffer();
+  const doc   = await PDFDocument.load(bytes, { ignoreEncryption: true });
+
+  for (const page of doc.getPages()) {
+    const { width, height } = page.getSize();
+    const x = margins.left   * MM;
+    const y = margins.bottom * MM;
+    const w = width  - (margins.left  + margins.right)  * MM;
+    const h = height - (margins.top   + margins.bottom) * MM;
+    if (w > 0 && h > 0) page.setCropBox(x, y, w, h);
+  }
+
+  const out = await doc.save();
+  download(pdfBlob(out), `${basename(file)}-recortado.pdf`);
+}
+
+export async function cropPdfToBlob(file: File, margins: CropMargins): Promise<Blob> {
+  const bytes = await file.arrayBuffer();
+  const doc   = await PDFDocument.load(bytes, { ignoreEncryption: true });
+
+  for (const page of doc.getPages()) {
+    const { width, height } = page.getSize();
+    const x = margins.left   * MM;
+    const y = margins.bottom * MM;
+    const w = width  - (margins.left  + margins.right)  * MM;
+    const h = height - (margins.top   + margins.bottom) * MM;
+    if (w > 0 && h > 0) page.setCropBox(x, y, w, h);
+  }
+
+  const out = await doc.save();
+  return pdfBlob(out);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 16. PDF A ESCALA DE GRISES
+// ─────────────────────────────────────────────────────────────────
+export async function grayscalePdf(file: File): Promise<void> {
+  await ensurePdfJs();
+  const bytes  = await file.arrayBuffer();
+  const pdfSrc = await window.pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
+  const newDoc = await PDFDocument.create();
+
+  for (let i = 1; i <= pdfSrc.numPages; i++) {
+    const page     = await pdfSrc.getPage(i);
+    const viewport = page.getViewport({ scale: 2 });
+    const canvas   = document.createElement("canvas");
+    canvas.width   = viewport.width;
+    canvas.height  = viewport.height;
+    const ctx      = canvas.getContext("2d")!;
+    await page.render({ canvasContext: ctx, viewport }).promise;
+
+    // Convertir a escala de grises pixel a pixel
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const d = imgData.data;
+    for (let j = 0; j < d.length; j += 4) {
+      const g = Math.round(0.2126 * d[j] + 0.7152 * d[j + 1] + 0.0722 * d[j + 2]);
+      d[j] = d[j + 1] = d[j + 2] = g;
+    }
+    ctx.putImageData(imgData, 0, 0);
+
+    const pngBlob  = await new Promise<Blob>(r => canvas.toBlob(b => r(b!), "image/png"));
+    const pngBytes = await pngBlob.arrayBuffer();
+    const img      = await newDoc.embedPng(pngBytes);
+    const w        = viewport.width  / 2;
+    const h        = viewport.height / 2;
+    const newPage  = newDoc.addPage([w, h]);
+    newPage.drawImage(img, { x: 0, y: 0, width: w, height: h });
+  }
+
+  const out = await newDoc.save();
+  download(pdfBlob(out), `${basename(file)}-grises.pdf`);
+}
+
+export async function grayscalePdfToBlob(file: File): Promise<Blob> {
+  await ensurePdfJs();
+  const bytes  = await file.arrayBuffer();
+  const pdfSrc = await window.pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
+  const newDoc = await PDFDocument.create();
+
+  for (let i = 1; i <= pdfSrc.numPages; i++) {
+    const page     = await pdfSrc.getPage(i);
+    const viewport = page.getViewport({ scale: 2 });
+    const canvas   = document.createElement("canvas");
+    canvas.width   = viewport.width;
+    canvas.height  = viewport.height;
+    const ctx      = canvas.getContext("2d")!;
+    await page.render({ canvasContext: ctx, viewport }).promise;
+
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const d = imgData.data;
+    for (let j = 0; j < d.length; j += 4) {
+      const g = Math.round(0.2126 * d[j] + 0.7152 * d[j + 1] + 0.0722 * d[j + 2]);
+      d[j] = d[j + 1] = d[j + 2] = g;
+    }
+    ctx.putImageData(imgData, 0, 0);
+
+    const pngBlob  = await new Promise<Blob>(r => canvas.toBlob(b => r(b!), "image/png"));
+    const pngBytes = await pngBlob.arrayBuffer();
+    const img      = await newDoc.embedPng(pngBytes);
+    const w        = viewport.width  / 2;
+    const h        = viewport.height / 2;
+    const newPage  = newDoc.addPage([w, h]);
+    newPage.drawImage(img, { x: 0, y: 0, width: w, height: h });
+  }
+
+  const out = await newDoc.save();
+  return pdfBlob(out);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 17. PDF → POWERPOINT
+// ─────────────────────────────────────────────────────────────────
+export async function pdfToPptx(file: File): Promise<void> {
+  await ensurePdfJs();
+
+  if (!window.PptxGenJS) {
+    await new Promise<void>((res, rej) => {
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js";
+      s.onload = () => res();
+      s.onerror = () => rej(new Error("PptxGenJS load error"));
+      document.head.appendChild(s);
+    });
+  }
+
+  const bytes  = await file.arrayBuffer();
+  const pdfSrc = await window.pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
+
+  // Determinar relación de aspecto por la primera página
+  const firstPage = await pdfSrc.getPage(1);
+  const firstVp   = firstPage.getViewport({ scale: 1 });
+  const ratio     = firstVp.width / firstVp.height;
+  const W         = 10; // pulgadas
+  const H         = parseFloat((W / ratio).toFixed(4));
+
+  const pptx = new window.PptxGenJS();
+  pptx.defineLayout({ name: "CUSTOM", width: W, height: H });
+  pptx.layout = "CUSTOM";
+
+  for (let i = 1; i <= pdfSrc.numPages; i++) {
+    const page     = await pdfSrc.getPage(i);
+    const viewport = page.getViewport({ scale: 2 });
+    const canvas   = document.createElement("canvas");
+    canvas.width   = viewport.width;
+    canvas.height  = viewport.height;
+    const ctx      = canvas.getContext("2d")!;
+    await page.render({ canvasContext: ctx, viewport }).promise;
+
+    const imgData = canvas.toDataURL("image/jpeg", 0.85);
+    const slide   = pptx.addSlide();
+    slide.addImage({ data: imgData, x: 0, y: 0, w: "100%", h: "100%" });
+  }
+
+  await pptx.writeFile({ fileName: `${basename(file)}.pptx` });
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 18. PDF → EXCEL
+// ─────────────────────────────────────────────────────────────────
+export async function pdfToExcel(file: File): Promise<void> {
+  await ensurePdfJs();
+
+  if (!window.XLSX) {
+    await new Promise<void>((res, rej) => {
+      const s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+      s.onload = () => res();
+      s.onerror = () => rej(new Error("XLSX load error"));
+      document.head.appendChild(s);
+    });
+  }
+
+  const bytes  = await file.arrayBuffer();
+  const pdfSrc = await window.pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
+  const wb     = window.XLSX.utils.book_new();
+
+  for (let i = 1; i <= pdfSrc.numPages; i++) {
+    const page    = await pdfSrc.getPage(i);
+    const content = await page.getTextContent();
+
+    // Agrupar elementos de texto por línea (posición Y)
+    const lineMap: Record<number, Array<{ x: number; str: string }>> = {};
+    for (const item of content.items as Array<{ str: string; transform: number[] }>) {
+      if (!item.str?.trim()) continue;
+      const y = Math.round(item.transform[5]);
+      const x = Math.round(item.transform[4]);
+      if (!lineMap[y]) lineMap[y] = [];
+      lineMap[y].push({ x, str: item.str });
+    }
+
+    // Ordenar líneas de arriba a abajo, elementos izq a der
+    const rows = Object.keys(lineMap)
+      .sort((a, b) => Number(b) - Number(a))
+      .map(y => lineMap[Number(y)].sort((a, b) => a.x - b.x).map(it => it.str));
+
+    const ws = window.XLSX.utils.aoa_to_sheet(rows);
+    window.XLSX.utils.book_append_sheet(wb, ws, `Pag ${i}`);
+  }
+
+  window.XLSX.writeFile(wb, `${basename(file)}.xlsx`);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 19. FIRMAR PDF
+// ─────────────────────────────────────────────────────────────────
+export async function signPdf(file: File, signatureDataUrl: string): Promise<void> {
+  const bytes   = await file.arrayBuffer();
+  const doc     = await PDFDocument.load(bytes, { ignoreEncryption: true });
+
+  // Decodificar PNG base64
+  const base64  = signatureDataUrl.split(",")[1];
+  const sigBytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+  const sigImage = await doc.embedPng(sigBytes);
+
+  const pages    = doc.getPages();
+  const lastPage = pages[pages.length - 1];
+  const { width, height } = lastPage.getSize();
+
+  // Colocar firma en esquina inferior derecha
+  const sigW = Math.min(160, width * 0.28);
+  const sigH = (sigW / sigImage.width) * sigImage.height;
+  lastPage.drawImage(sigImage, {
+    x:      width - sigW - 28,
+    y:      28,
+    width:  sigW,
+    height: sigH,
+  });
+
+  const out = await doc.save();
+  download(pdfBlob(out), `${basename(file)}-firmado.pdf`);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 20. OCR — Extraer texto de PDFs escaneados (Pro)
+// ─────────────────────────────────────────────────────────────────
+export async function ocrPdf(
+  file: File,
+  lang = "eng",
+  onProgress?: (pct: number) => void
+): Promise<void> {
+  await ensurePdfJs();
+
+  if (!window.Tesseract) {
+    await new Promise<void>((res, rej) => {
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+      s.onload = () => res();
+      s.onerror = () => rej(new Error("Tesseract.js load error"));
+      document.head.appendChild(s);
+    });
+  }
+
+  const bytes  = await file.arrayBuffer();
+  const pdfSrc = await window.pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
+
+  const worker = await window.Tesseract.createWorker(lang);
+  const texts: string[] = [];
+
+  for (let i = 1; i <= pdfSrc.numPages; i++) {
+    onProgress?.(Math.round(5 + (i / pdfSrc.numPages) * 85));
+
+    const page     = await pdfSrc.getPage(i);
+    const viewport = page.getViewport({ scale: 2 });
+    const canvas   = document.createElement("canvas");
+    canvas.width   = viewport.width;
+    canvas.height  = viewport.height;
+    const ctx      = canvas.getContext("2d")!;
+    await page.render({ canvasContext: ctx, viewport }).promise;
+
+    const { data: { text } } = await worker.recognize(canvas);
+    texts.push(`--- Página ${i} ---\n${text.trim()}`);
+  }
+
+  await worker.terminate();
+
+  download(
+    new Blob([texts.join("\n\n")], { type: "text/plain;charset=utf-8" }),
+    `${basename(file)}-ocr.txt`
+  );
 }
