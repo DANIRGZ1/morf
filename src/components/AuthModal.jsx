@@ -17,7 +17,14 @@ export default function AuthModal({ onClose }) {
     setErrMsg("");
     const { error } = await signIn(email.trim());
     if (error) {
-      setErrMsg(error.message || "Error al enviar el enlace");
+      const msg = error.message?.toLowerCase() ?? "";
+      if (msg.includes("rate limit") || msg.includes("too many") || msg.includes("exceeded")) {
+        setErrMsg("Demasiados intentos. Espera unos minutos e inténtalo de nuevo.");
+      } else if (msg.includes("invalid email") || msg.includes("unable to validate")) {
+        setErrMsg("El correo electrónico no es válido.");
+      } else {
+        setErrMsg("Error al enviar el enlace. Inténtalo de nuevo.");
+      }
     } else {
       setSent(true);
     }
