@@ -11,7 +11,7 @@ import {
   numberPagesPdf, numberPagesPdfToBlob,
   cropPdf, cropPdfToBlob,
   grayscalePdf, grayscalePdfToBlob,
-  pdfToPptx, pdfToExcel, signPdf,
+  pdfToPptx, pdfToExcel, signPdf, ocrPdf,
 } from "../utils/convert";
 
 /* ── Tools ───────────────────────────────────────────────────────────────── */
@@ -35,6 +35,8 @@ export const TOOL_BASE = [
   {id:"grayscale-pdf", icon:"grayscale", accepts:[".pdf"],                        from:"pdf",  to:"pdf", batch:true},
   {id:"unlock-pdf",    icon:"unlock",    accepts:[".pdf"],                        from:"pdf",  to:"pdf", batch:true},
   {id:"sign-pdf",      icon:"sign",      accepts:[".pdf"],                        from:"pdf",  to:"pdf"},
+  {id:"ocr-pdf",       icon:"ocr",       accepts:[".pdf"],                        from:"pdf",  to:"txt",  pro:true},
+  {id:"protect-pdf",   icon:"protect",   accepts:[".pdf"],                        from:"pdf",  to:"pdf",  comingSoon:true},
 ];
 
 /* ── Preview modal ───────────────────────────────────────────────────────── */
@@ -373,6 +375,7 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
   const [cropMargins,setCropMargins]   = useState({top:10,bottom:10,left:10,right:10});
   const [signatureDataUrl,setSignatureDataUrl] = useState(null);
   const [compressResult,setCompressResult]     = useState(null); // {before,after}
+  const [ocrLang,setOcrLang]                  = useState("eng");
   const ref = useRef();
   const progressTimer = useRef(null);
 
@@ -526,6 +529,9 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
         if (!signatureDataUrl) { setErrMsg("Dibuja tu firma antes de continuar."); setStatus("error"); return; }
         await signPdf(files[0], signatureDataUrl);
       }
+      else if (tool.id==="ocr-pdf") {
+        await ocrPdf(files[0], ocrLang, pct => setProgress(pct));
+      }
 
       finishOk();
     } catch(e) {
@@ -595,6 +601,16 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
             </div>
           ):(
             <>
+              {tool.comingSoon ? (
+                <div style={{textAlign:"center",padding:"28px 0"}}>
+                  <div style={{width:46,height:46,borderRadius:"50%",background:"var(--al)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px"}}>
+                    <Ic n={tool.icon} s={22} c="var(--ac)"/>
+                  </div>
+                  <div style={{fontWeight:600,fontSize:14,marginBottom:6,color:"var(--ac)"}}>Próximamente</div>
+                  <div style={{fontSize:13,color:"var(--t2)",maxWidth:300,margin:"0 auto 18px",lineHeight:1.6}}>{T.coming_soon_desc||"Estamos trabajando en esta herramienta. Disponible muy pronto."}</div>
+                  <button className="bg" onClick={onClose}>{T.cancel}</button>
+                </div>
+              ) : (<>
               <input ref={ref} type="file"
                 accept={[...(tool.accepts||[]),...(tool.mimeTypes||[])].join(",")}
                 multiple={isMulti}
@@ -756,6 +772,22 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
                   <div style={{fontSize:10,color:"var(--tm)",marginTop:5}}>{T.sign_hint||"La firma se añadirá en la esquina inferior derecha de la última página."}</div>
                 </div>
               )}
+              {tool.id==="ocr-pdf"&&files.length>0&&(
+                <div style={{marginBottom:12}}>
+                  <div style={{fontSize:11,fontWeight:500,color:"var(--t2)",marginBottom:6}}>{T.ocr_lang_label||"Idioma del documento"}</div>
+                  <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                    {[["eng","English"],["spa","Español"],["fra","Français"],["deu","Deutsch"],["por","Português"]].map(([code,name])=>(
+                      <button key={code} onClick={()=>setOcrLang(code)}
+                        style={{padding:"5px 12px",border:`1px solid ${ocrLang===code?"var(--ac)":"var(--bd)"}`,borderRadius:6,
+                          fontSize:11,background:ocrLang===code?"var(--al)":"transparent",
+                          color:ocrLang===code?"var(--ac)":"var(--t2)",cursor:"pointer",fontWeight:ocrLang===code?500:400,transition:"all .16s"}}>
+                        {name}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{fontSize:10,color:"var(--tm)",marginTop:6}}>{T.ocr_hint||"La primera ejecución descarga ~14 MB de datos de idioma."}</div>
+                </div>
+              )}
               {status==="proc"&&(
                 <div style={{marginBottom:16,padding:"14px 16px",background:"var(--al)",borderRadius:10}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
@@ -779,6 +811,7 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
                   }
                 </button>
               </div>
+            </>)}
             </>
           )}
         </div>

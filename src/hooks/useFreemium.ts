@@ -17,9 +17,15 @@ export function useFreemium(): FreemiumState {
   const isPro = () => localStorage.getItem('morf_pro') === 'true'
 
   const BATCH_TOOL_IDS = new Set(['merge', 'compress', 'png-jpg', 'jpg-png', 'rotate'])
+  const PRO_ONLY_TOOLS = new Set(['ocr-pdf'])
 
   const checkLimits = (files: Array<{ size: number }>, toolId: string): boolean => {
     if (isPro()) return true
+    if (PRO_ONLY_TOOLS.has(toolId)) {
+      setUpgradeReason('pro')
+      setShowUpgrade(true)
+      return false
+    }
     if (BATCH_TOOL_IDS.has(toolId) && files.length > FREE_MAX_BATCH) {
       setUpgradeReason('batch')
       setShowUpgrade(true)

@@ -977,3 +977,52 @@ export async function signPdf(file: File, signatureDataUrl: string): Promise<voi
   const out = await doc.save();
   download(pdfBlob(out), `${basename(file)}-firmado.pdf`);
 }
+
+// ─────────────────────────────────────────────────────────────────
+// 20. OCR — Extraer texto de PDFs escaneados (Pro)
+// ─────────────────────────────────────────────────────────────────
+export async function ocrPdf(
+  file: File,
+  lang = "eng",
+  onProgress?: (pct: number) => void
+): Promise<void> {
+  await ensurePdfJs();
+
+  if (!window.Tesseract) {
+    await new Promise<void>((res, rej) => {
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+      s.onload = () => res();
+      s.onerror = () => rej(new Error("Tesseract.js load error"));
+      document.head.appendChild(s);
+    });
+  }
+
+  const bytes  = await file.arrayBuffer();
+  const pdfSrc = await window.pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
+
+  const worker = await window.Tesseract.createWorker(lang);
+  const texts: string[] = [];
+
+  for (let i = 1; i <= pdfSrc.numPages; i++) {
+    onProgress?.(Math.round(5 + (i / pdfSrc.numPages) * 85));
+
+    const page     = await pdfSrc.getPage(i);
+    const viewport = page.getViewport({ scale: 2 });
+    const canvas   = document.createElement("canvas");
+    canvas.width   = viewport.width;
+    canvas.height  = viewport.height;
+    const ctx      = canvas.getContext("2d")!;
+    await page.render({ canvasContext: ctx, viewport }).promise;
+
+    const { data: { text } } = await worker.recognize(canvas);
+    texts.push(`--- Página ${i} ---\n${text.trim()}`);
+  }
+
+  await worker.terminate();
+
+  download(
+    new Blob([texts.join("\n\n")], { type: "text/plain;charset=utf-8" }),
+    `${basename(file)}-ocr.txt`
+  );
+}

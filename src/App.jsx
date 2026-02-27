@@ -376,7 +376,10 @@ export default function App() {
     api:    { title:T.modal_api,     icon:"code"   },
   };
 
-  const goToTool = t => { window.history.pushState(null, '', `#${t.id}`); setToolPage(t); };
+  const goToTool = t => {
+    if (t.comingSoon) { showToast(T.coming_soon_toast||"¡Próximamente! Estamos trabajando en esta herramienta.","ok"); return; }
+    window.history.pushState(null, '', `#${t.id}`); setToolPage(t);
+  };
   const backHome = () => { window.history.pushState(null, '', location.pathname + location.search); setToolPage(null); };
   const fullToolPage = toolPage ? TOOLS.find(t => t.id === toolPage.id) || toolPage : null;
 
@@ -621,13 +624,16 @@ export default function App() {
                 <div key={t.id} className={`card fu fu${i+1}`}
                   role="button" tabIndex={0}
                   aria-label={t.label}
+                  style={{opacity:t.comingSoon?.6:1}}
                   onClick={()=>goToTool(t)}
                   onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();goToTool(t);}}}>
                   <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:12}}>
                     <div style={{width:34,height:34,borderRadius:7,background:"#F5F5F3",display:"flex",alignItems:"center",justifyContent:"center"}}>
                       <Ic n={t.icon} s={15} c="var(--t2)"/>
                     </div>
-                    <div style={{display:"flex",gap:3,alignItems:"center"}}>
+                    <div style={{display:"flex",gap:4,alignItems:"center"}}>
+                      {t.pro&&<span style={{fontSize:9,fontWeight:700,fontFamily:"'DM Mono',monospace",background:"var(--ac)",color:"#fff",borderRadius:3,padding:"1px 5px",letterSpacing:".04em"}}>PRO</span>}
+                      {t.comingSoon&&<span style={{fontSize:9,fontWeight:600,fontFamily:"'DM Mono',monospace",background:"var(--al)",color:"var(--ac)",borderRadius:3,padding:"1px 5px"}}>SOON</span>}
                       <Tag type={t.from}/><span style={{color:"var(--tm)",fontSize:10}}>→</span><Tag type={t.to}/>
                     </div>
                   </div>
@@ -656,13 +662,16 @@ export default function App() {
                   <div key={t.id} className={`card fu fu${i+1}`}
                     role="button" tabIndex={0}
                     aria-label={t.label}
+                    style={{opacity:t.comingSoon?.6:1}}
                     onClick={()=>goToTool(t)}
                     onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();goToTool(t);}}}>
                     <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:12}}>
                       <div style={{width:34,height:34,borderRadius:7,background:"#F5F5F3",display:"flex",alignItems:"center",justifyContent:"center"}}>
                         <Ic n={t.icon} s={15} c="var(--t2)"/>
                       </div>
-                      <div style={{display:"flex",gap:3,alignItems:"center"}}>
+                      <div style={{display:"flex",gap:4,alignItems:"center"}}>
+                        {t.pro&&<span style={{fontSize:9,fontWeight:700,fontFamily:"'DM Mono',monospace",background:"var(--ac)",color:"#fff",borderRadius:3,padding:"1px 5px",letterSpacing:".04em"}}>PRO</span>}
+                        {t.comingSoon&&<span style={{fontSize:9,fontWeight:600,fontFamily:"'DM Mono',monospace",background:"var(--al)",color:"var(--ac)",borderRadius:3,padding:"1px 5px"}}>SOON</span>}
                         <Tag type={t.from}/><span style={{color:"var(--tm)",fontSize:10}}>→</span><Tag type={t.to}/>
                       </div>
                     </div>
