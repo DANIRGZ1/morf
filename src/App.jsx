@@ -205,7 +205,7 @@ function AdUnit({ slot, style={} }) {
     if (pushed.current) return;
     pushed.current = true;
     try { (window.adsbygoogle = window.adsbygoogle || []).push({}); }
-    catch(e) { /* AdSense no disponible */ }
+    catch { /* AdSense no disponible */ }
   }, []);
   return (
     <ins className="adsbygoogle"
