@@ -585,8 +585,8 @@ export default function App() {
                   return (
                     <div key={i} style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",gap:10,alignItems:"center"}}>
                       <div style={{padding:"11px 13px",background:"var(--sf)",border:"1px solid var(--bd)",
-                        borderRadius:8,display:"flex",alignItems:"center",gap:9}}>
-                        <Ic n="file" s={15} c="var(--tm)"/>
+                        borderRadius:8,display:"flex",alignItems:"center",gap:9,minWidth:0,overflow:"hidden"}}>
+                        <Ic n="file" s={15} c="var(--tm)" style={{flexShrink:0}}/>
                         <div style={{flex:1,minWidth:0}}>
                           <div style={{fontSize:12,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",
                             whiteSpace:"nowrap"}}>{h.filename}</div>
@@ -597,8 +597,8 @@ export default function App() {
                         <Ic n="logo" s={18} c="var(--ac)" sw={1.6}/>
                       </div>
                       <div style={{padding:"11px 13px",background:"var(--sf)",border:"1px solid var(--ok)",
-                        borderRadius:8,display:"flex",alignItems:"center",gap:9}}>
-                        <Ic n="file" s={15} c="var(--ok)"/>
+                        borderRadius:8,display:"flex",alignItems:"center",gap:9,minWidth:0,overflow:"hidden"}}>
+                        <Ic n="file" s={15} c="var(--ok)" style={{flexShrink:0}}/>
                         <div style={{flex:1,minWidth:0}}>
                           <div style={{fontSize:12,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",
                             whiteSpace:"nowrap"}}>{outName}</div>
