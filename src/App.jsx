@@ -248,7 +248,7 @@ function ToolPage({ tool, showToast, bumpCount, addToHistory, checkLimits, onBac
       </div>
       {/* Anuncio 4 — post-conversión */}
       <div style={{maxWidth:560,margin:"0 auto",padding:"0 20px 48px"}}>
-        <AdUnit slot="4444444444" style={{minHeight:90}}/>
+        <AdUnit slot="5009358755" style={{minHeight:90}}/>
       </div>
     </div>
   );
@@ -493,7 +493,7 @@ export default function App() {
 
           {/* Anuncio 1 — tras propuesta de valor */}
           <div style={{marginBottom:48}}>
-            <AdUnit slot="1111111111" style={{minHeight:90}}/>
+            <AdUnit slot="9092219780" style={{minHeight:90}}/>
           </div>
 
           {/* Cómo funciona */}
@@ -638,7 +638,7 @@ export default function App() {
           </div>
 
           {/* Anuncio 2 — tras herramientas */}
-          <AdUnit slot="2222222222" style={{marginTop:32,minHeight:90}}/>
+          <AdUnit slot="4442528333" style={{marginTop:32,minHeight:90}}/>
 
           {/* Features */}
           <div className="m-feat" style={{borderTop:"1px solid var(--bd)",marginTop:48,paddingTop:36,display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:20}}>
@@ -732,7 +732,7 @@ export default function App() {
 
         {/* Anuncio 3 — tras FAQ */}
         <div style={{maxWidth:960,margin:"0 auto",padding:"0 20px 32px"}}>
-          <AdUnit slot="3333333333" style={{minHeight:90}}/>
+          <AdUnit slot="4789866901" style={{minHeight:90}}/>
         </div>
 
         {/* Historial */}
