@@ -585,6 +585,29 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
                 );
               })()}
               <button className="bg" onClick={dl}>{T.other}</button>
+              {/* Share tool */}
+              <div style={{marginTop:14,paddingTop:14,borderTop:"1px solid var(--bd)"}}>
+                <div style={{fontSize:11,color:"var(--tm)",marginBottom:8}}>{T.share_hint||"¿Te ha sido útil? Comparte la herramienta"}</div>
+                <div style={{display:"flex",gap:6,justifyContent:"center",flexWrap:"wrap"}}>
+                  {typeof navigator.share==="function"&&(
+                    <button className="bg" style={{fontSize:11,padding:"5px 10px",display:"inline-flex",alignItems:"center",gap:4}}
+                      onClick={()=>navigator.share({title:"morf — "+tool.label,text:tool.desc,url:window.location.href}).catch(()=>{})}>
+                      <Ic n="share" s={11} c="var(--t2)"/> {T.share_native||"Compartir"}
+                    </button>
+                  )}
+                  <a href={`https://wa.me/?text=${encodeURIComponent("Convierte PDFs gratis sin registrarte → "+window.location.href)}`}
+                    target="_blank" rel="noopener noreferrer"
+                    style={{fontSize:11,padding:"5px 10px",border:"1px solid var(--bd)",borderRadius:6,
+                      background:"var(--sf)",color:"var(--t2)",textDecoration:"none",display:"inline-flex",alignItems:"center",gap:4,fontFamily:"'DM Sans',sans-serif"}}>
+                    WhatsApp
+                  </a>
+                  <a href={`mailto:?subject=${encodeURIComponent("morf — "+tool.label)}&body=${encodeURIComponent(tool.desc+"\n\n"+window.location.href)}`}
+                    style={{fontSize:11,padding:"5px 10px",border:"1px solid var(--bd)",borderRadius:6,
+                      background:"var(--sf)",color:"var(--t2)",textDecoration:"none",display:"inline-flex",alignItems:"center",gap:4,fontFamily:"'DM Sans',sans-serif"}}>
+                    Email
+                  </a>
+                </div>
+              </div>
             </div>
           ):status==="error"?(
             <div style={{textAlign:"center",padding:"24px 0"}}>
@@ -811,6 +834,12 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
                   }
                 </button>
               </div>
+              {files.length>0&&(
+                <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:4,marginTop:6}}>
+                  <Ic n="lock" s={10} c="var(--ok)"/>
+                  <span style={{fontSize:10,color:"var(--tm)"}}>{T.privacy_note||"Tu archivo nunca sale de tu navegador"}</span>
+                </div>
+              )}
             </>)}
             </>
           )}

@@ -1,13 +1,179 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
+
+  <!-- Homepage -->
   <url>
     <loc>https://morf-three.vercel.app/</loc>
-    <lastmod>2025-01-01</lastmod>
-    <changefreq>monthly</changefreq>
+    <lastmod>2025-02-01</lastmod>
+    <changefreq>weekly</changefreq>
     <priority>1.0</priority>
     <xhtml:link rel="alternate" hreflang="es" href="https://morf-three.vercel.app/"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://morf-three.vercel.app/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://morf-three.vercel.app/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://morf-three.vercel.app/"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://morf-three.vercel.app/"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://morf-three.vercel.app/"/>
   </url>
+
+  <!-- PDF → Word -->
+  <url>
+    <loc>https://morf-three.vercel.app/#pdf-word</loc>
+    <lastmod>2025-02-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Word → PDF -->
+  <url>
+    <loc>https://morf-three.vercel.app/#word-pdf</loc>
+    <lastmod>2025-02-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Image → PDF -->
+  <url>
+    <loc>https://morf-three.vercel.app/#img-pdf</loc>
+    <lastmod>2025-02-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Merge PDFs -->
+  <url>
+    <loc>https://morf-three.vercel.app/#merge</loc>
+    <lastmod>2025-02-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Split PDF -->
+  <url>
+    <loc>https://morf-three.vercel.app/#split</loc>
+    <lastmod>2025-02-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Compress PDF -->
+  <url>
+    <loc>https://morf-three.vercel.app/#compress</loc>
+    <lastmod>2025-02-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- PNG → JPG -->
+  <url>
+    <loc>https://morf-three.vercel.app/#png-jpg</loc>
+    <lastmod>2025-02-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- JPG → PNG -->
+  <url>
+    <loc>https://morf-three.vercel.app/#jpg-png</loc>
+    <lastmod>2025-02-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Rotate PDF -->
+  <url>
+    <loc>https://morf-three.vercel.app/#rotate</loc>
+    <lastmod>2025-02-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Excel → PDF -->
+  <url>
+    <loc>https://morf-three.vercel.app/#excel-pdf</loc>
+    <lastmod>2025-02-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- PDF → PowerPoint -->
+  <url>
+    <loc>https://morf-three.vercel.app/#pdf-pptx</loc>
+    <lastmod>2025-02-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- PDF → Excel -->
+  <url>
+    <loc>https://morf-three.vercel.app/#pdf-excel</loc>
+    <lastmod>2025-02-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Watermark PDF -->
+  <url>
+    <loc>https://morf-three.vercel.app/#watermark-pdf</loc>
+    <lastmod>2025-02-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Number Pages -->
+  <url>
+    <loc>https://morf-three.vercel.app/#number-pages</loc>
+    <lastmod>2025-02-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <!-- Crop PDF -->
+  <url>
+    <loc>https://morf-three.vercel.app/#crop-pdf</loc>
+    <lastmod>2025-02-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <!-- Grayscale PDF -->
+  <url>
+    <loc>https://morf-three.vercel.app/#grayscale-pdf</loc>
+    <lastmod>2025-02-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <!-- Unlock PDF -->
+  <url>
+    <loc>https://morf-three.vercel.app/#unlock-pdf</loc>
+    <lastmod>2025-02-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Sign PDF -->
+  <url>
+    <loc>https://morf-three.vercel.app/#sign-pdf</loc>
+    <lastmod>2025-02-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- OCR PDF (Pro) -->
+  <url>
+    <loc>https://morf-three.vercel.app/#ocr-pdf</loc>
+    <lastmod>2025-02-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Protect PDF (coming soon) -->
+  <url>
+    <loc>https://morf-three.vercel.app/#protect-pdf</loc>
+    <lastmod>2025-02-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
 </urlset>
