@@ -265,6 +265,19 @@ export default function App() {
   const [toast, setToast]     = useState(null);
   const [globalDrag, setGlobalDrag] = useState(false);
   const [dark, setDark] = useState(() => window.matchMedia?.('(prefers-color-scheme: dark)').matches);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef(null);
+
+  useEffect(() => {
+    if (!userMenuOpen) return;
+    const handler = (e) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [userMenuOpen]);
   const { count, bumpCount }                           = useCounter();
   const { showUpgrade, setShowUpgrade, upgradeReason, checkLimits } = useFreemium();
   const { user, signOut }                              = useAuth();
@@ -409,16 +422,40 @@ export default function App() {
               </button>
               <LangPicker lang={lang} setLang={setLang}/>
               {(supabase && user) ? (
-                <button
-                  onClick={()=>signOut()}
-                  title={user.email}
-                  style={{display:"inline-flex",alignItems:"center",gap:5,
-                    background:"var(--al)",border:"1px solid var(--ac)",
-                    borderRadius:6,padding:"4px 9px",cursor:"pointer",
-                    fontSize:11,color:"var(--ac)",fontFamily:"'DM Sans',sans-serif"}}>
-                  <Ic n="user" s={13} c="var(--ac)" aria-hidden="true"/>
-                  <span className="m-nav-labels">{user.email?.split("@")[0]}</span>
-                </button>
+                <div ref={userMenuRef} style={{position:"relative"}}>
+                  <button
+                    onClick={()=>setUserMenuOpen(o=>!o)}
+                    title={user.email}
+                    style={{display:"inline-flex",alignItems:"center",gap:5,
+                      background:"var(--al)",border:"1px solid var(--ac)",
+                      borderRadius:6,padding:"4px 9px",cursor:"pointer",
+                      fontSize:11,color:"var(--ac)",fontFamily:"'DM Sans',sans-serif"}}>
+                    <Ic n="user" s={13} c="var(--ac)" aria-hidden="true"/>
+                    <span className="m-nav-labels">{user.email?.split("@")[0]}</span>
+                  </button>
+                  {userMenuOpen && (
+                    <div style={{position:"absolute",top:"calc(100% + 6px)",right:0,
+                      background:"var(--sf)",border:"1px solid var(--bd)",borderRadius:8,
+                      minWidth:160,boxShadow:"0 4px 16px rgba(0,0,0,.1)",
+                      animation:"ld .16s ease both",zIndex:300}}>
+                      <div style={{padding:"10px 13px 8px",borderBottom:"1px solid var(--bd)"}}>
+                        <div style={{fontSize:11,color:"var(--tm)",overflow:"hidden",
+                          textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.email}</div>
+                      </div>
+                      <button
+                        onClick={()=>{setUserMenuOpen(false);signOut();}}
+                        style={{display:"flex",alignItems:"center",gap:8,width:"100%",
+                          padding:"9px 13px",fontSize:13,color:"#B91C1C",cursor:"pointer",
+                          background:"transparent",border:"none",fontFamily:"'DM Sans',sans-serif",
+                          textAlign:"left",transition:"background .12s"}}
+                        onMouseEnter={e=>e.currentTarget.style.background="var(--bg)"}
+                        onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                        <Ic n="x" s={13} c="#B91C1C"/>
+                        Cerrar sesión
+                      </button>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <button
                   onClick={()=>setShowAuth(true)}
