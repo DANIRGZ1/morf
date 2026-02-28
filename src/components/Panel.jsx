@@ -13,6 +13,7 @@ import {
   cropPdf, cropPdfToBlob,
   grayscalePdf, grayscalePdfToBlob,
   pdfToPptx, pdfToExcel, signPdf, ocrPdf,
+  pdfToImages, organizePdf, deletePagesPdf, pptxToPdf, ensurePdfJs,
 } from "../utils/convert";
 
 /* ── Tools ───────────────────────────────────────────────────────────────── */
@@ -38,6 +39,10 @@ export const TOOL_BASE = [
   {id:"sign-pdf",      icon:"sign",      accepts:[".pdf"],                        from:"pdf",  to:"pdf"},
   {id:"ocr-pdf",       icon:"ocr",       accepts:[".pdf"],                        from:"pdf",  to:"txt",  pro:true},
   {id:"protect-pdf",   icon:"protect",   accepts:[".pdf"],                        from:"pdf",  to:"pdf",  comingSoon:true},
+  {id:"pptx-pdf",      icon:"pptx",      accepts:[".pptx",".ppt"], mimeTypes:["application/vnd.openxmlformats-officedocument.presentationml.presentation","application/vnd.ms-powerpoint"], from:"pptx", to:"pdf"},
+  {id:"pdf-img",       icon:"img",       accepts:[".pdf"],                        from:"pdf",  to:"png"},
+  {id:"organize-pdf",  icon:"split",     accepts:[".pdf"],                        from:"pdf",  to:"pdf"},
+  {id:"delete-pages",  icon:"x",         accepts:[".pdf"],                        from:"pdf",  to:"pdf"},
 ];
 
 /* ── Preview modal ───────────────────────────────────────────────────────── */
@@ -373,8 +378,39 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
   const [signatureDataUrl,setSignatureDataUrl] = useState(null);
   const [compressResult,setCompressResult]     = useState(null); // {before,after}
   const [ocrLang,setOcrLang]                  = useState("eng");
+  const [pageOrder,setPageOrder]              = useState([]); // [{idx,thumb}] para organize-pdf
+  const [orgDrag,setOrgDrag]                  = useState(null);
+  const [thumbsReady,setThumbsReady]          = useState(false);
   const ref = useRef();
   const progressTimer = useRef(null);
+
+  // Generar miniaturas para el organizador de páginas
+  useEffect(() => {
+    if (tool.id !== "organize-pdf" || files.length === 0) {
+      setPageOrder([]); setThumbsReady(false); return;
+    }
+    let cancelled = false;
+    setThumbsReady(false); setPageOrder([]);
+    (async () => {
+      try {
+        await ensurePdfJs();
+        const bytes  = await files[0].arrayBuffer();
+        const pdfSrc = await window.pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
+        const items  = [];
+        for (let i = 1; i <= pdfSrc.numPages; i++) {
+          if (cancelled) return;
+          const page = await pdfSrc.getPage(i);
+          const vp   = page.getViewport({ scale: 0.4 });
+          const cv   = document.createElement("canvas");
+          cv.width = vp.width; cv.height = vp.height;
+          await page.render({ canvasContext: cv.getContext("2d"), viewport: vp }).promise;
+          items.push({ idx: i - 1, thumb: cv.toDataURL("image/jpeg", 0.6) });
+        }
+        if (!cancelled) { setPageOrder(items); setThumbsReady(true); }
+      } catch(e) { console.error(e); }
+    })();
+    return () => { cancelled = true; };
+  }, [tool.id, files]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isMulti = !!(tool.multi || tool.batch);
 
@@ -534,6 +570,25 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
       else if (tool.id==="ocr-pdf") {
         await ocrPdf(files[0], ocrLang, pct => setProgress(pct));
       }
+      else if (tool.id==="pptx-pdf") {
+        const res = await pptxToPdf(files[0]);
+        clearInterval(progressTimer.current);
+        if (res==="popup-blocked") { setErrMsg(T.err_popup); setStatus("error"); return; }
+        setProgress(100); showToast(T.conv_done); bumpCount();
+        addToHistory(files[0]?.name, tool.label);
+        notifyDone(files[0]?.name);
+        setStatus("idle"); setFiles([]); return;
+      }
+      else if (tool.id==="pdf-img") {
+        await pdfToImages(files[0], pct => setProgress(pct));
+      }
+      else if (tool.id==="organize-pdf") {
+        if (pageOrder.length===0) { setErrMsg("No quedan páginas para guardar."); setStatus("error"); return; }
+        await organizePdf(files[0], pageOrder.map(item => item.idx));
+      }
+      else if (tool.id==="delete-pages") {
+        await deletePagesPdf(files[0], range);
+      }
 
       finishOk();
     } catch(e) {
@@ -545,7 +600,7 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
     }
   };
 
-  const dl = () => { setStatus("idle"); setFiles([]); setCompressResult(null); setSignatureDataUrl(null); };
+  const dl = () => { setStatus("idle"); setFiles([]); setCompressResult(null); setSignatureDataUrl(null); setPageOrder([]); setThumbsReady(false); };
 
   return (
     <>
@@ -813,6 +868,62 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
                   <div style={{fontSize:10,color:"var(--tm)",marginTop:6}}>{T.ocr_hint||"La primera ejecución descarga ~14 MB de datos de idioma."}</div>
                 </div>
               )}
+              {tool.id==="organize-pdf"&&files.length>0&&(
+                <div style={{marginBottom:12}}>
+                  {!thumbsReady?(
+                    <div style={{fontSize:12,color:"var(--tm)",textAlign:"center",padding:"20px 0",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+                      <div className="spn"/>Generando miniaturas…
+                    </div>
+                  ):(
+                    <>
+                      <div style={{fontSize:11,color:"var(--t2)",marginBottom:8}}>
+                        {T.organize_hint||"Arrastra para reordenar · Clic en ✕ para eliminar"}
+                      </div>
+                      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(72px,1fr))",gap:6,maxHeight:320,overflowY:"auto",padding:"2px"}}>
+                        {pageOrder.map((item,i)=>(
+                          <div key={`${item.idx}-${i}`}
+                            draggable
+                            onDragStart={()=>setOrgDrag(i)}
+                            onDragOver={e=>e.preventDefault()}
+                            onDrop={e=>{e.preventDefault();if(orgDrag===null||orgDrag===i)return;setPageOrder(p=>{const n=[...p];const[m]=n.splice(orgDrag,1);n.splice(i,0,m);return n;});setOrgDrag(null);}}
+                            onDragEnd={()=>setOrgDrag(null)}
+                            style={{position:"relative",cursor:"grab",opacity:orgDrag===i?.35:1,transition:"opacity .15s",userSelect:"none"}}>
+                            <img src={item.thumb} alt={`p${item.idx+1}`}
+                              style={{width:"100%",borderRadius:4,border:"1px solid var(--bd)",display:"block"}}/>
+                            <span style={{position:"absolute",bottom:3,left:"50%",transform:"translateX(-50%)",
+                              fontSize:8,background:"rgba(0,0,0,.6)",color:"#fff",borderRadius:3,padding:"1px 5px",
+                              fontFamily:"'DM Mono',monospace",pointerEvents:"none",whiteSpace:"nowrap"}}>
+                              p.{i+1}
+                            </span>
+                            <button
+                              onClick={()=>setPageOrder(p=>p.filter((_,j)=>j!==i))}
+                              style={{position:"absolute",top:2,right:2,background:"rgba(185,28,28,.85)",color:"#fff",
+                                border:"none",borderRadius:"50%",width:16,height:16,fontSize:9,cursor:"pointer",
+                                display:"flex",alignItems:"center",justifyContent:"center",padding:0,lineHeight:1}}
+                              aria-label={`Eliminar página ${i+1}`}>✕</button>
+                          </div>
+                        ))}
+                      </div>
+                      {pageOrder.length===0&&(
+                        <div style={{fontSize:12,color:"var(--tm)",textAlign:"center",padding:"12px 0"}}>
+                          {T.organize_empty||"No quedan páginas. Vuelve a subir el archivo."}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+              {tool.id==="delete-pages"&&files.length>0&&(
+                <div style={{marginBottom:12}}>
+                  <div style={{fontSize:11,fontWeight:500,color:"var(--t2)",marginBottom:5}}>
+                    {T.del_pages_label||"Páginas a eliminar (ej. 1-3, 5, 7-9)"}
+                  </div>
+                  <input value={range} onChange={e=>setRange(e.target.value)} placeholder="1, 3, 5-7"
+                    className="fi-inp" style={{fontFamily:"'DM Mono',monospace",fontSize:12}}
+                    onFocus={e=>e.target.style.borderColor="var(--ac)"}
+                    onBlur={e=>e.target.style.borderColor="var(--bd)"}/>
+                </div>
+              )}
               {status==="proc"&&(
                 <div style={{marginBottom:16,padding:"14px 16px",background:"var(--al)",borderRadius:10}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
@@ -829,7 +940,7 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
               )}
               <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
                 <button className="bg" onClick={onClose}>{T.cancel}</button>
-                <button className="bp" disabled={!files.length||status==="proc"||(tool.id==="sign-pdf"&&!signatureDataUrl)} onClick={convert}>
+                <button className="bp" disabled={!files.length||status==="proc"||(tool.id==="sign-pdf"&&!signatureDataUrl)||(tool.id==="organize-pdf"&&(!thumbsReady||pageOrder.length===0))} onClick={convert}>
                   {status==="proc"
                     ? <><div className="spn"/>{T.processing}</>
                     : <><Ic n="arrow" s={14}/>{tool.batch&&files.length>1?`Convertir ${files.length} archivos`:T.convert}</>
