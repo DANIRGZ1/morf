@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { Ic } from "./icons";
 import { useLang } from "../contexts/LangContext";
+import { requestNotifyPermission, notifyDone } from "../utils/notify";
 import {
   mergePdfs, splitPdf, imagesToPdf, wordToPdf, pdfToWord,
   pngToJpg, jpgToPng, rotatePdf, excelToPdf,
@@ -424,7 +425,9 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
     setStatus("done");
     showToast(T.conv_done);
     bumpCount();
-    addToHistory(histName ?? files[0]?.name, tool.label);
+    const label = histName ?? files[0]?.name;
+    addToHistory(label, tool.label);
+    notifyDone(label);
   };
 
   const convert = async () => {
@@ -432,6 +435,7 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
     if (files.some(f => f.size > maxSize)) { setErrMsg(T.err_size); setStatus("error"); return; }
     if (!checkLimits(files, tool.id)) return;
 
+    requestNotifyPermission();
     setStatus("proc");
     setErrMsg("");
     startProgress();
@@ -500,6 +504,7 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
         if (res === "popup-blocked") { setErrMsg(T.err_popup); setStatus("error"); return; }
         setProgress(100); showToast(T.conv_done); bumpCount();
         addToHistory(files[0]?.name, tool.label);
+        notifyDone(files[0]?.name);
         setStatus("idle"); setFiles([]); return;
       }
       else if (tool.id==="pdf-word")  { await pdfToWord(files[0]); }
@@ -512,6 +517,7 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
         if (res === "popup-blocked") { setErrMsg(T.err_popup); setStatus("error"); return; }
         setProgress(100); showToast(T.conv_done); bumpCount();
         addToHistory(files[0]?.name, tool.label);
+        notifyDone(files[0]?.name);
         setStatus("idle"); setFiles([]); return;
       }
       else if (tool.id==="pdf-pptx")      { await pdfToPptx(files[0]); }
