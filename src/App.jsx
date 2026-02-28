@@ -99,7 +99,7 @@ const css = `
   @media(max-width:600px){
     /* Header */
     .m-header-inner{padding:0 14px!important}
-    .m-logo-text{display:none}
+    .m-logo-text{font-size:13px!important}
     .m-nav-labels{display:none}
 
     /* Hero */
