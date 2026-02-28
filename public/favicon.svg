@@ -1,8 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
   <!-- Background -->
   <rect width="32" height="32" rx="7" fill="#1C3042"/>
-  <!-- Lowercase «m» lettermark — two arched strokes -->
-  <path d="M5 26 V15 C5 9 16 9 16 15 V26 M16 15 C16 9 27 9 27 15 V26"
+  <!-- Lowercase «m» lettermark (narrowed to leave room for the dot) -->
+  <path d="M4 26 V16 C4 9 13 9 13 16 V26 M13 16 C13 9 22 9 22 16 V26"
     stroke="white" stroke-width="2.4" fill="none"
     stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Blue dot accent — reads as «m.» -->
+  <circle cx="27" cy="25" r="3.2" fill="#60b8d4"/>
 </svg>
