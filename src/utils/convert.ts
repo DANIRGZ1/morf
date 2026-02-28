@@ -1274,3 +1274,78 @@ export async function signPdfV2(
   const out = await doc.save();
   download(pdfBlob(out), `${basename(file)}-firmado.pdf`);
 }
+
+// ── 29. ANOTAR PDF ────────────────────────────────────────────────────────────
+export type AnnotPos = "tl"|"tc"|"tr"|"ml"|"mc"|"mr"|"bl"|"bc"|"br";
+export interface Annotation {
+  page: number;      // 1-indexed
+  text: string;
+  pos: AnnotPos;
+  size: number;      // pt
+  color: "red"|"blue"|"black";
+}
+
+export async function annotatePdf(file: File, annotations: Annotation[]): Promise<void> {
+  const bytes = await file.arrayBuffer();
+  const doc   = await PDFDocument.load(bytes, { ignoreEncryption: true });
+  const font  = await doc.embedFont(StandardFonts.Helvetica);
+  const pages = doc.getPages();
+
+  const colorMap = { red: rgb(0.85, 0.1, 0.1), blue: rgb(0.1, 0.2, 0.85), black: rgb(0,0,0) };
+
+  for (const ann of annotations) {
+    const pg = pages[Math.min(ann.page - 1, pages.length - 1)];
+    const { width, height } = pg.getSize();
+    const margin = 20;
+    const textW  = font.widthOfTextAtSize(ann.text, ann.size);
+    const posMap: Record<AnnotPos, { x: number; y: number }> = {
+      tl: { x: margin,                  y: height - ann.size - margin },
+      tc: { x: (width - textW) / 2,     y: height - ann.size - margin },
+      tr: { x: width - textW - margin,  y: height - ann.size - margin },
+      ml: { x: margin,                  y: (height - ann.size) / 2 },
+      mc: { x: (width - textW) / 2,     y: (height - ann.size) / 2 },
+      mr: { x: width - textW - margin,  y: (height - ann.size) / 2 },
+      bl: { x: margin,                  y: margin },
+      bc: { x: (width - textW) / 2,     y: margin },
+      br: { x: width - textW - margin,  y: margin },
+    };
+    pg.drawText(ann.text, {
+      ...posMap[ann.pos],
+      size: ann.size,
+      font,
+      color: colorMap[ann.color],
+    });
+  }
+
+  const out = await doc.save();
+  download(pdfBlob(out), `${basename(file)}-anotado.pdf`);
+}
+
+// ── 30. REDACTAR PDF ──────────────────────────────────────────────────────────
+export interface RedactZone {
+  page: number;   // 1-indexed
+  x: number;      // % de ancho de página (0-100)
+  y: number;      // % de alto de página (0-100), origen arriba
+  w: number;      // % ancho
+  h: number;      // % alto
+}
+
+export async function redactPdf(file: File, zones: RedactZone[]): Promise<void> {
+  const bytes = await file.arrayBuffer();
+  const doc   = await PDFDocument.load(bytes, { ignoreEncryption: true });
+  const pages = doc.getPages();
+
+  for (const z of zones) {
+    const pg = pages[Math.min(z.page - 1, pages.length - 1)];
+    const { width, height } = pg.getSize();
+    // PDF coords: y=0 is bottom; convert % from top
+    const pdfX = (z.x / 100) * width;
+    const pdfH = (z.h / 100) * height;
+    const pdfY = height - (z.y / 100) * height - pdfH;
+    const pdfW = (z.w / 100) * width;
+    pg.drawRectangle({ x: pdfX, y: pdfY, width: pdfW, height: pdfH, color: rgb(0, 0, 0) });
+  }
+
+  const out = await doc.save();
+  download(pdfBlob(out), `${basename(file)}-redactado.pdf`);
+}
