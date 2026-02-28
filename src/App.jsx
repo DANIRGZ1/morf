@@ -12,6 +12,7 @@ import Modal from "./components/Modal";
 import UpgradeModal from "./components/UpgradeModal";
 import AuthModal from "./components/AuthModal";
 import Toast from "./components/Toast";
+import Dashboard from "./components/Dashboard";
 import Panel, { TOOL_BASE } from "./components/Panel";
 import { Privacy, Terms, Contact, API } from "./components/ModalContents";
 
@@ -331,6 +332,7 @@ export default function App() {
   const [showAuth, setShowAuth]                        = useState(false);
   const [billingYear, setBillingYear] = useState(true);
   const [showAllTools, setShowAllTools] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(false);
   const [toolSearch, setToolSearch] = useState("");
   const [preloadedFile, setPreloadedFile] = useState(null);
   const [dropCandidates, setDropCandidates] = useState(null); // {file, tools[]}
@@ -507,8 +509,18 @@ export default function App() {
             onBack={backHome} preloadedFile={preloadedFile} onGoToTool={goToTool}/>
         )}
 
-        {/* Main app — hidden (not unmounted) when tool page is active */}
-        <div style={{display:fullToolPage?'none':'block'}}>
+        {/* Dashboard page */}
+        {showDashboard && !fullToolPage && (
+          <Dashboard
+            history={history}
+            count={count}
+            lang={lang}
+            onBack={() => setShowDashboard(false)}
+          />
+        )}
+
+        {/* Main app — hidden (not unmounted) when tool page or dashboard is active */}
+        <div style={{display:(fullToolPage||showDashboard)?'none':'block'}}>
 
         {/* Header */}
         <header style={{borderBottom:"1px solid var(--bd)",background:"var(--sf)",position:"sticky",top:0,zIndex:100}}>
@@ -518,6 +530,13 @@ export default function App() {
               <span style={{fontSize:9,fontFamily:"'DM Mono',monospace",background:"var(--al)",color:"var(--ac)",padding:"2px 6px",borderRadius:3,fontWeight:500}}>BETA</span>
             </div>
             <nav aria-label="Menú principal" style={{display:"flex",gap:16,alignItems:"center"}}>
+              {history.length > 0 && (
+                <button className="nl m-nav-labels" onClick={()=>setShowDashboard(true)}
+                  style={{display:"inline-flex",alignItems:"center",gap:4}}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                  Dashboard
+                </button>
+              )}
               <button className="nl m-nav-privacy" onClick={()=>setModal("privacy")}>{T.nav_privacy}</button>
               <button className="nl m-nav-labels" onClick={()=>setModal("api")}>{T.nav_api}</button>
               <button className="nl m-nav-labels" onClick={()=>setModal("contact")}>{T.nav_help}</button>
