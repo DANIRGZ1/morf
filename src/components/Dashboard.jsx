@@ -3,6 +3,10 @@ import { useMemo, useState } from "react";
 const DAYS_ES = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
 const DAYS_EN = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
+// Heatmap row labels: Mon, Wed, Fri (indices 1, 3, 5 in ISO week, but we use Sun=0 JS days)
+// We show labels for rows: Mon=1, Wed=3, Fri=5
+const HEATMAP_ROW_LABELS = { 1: "Mon", 3: "Wed", 5: "Fri" };
+
 function StatCard({ label, value, sub, accent }) {
   return (
     <div style={{
@@ -51,6 +55,131 @@ function WeekChart({ data, labels }) {
   );
 }
 
+// Returns a YYYY-MM-DD string in local time for a given Date object
+function toLocalDateStr(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function ActivityHeatmap({ heatmapGrid, monthLabels }) {
+  // heatmapGrid: 7 rows (Sun..Sat) × 13 cols (weeks, oldest first)
+  // We render rows Mon(1)..Sun(0) to match GitHub style: Mon at top, Sun at bottom
+  // Row order for display: Mon=1, Tue=2, Wed=3, Thu=4, Fri=5, Sat=6, Sun=0
+  const rowOrder = [1, 2, 3, 4, 5, 6, 0];
+  const rowLabels = { 1: "Mon", 3: "Wed", 5: "Fri" };
+
+  const cellSize = 11;
+  const cellGap = 3;
+
+  return (
+    <div style={{ overflowX: "auto" }}>
+      <div style={{ display: "inline-flex", flexDirection: "column", gap: 0 }}>
+        {/* Month labels row */}
+        <div style={{ display: "flex", marginLeft: 34, marginBottom: 4, gap: cellGap }}>
+          {monthLabels.map((ml, wi) => (
+            <div
+              key={wi}
+              style={{
+                width: cellSize,
+                fontSize: 9,
+                color: ml ? "var(--t2)" : "transparent",
+                fontFamily: "'DM Mono', monospace",
+                userSelect: "none",
+                flexShrink: 0,
+              }}
+            >
+              {ml || ""}
+            </div>
+          ))}
+        </div>
+
+        {/* Grid rows */}
+        {rowOrder.map((dayOfWeek) => (
+          <div key={dayOfWeek} style={{ display: "flex", alignItems: "center", gap: 0, marginBottom: cellGap }}>
+            {/* Row label */}
+            <div style={{
+              width: 30,
+              fontSize: 9,
+              color: "var(--t2)",
+              textAlign: "right",
+              paddingRight: 6,
+              fontFamily: "'DM Mono', monospace",
+              userSelect: "none",
+              flexShrink: 0,
+              lineHeight: `${cellSize}px`,
+            }}>
+              {rowLabels[dayOfWeek] || ""}
+            </div>
+            {/* Cells */}
+            <div style={{ display: "flex", gap: cellGap }}>
+              {heatmapGrid[dayOfWeek].map((cell, wi) => {
+                const bg =
+                  cell === null
+                    ? "transparent"
+                    : cell.count === 0
+                    ? "var(--bd)"
+                    : cell.count === 1
+                    ? "color-mix(in srgb, var(--ac) 45%, var(--bg))"
+                    : "var(--ac)";
+                return (
+                  <div
+                    key={wi}
+                    title={cell ? `${cell.date}: ${cell.count} conversión${cell.count !== 1 ? "es" : ""}` : ""}
+                    style={{
+                      width: cellSize,
+                      height: cellSize,
+                      borderRadius: 2,
+                      background: bg,
+                      flexShrink: 0,
+                      cursor: cell && cell.count > 0 ? "default" : "default",
+                      transition: "opacity .15s",
+                    }}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        ))}
+
+        {/* Legend */}
+        <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 8, marginLeft: 34 }}>
+          <span style={{ fontSize: 9, color: "var(--t2)", marginRight: 2 }}>Menos</span>
+          {[
+            "var(--bd)",
+            "color-mix(in srgb, var(--ac) 30%, var(--bg))",
+            "color-mix(in srgb, var(--ac) 60%, var(--bg))",
+            "var(--ac)",
+          ].map((bg, i) => (
+            <div key={i} style={{ width: cellSize, height: cellSize, borderRadius: 2, background: bg }} />
+          ))}
+          <span style={{ fontSize: 9, color: "var(--t2)", marginLeft: 2 }}>Más</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function exportCSV(history) {
+  const header = "Fecha,Archivo,Herramienta,Tamaño (MB)";
+  const rows = history.map((h) => {
+    const fecha = h.date ? new Date(h.date).toLocaleDateString("es") : "";
+    const archivo = `"${(h.filename || "").replace(/"/g, '""')}"`;
+    const herramienta = `"${(h.tool || "").replace(/"/g, '""')}"`;
+    const mb = h.size != null ? (h.size / 1048576).toFixed(3) : "";
+    return [fecha, archivo, herramienta, mb].join(",");
+  });
+  const csv = [header, ...rows].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "morf-historial.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function Dashboard({ history, count, onBack, lang = "es" }) {
   const [tab, setTab] = useState("overview");
 
@@ -66,6 +195,13 @@ export default function Dashboard({ history, count, onBack, lang = "es" }) {
     let thisMonth = 0;
     const dayActivity = [0, 0, 0, 0, 0, 0, 0];
 
+    // Size tracking
+    let totalBytes = 0;
+    let sizedCount = 0;
+
+    // Heatmap: date string -> count
+    const dateCounts = {};
+
     for (const h of history) {
       toolCounts[h.tool] = (toolCounts[h.tool] || 0) + 1;
       const ext = (h.filename.split(".").pop() || "?").toLowerCase();
@@ -74,6 +210,16 @@ export default function Dashboard({ history, count, onBack, lang = "es" }) {
       if (d >= weekAgo) thisWeek++;
       if (d >= monthAgo) thisMonth++;
       dayActivity[d.getDay()]++;
+
+      // Size
+      if (h.size != null) {
+        totalBytes += h.size;
+        sizedCount++;
+      }
+
+      // Heatmap
+      const ds = toLocalDateStr(d);
+      dateCounts[ds] = (dateCounts[ds] || 0) + 1;
     }
 
     const topTools = Object.entries(toolCounts)
@@ -87,7 +233,58 @@ export default function Dashboard({ history, count, onBack, lang = "es" }) {
     const topTool = topTools[0]?.[0] ?? "—";
     const uniqueTools = Object.keys(toolCounts).length;
 
-    return { toolCounts, topTools, topTypes, topTool, uniqueTools, thisWeek, thisMonth, dayActivity };
+    // Build heatmap grid: 7 rows (Sun=0 .. Sat=6), 13 columns (weeks)
+    // Total 91 days. Day 0 = 90 days ago, day 90 = today.
+    // We align so that column 0 starts on Sunday.
+    // Find the Sunday on or before 90 days ago.
+    const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    // The start date of our 91-day window
+    const startDate = new Date(todayMidnight);
+    startDate.setDate(startDate.getDate() - 90);
+    // Rewind to previous Sunday
+    const startDow = startDate.getDay(); // 0=Sun
+    const gridStart = new Date(startDate);
+    gridStart.setDate(gridStart.getDate() - startDow);
+
+    // heatmapGrid[dayOfWeek][weekIndex] = { date, count } | null
+    const heatmapGrid = Array.from({ length: 7 }, () => Array(13).fill(null));
+    const monthLabels = Array(13).fill(null); // one label per column (week)
+
+    let lastMonth = -1;
+    for (let wi = 0; wi < 13; wi++) {
+      for (let dow = 0; dow < 7; dow++) {
+        const cellDate = new Date(gridStart);
+        cellDate.setDate(gridStart.getDate() + wi * 7 + dow);
+        const ds = toLocalDateStr(cellDate);
+        const cellTime = cellDate.getTime();
+        const startTime = startDate.getTime();
+        const endTime = todayMidnight.getTime();
+        if (cellTime < startTime || cellTime > endTime) {
+          heatmapGrid[dow][wi] = null;
+        } else {
+          heatmapGrid[dow][wi] = { date: ds, count: dateCounts[ds] || 0 };
+        }
+        // Month label: place on first column where the month changes (using Sunday of that week)
+        if (dow === 0) {
+          const m = cellDate.getMonth();
+          if (m !== lastMonth) {
+            const monthNames = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+            monthLabels[wi] = monthNames[m];
+            lastMonth = m;
+          }
+        }
+      }
+    }
+
+    // Total MB
+    const totalMB = sizedCount > 0 ? (totalBytes / 1048576).toFixed(2) : null;
+
+    return {
+      toolCounts, topTools, topTypes, topTool, uniqueTools,
+      thisWeek, thisMonth, dayActivity,
+      heatmapGrid, monthLabels,
+      totalMB, sizedCount,
+    };
   }, [history]);
 
   const days = lang === "es" ? DAYS_ES : DAYS_EN;
@@ -127,11 +324,29 @@ export default function Dashboard({ history, count, onBack, lang = "es" }) {
             Resumen de tus conversiones en morf
           </p>
         </div>
-        {/* Tabs */}
-        <div style={{ display: "flex", background: "var(--al)", borderRadius: 9, padding: 3, gap: 2 }}>
-          {[["overview", "Resumen"], ["tools", "Herramientas"], ["files", "Archivos"]].map(([v, label]) => (
-            <button key={v} style={tabStyle(v)} onClick={() => setTab(v)}>{label}</button>
-          ))}
+        {/* Right side: CSV export + Tabs */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {history.length > 0 && (
+            <button
+              onClick={() => exportCSV(history)}
+              style={{
+                padding: "7px 14px", fontSize: 12, borderRadius: 7, fontFamily: "'DM Sans',sans-serif",
+                fontWeight: 500, cursor: "pointer", border: "1px solid var(--bd)",
+                background: "var(--sf)", color: "var(--t1)", display: "inline-flex",
+                alignItems: "center", gap: 5, transition: "border-color .15s",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--ac)"; e.currentTarget.style.color = "var(--ac)"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--bd)"; e.currentTarget.style.color = "var(--t1)"; }}
+            >
+              ↓ Exportar CSV
+            </button>
+          )}
+          {/* Tabs */}
+          <div style={{ display: "flex", background: "var(--al)", borderRadius: 9, padding: 3, gap: 2 }}>
+            {[["overview", "Resumen"], ["tools", "Herramientas"], ["files", "Archivos"]].map(([v, label]) => (
+              <button key={v} style={tabStyle(v)} onClick={() => setTab(v)}>{label}</button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -140,11 +355,36 @@ export default function Dashboard({ history, count, onBack, lang = "es" }) {
         <>
           {/* Stat cards */}
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
-            <StatCard label="Total conversiones" value={count > 0 ? count.toLocaleString() : history.length} sub="desde que empezaste a usar morf" />
-            <StatCard label="Esta semana" value={stats.thisWeek} sub={`${stats.thisMonth} este mes`} />
-            <StatCard label="Herramienta top" value={stats.topTool !== "—" ? stats.topTool.split(" ").slice(0, 2).join(" ") : "—"}
-              sub={stats.topTool !== "—" ? `${stats.toolCounts[stats.topTool]}× usada` : "sin datos aún"} accent />
-            <StatCard label="Herramientas usadas" value={stats.uniqueTools} sub={`de ${32} disponibles`} />
+            <StatCard
+              label="Total conversiones"
+              value={count > 0 ? count.toLocaleString() : history.length}
+              sub="desde que empezaste a usar morf"
+            />
+            <StatCard
+              label="Esta semana"
+              value={stats.thisWeek}
+              sub={`${stats.thisMonth} este mes`}
+            />
+            <StatCard
+              label="Herramienta top"
+              value={stats.topTool !== "—" ? stats.topTool.split(" ").slice(0, 2).join(" ") : "—"}
+              sub={stats.topTool !== "—" ? `${stats.toolCounts[stats.topTool]}× usada` : "sin datos aún"}
+              accent
+            />
+            <StatCard
+              label="Herramientas usadas"
+              value={stats.uniqueTools}
+              sub={`de ${32} disponibles`}
+            />
+            <StatCard
+              label="Datos procesados"
+              value={stats.totalMB != null ? `${stats.totalMB} MB` : "—"}
+              sub={
+                stats.sizedCount > 0
+                  ? `${stats.sizedCount} archivo${stats.sizedCount !== 1 ? "s" : ""} con tamaño registrado`
+                  : "sin datos de tamaño"
+              }
+            />
           </div>
 
           {/* Two-column layout */}
@@ -223,6 +463,21 @@ export default function Dashboard({ history, count, onBack, lang = "es" }) {
                 )}
               </div>
             </div>
+          </div>
+
+          {/* Activity Heatmap */}
+          <div style={{ background: "var(--sf)", border: "1px solid var(--bd)", borderRadius: 12,
+            padding: "20px 24px", marginTop: 16 }}>
+            <div style={{ fontWeight: 600, fontSize: 14, color: "var(--t1)", marginBottom: 4 }}>
+              Actividad — últimas 13 semanas
+            </div>
+            <div style={{ fontSize: 12, color: "var(--t2)", marginBottom: 16 }}>
+              Cada celda representa un día. El color indica la cantidad de conversiones.
+            </div>
+            <ActivityHeatmap
+              heatmapGrid={stats.heatmapGrid}
+              monthLabels={stats.monthLabels}
+            />
           </div>
         </>
       )}

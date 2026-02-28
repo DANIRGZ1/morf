@@ -1509,3 +1509,80 @@ export async function applyEdits(
   const out = await doc.save();
   download(pdfBlob(out), `${basename(file)}-editado.pdf`);
 }
+
+// ── 35. PDF → MARKDOWN ───────────────────────────────────────────────────────
+export async function pdfToMarkdown(
+  file: File,
+  onProgress?: (pct: number) => void
+): Promise<void> {
+  await ensurePdfJs();
+  const bytes = await file.arrayBuffer();
+  const pdf   = await window.pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
+  const parts: string[] = [`# ${basename(file)}\n`];
+
+  for (let p = 1; p <= pdf.numPages; p++) {
+    onProgress?.(Math.round((p / pdf.numPages) * 95));
+    const page    = await pdf.getPage(p);
+    const content = await page.getTextContent();
+
+    // Group items by y position, track font sizes for heading detection
+    const lines: Record<number, { texts: string[]; maxSize: number }> = {};
+    for (const item of (content.items as Array<{ str: string; transform: number[]; height: number }>)) {
+      if (!item.str.trim()) continue;
+      const y    = Math.round(item.transform[5]);
+      const size = item.height || 0;
+      if (!lines[y]) lines[y] = { texts: [], maxSize: 0 };
+      lines[y].texts.push(item.str);
+      if (size > lines[y].maxSize) lines[y].maxSize = size;
+    }
+
+    const sorted = Object.entries(lines).sort((a, b) => +b[0] - +a[0]);
+    const allSizes = sorted.map(([, v]) => v.maxSize).filter(s => s > 0);
+    const medianSize = allSizes.sort((a, b) => a - b)[Math.floor(allSizes.length / 2)] || 12;
+
+    if (pdf.numPages > 1) parts.push(`\n---\n*Página ${p}*\n`);
+
+    for (const [, { texts, maxSize }] of sorted) {
+      const text = texts.join(" ").trim();
+      if (!text) continue;
+      if (maxSize > medianSize * 1.5) {
+        parts.push(`\n## ${text}\n`);
+      } else if (maxSize > medianSize * 1.2) {
+        parts.push(`\n### ${text}\n`);
+      } else {
+        parts.push(text + "  ");
+      }
+    }
+  }
+
+  onProgress?.(100);
+  download(
+    new Blob([parts.join("\n")], { type: "text/markdown;charset=utf-8" }),
+    `${basename(file)}.md`
+  );
+}
+
+// ── 36. EXTRAER DIFF DE TEXTO (para comparar PDFs) ───────────────────────────
+export async function extractPdfPages(file: File): Promise<string[]> {
+  await ensurePdfJs();
+  const bytes = await file.arrayBuffer();
+  const pdf   = await window.pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
+  const pages: string[] = [];
+
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page    = await pdf.getPage(p);
+    const content = await page.getTextContent();
+    const lines: Record<number, string[]> = {};
+    for (const item of (content.items as Array<{ str: string; transform: number[] }>)) {
+      if (!item.str.trim()) continue;
+      const y = Math.round(item.transform[5]);
+      (lines[y] ??= []).push(item.str);
+    }
+    pages.push(
+      Object.keys(lines).sort((a, b) => +b - +a)
+        .map(y => lines[+y].join(" "))
+        .join("\n")
+    );
+  }
+  return pages;
+}
