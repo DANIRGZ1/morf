@@ -423,7 +423,7 @@ export default function App() {
         <header style={{borderBottom:"1px solid var(--bd)",background:"var(--sf)",position:"sticky",top:0,zIndex:100}}>
           <div className="m-header-inner" style={{maxWidth:960,margin:"0 auto",padding:"0 20px",height:52,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
             <div style={{display:"flex",alignItems:"center",gap:9}}>
-              <span className="m-logo-text" style={{fontWeight:700,fontSize:15,letterSpacing:"-.03em"}}>morf<span style={{fontWeight:300,color:"var(--ac)"}}>.</span><span style={{fontWeight:400,color:"var(--ac)"}}>pdf</span></span>
+              <span className="m-logo-text" style={{fontWeight:700,fontSize:15,letterSpacing:"-.03em",color:"var(--t1)"}}>morf<span style={{fontWeight:300,color:"var(--ac)"}}>.</span><span style={{fontWeight:400,color:"var(--ac)"}}>pdf</span></span>
               <span style={{fontSize:9,fontFamily:"'DM Mono',monospace",background:"var(--al)",color:"var(--ac)",padding:"2px 6px",borderRadius:3,fontWeight:500}}>BETA</span>
             </div>
             <nav aria-label="Menú principal" style={{display:"flex",gap:16,alignItems:"center"}}>
@@ -611,7 +611,7 @@ export default function App() {
                         </div>
                       </div>
                       <div style={{display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                        <Ic n="logo" s={18} c="var(--ac)" sw={1.6}/>
+                        <Ic n="arrow" s={18} c="var(--ac)" sw={1.6}/>
                       </div>
                       <div style={{padding:"11px 13px",background:"var(--sf)",border:"1px solid var(--ok)",
                         borderRadius:8,display:"flex",alignItems:"center",gap:9,minWidth:0,overflow:"hidden"}}>
