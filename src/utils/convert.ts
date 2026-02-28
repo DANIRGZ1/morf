@@ -538,7 +538,7 @@ export async function rotatePdf(file: File, degrees = 90): Promise<void> {
 // ─────────────────────────────────────────────────────────────────
 // Helper: cargar pdf.js dinámicamente
 // ─────────────────────────────────────────────────────────────────
-async function ensurePdfJs(): Promise<void> {
+export async function ensurePdfJs(): Promise<void> {
   if (!window.pdfjsLib) {
     await new Promise<void>((res, rej) => {
       const s = document.createElement("script");
@@ -1025,4 +1025,163 @@ export async function ocrPdf(
     new Blob([texts.join("\n\n")], { type: "text/plain;charset=utf-8" }),
     `${basename(file)}-ocr.txt`
   );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// HTML escape helper
+// ─────────────────────────────────────────────────────────────────
+function escapeHtml(s: string): string {
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+          .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 21. PDF → IMÁGENES (PNG por página)
+// ─────────────────────────────────────────────────────────────────
+export async function pdfToImages(
+  file: File,
+  onProgress?: (pct: number) => void
+): Promise<void> {
+  await ensurePdfJs();
+  const bytes  = await file.arrayBuffer();
+  const pdfSrc = await window.pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
+
+  if (pdfSrc.numPages === 1) {
+    const page     = await pdfSrc.getPage(1);
+    const viewport = page.getViewport({ scale: 2 });
+    const canvas   = document.createElement("canvas");
+    canvas.width   = viewport.width;
+    canvas.height  = viewport.height;
+    await page.render({ canvasContext: canvas.getContext("2d")!, viewport }).promise;
+    const blob = await new Promise<Blob>(r => canvas.toBlob(b => r(b!), "image/png"));
+    download(blob, `${basename(file)}-p1.png`);
+    return;
+  }
+
+  const items: Array<{ filename: string; blob: Blob }> = [];
+  for (let i = 1; i <= pdfSrc.numPages; i++) {
+    onProgress?.(Math.round(5 + (i / pdfSrc.numPages) * 85));
+    const page     = await pdfSrc.getPage(i);
+    const viewport = page.getViewport({ scale: 2 });
+    const canvas   = document.createElement("canvas");
+    canvas.width   = viewport.width;
+    canvas.height  = viewport.height;
+    await page.render({ canvasContext: canvas.getContext("2d")!, viewport }).promise;
+    const blob = await new Promise<Blob>(r => canvas.toBlob(b => r(b!), "image/png"));
+    items.push({ filename: `${basename(file)}-p${i}.png`, blob });
+  }
+  await downloadAsZip(items);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 22. ORGANIZAR PDF — reordenar / eliminar páginas
+// pageOrder: array de índices base-0 en el nuevo orden deseado
+// ─────────────────────────────────────────────────────────────────
+export async function organizePdf(file: File, pageOrder: number[]): Promise<void> {
+  const bytes  = await file.arrayBuffer();
+  const srcDoc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+  const newDoc = await PDFDocument.create();
+  const pages  = await newDoc.copyPages(srcDoc, pageOrder);
+  pages.forEach(p => newDoc.addPage(p));
+  const out = await newDoc.save();
+  download(pdfBlob(out), `${basename(file)}-organizado.pdf`);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 23. BORRAR PÁGINAS de un PDF
+// rangeStr: páginas a ELIMINAR en formato "1-3, 5, 7-9"
+// ─────────────────────────────────────────────────────────────────
+export async function deletePagesPdf(file: File, rangeStr: string): Promise<void> {
+  const bytes   = await file.arrayBuffer();
+  const doc     = await PDFDocument.load(bytes, { ignoreEncryption: true });
+  const total   = doc.getPageCount();
+  const toDelete = new Set(parsePageRange(rangeStr, total));
+  const keepOrder = Array.from({ length: total }, (_, i) => i).filter(i => !toDelete.has(i));
+  if (keepOrder.length === 0) throw new Error("No quedan páginas tras el borrado");
+  const newDoc = await PDFDocument.create();
+  const pages  = await newDoc.copyPages(doc, keepOrder);
+  pages.forEach(p => newDoc.addPage(p));
+  const out = await newDoc.save();
+  download(pdfBlob(out), `${basename(file)}-sin-paginas.pdf`);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 24. PPTX → PDF (extracción de texto por diapositiva + impresión)
+// ─────────────────────────────────────────────────────────────────
+export async function pptxToPdf(file: File): Promise<string> {
+  if (!window.JSZip) {
+    await new Promise<void>((res, rej) => {
+      const s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
+      s.onload = () => res();
+      s.onerror = () => rej(new Error("JSZip load error"));
+      document.head.appendChild(s);
+    });
+  }
+
+  const bytes = await file.arrayBuffer();
+  const zip   = await window.JSZip.loadAsync(bytes);
+
+  // Ordenar los archivos de diapositiva (slide1.xml, slide2.xml, …)
+  const slideKeys = Object.keys(zip.files)
+    .filter(k => /^ppt\/slides\/slide\d+\.xml$/.test(k))
+    .sort((a, b) => {
+      const na = parseInt(a.match(/\d+/)?.[0] ?? "0");
+      const nb = parseInt(b.match(/\d+/)?.[0] ?? "0");
+      return na - nb;
+    });
+
+  if (slideKeys.length === 0) throw new Error("No se encontraron diapositivas en el PPTX");
+
+  const slidesHtml: string[] = [];
+  for (const key of slideKeys) {
+    const xml   = await zip.file(key)?.async("string") ?? "";
+    // Extraer todos los nodos <a:t> (texto de formas/cuadros de texto)
+    const nodes = xml.match(/<a:t(?:\s[^>]*)?>([^<]*)<\/a:t>/g) ?? [];
+    const text  = nodes
+      .map((t: string) => t.replace(/<[^>]+>/g, "").trim())
+      .filter(Boolean)
+      .join("  ·  ");
+    const num   = slidesHtml.length + 1;
+    slidesHtml.push(
+      `<div class="slide"><div class="sn">${num} / ${slideKeys.length}</div>` +
+      `<div class="sc">${escapeHtml(text || "—")}</div></div>`
+    );
+  }
+
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>${escapeHtml(basename(file))}</title>
+  <style>
+    *{box-sizing:border-box}
+    body{font-family:Calibri,Arial,sans-serif;font-size:11pt;margin:0;padding:0}
+    .slide{page-break-after:always;padding:2.5cm 3cm;min-height:14cm;
+      display:flex;flex-direction:column;justify-content:center;
+      border-bottom:1px solid #EEE}
+    .slide:last-child{page-break-after:avoid}
+    .sn{font-size:8pt;color:#999;margin-bottom:18px;font-family:monospace}
+    .sc{font-size:14pt;line-height:1.7;color:#111;word-break:break-word}
+    @media print{
+      .slide{min-height:0}
+      @page{size:A4 landscape;margin:2cm}
+    }
+  </style>
+</head>
+<body>
+  ${slidesHtml.join("\n  ")}
+  <script>window.addEventListener("load",()=>setTimeout(()=>window.print(),400));</script>
+</body>
+</html>`;
+
+  const win = window.open("", "_blank", "width=1000,height=700");
+  if (!win) {
+    download(new Blob([html], { type: "text/html;charset=utf-8" }), `${basename(file)}.html`);
+    return "popup-blocked";
+  }
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+  return "print-dialog";
 }
