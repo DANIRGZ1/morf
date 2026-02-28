@@ -1185,3 +1185,92 @@ export async function pptxToPdf(file: File): Promise<string> {
   win.document.close();
   return "print-dialog";
 }
+
+// ─────────────────────────────────────────────────────────────────
+// 25. REPARAR PDF — re-serializar con pdf-lib para corregir errores comunes
+// ─────────────────────────────────────────────────────────────────
+export async function repairPdf(file: File): Promise<void> {
+  const bytes = await file.arrayBuffer();
+  const doc   = await PDFDocument.load(bytes, { ignoreEncryption: true });
+  const out   = await doc.save();
+  download(pdfBlob(out), `${basename(file)}-reparado.pdf`);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 26. HTML → PDF — abre el archivo HTML con autoprint
+// ─────────────────────────────────────────────────────────────────
+export async function htmlToPdf(file: File): Promise<string> {
+  const text     = await file.text();
+  const hasPrint = /window\.print/i.test(text);
+  const withPrint = hasPrint
+    ? text
+    : text.replace(/<\/body>/i,
+        `<script>window.addEventListener("load",()=>setTimeout(()=>window.print(),350));<\/script></body>`);
+  const blob = new Blob([withPrint], { type: "text/html;charset=utf-8" });
+  const url  = URL.createObjectURL(blob);
+  const win2 = window.open(url, "_blank", "width=1000,height=700");
+  if (!win2) {
+    download(blob, `${basename(file)}.html`);
+    URL.revokeObjectURL(url);
+    return "popup-blocked";
+  }
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  return "print-dialog";
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 27. APLANAR PDF — convierte formularios interactivos en texto estático
+// ─────────────────────────────────────────────────────────────────
+export async function flattenPdf(file: File): Promise<void> {
+  const bytes = await file.arrayBuffer();
+  const doc   = await PDFDocument.load(bytes, { ignoreEncryption: true });
+  try { doc.getForm().flatten(); } catch { /* sin formulario, ignorar */ }
+  const out   = await doc.save();
+  download(pdfBlob(out), `${basename(file)}-aplanado.pdf`);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 28. FIRMAR PDF v2 — página configurable + posición de 6 puntos
+// ─────────────────────────────────────────────────────────────────
+export type SignPage = "first" | "last" | "all" | number;
+export type SignPos  = "tl" | "tc" | "tr" | "bl" | "bc" | "br";
+
+export async function signPdfV2(
+  file: File,
+  signatureDataUrl: string,
+  pageSpec: SignPage = "last",
+  pos: SignPos       = "br",
+): Promise<void> {
+  const bytes    = await file.arrayBuffer();
+  const doc      = await PDFDocument.load(bytes, { ignoreEncryption: true });
+  const base64   = signatureDataUrl.split(",")[1];
+  const sigBytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+  const sigImage = await doc.embedPng(sigBytes);
+  const pages    = doc.getPages();
+
+  let targets: number[];
+  if      (pageSpec === "first") targets = [0];
+  else if (pageSpec === "last")  targets = [pages.length - 1];
+  else if (pageSpec === "all")   targets = pages.map((_, i) => i);
+  else                           targets = [Math.max(0, Math.min(Number(pageSpec) - 1, pages.length - 1))];
+
+  for (const idx of targets) {
+    const page = pages[idx];
+    const { width, height } = page.getSize();
+    const sigW   = Math.min(160, width * 0.28);
+    const sigH   = (sigW / sigImage.width) * sigImage.height;
+    const margin = 24;
+    const posMap: Record<SignPos, { x: number; y: number }> = {
+      tl: { x: margin,               y: height - sigH - margin },
+      tc: { x: (width - sigW) / 2,   y: height - sigH - margin },
+      tr: { x: width - sigW - margin, y: height - sigH - margin },
+      bl: { x: margin,               y: margin },
+      bc: { x: (width - sigW) / 2,   y: margin },
+      br: { x: width - sigW - margin, y: margin },
+    };
+    page.drawImage(sigImage, { ...posMap[pos], width: sigW, height: sigH });
+  }
+
+  const out = await doc.save();
+  download(pdfBlob(out), `${basename(file)}-firmado.pdf`);
+}
