@@ -16,7 +16,10 @@ import {
   pdfToImages, organizePdf, deletePagesPdf, pptxToPdf, ensurePdfJs,
   repairPdf, htmlToPdf, flattenPdf,
   annotatePdf, redactPdf,
+  ocrSearchablePdf,
 } from "../utils/convert";
+import ChatPdf from "./ChatPdf";
+import VisualAnnotate from "./VisualAnnotate";
 
 /* ── Tools ───────────────────────────────────────────────────────────────── */
 // eslint-disable-next-line react-refresh/only-export-components
@@ -48,8 +51,11 @@ export const TOOL_BASE = [
   {id:"repair-pdf",    icon:"file",      accepts:[".pdf"],                        from:"pdf",  to:"pdf"},
   {id:"html-pdf",      icon:"pdf",       accepts:[".html",".htm"],                from:"html", to:"pdf"},
   {id:"flatten-pdf",   icon:"compress",  accepts:[".pdf"],                        from:"pdf",  to:"pdf", batch:true},
-  {id:"annotate-pdf",  icon:"edit",      accepts:[".pdf"],                        from:"pdf",  to:"pdf"},
-  {id:"redact-pdf",    icon:"x",         accepts:[".pdf"],                        from:"pdf",  to:"pdf"},
+  {id:"annotate-pdf",    icon:"edit",      accepts:[".pdf"],  from:"pdf",  to:"pdf"},
+  {id:"redact-pdf",      icon:"x",         accepts:[".pdf"],  from:"pdf",  to:"pdf"},
+  {id:"ocr-searchable",  icon:"file",      accepts:[".pdf"],  from:"pdf",  to:"pdf"},
+  {id:"chat-pdf",        icon:"pdf",       accepts:[".pdf"],  from:"pdf",  to:"chat"},
+  {id:"visual-annotate", icon:"edit",      accepts:[".pdf"],  from:"pdf",  to:"pdf"},
 ];
 
 /* ── Preview modal ───────────────────────────────────────────────────────── */
@@ -395,8 +401,11 @@ const NEXT_TOOLS = {
   "repair-pdf":    ["compress","pdf-word","merge"],
   "html-pdf":      ["compress","merge","pdf-word"],
   "flatten-pdf":   ["compress","unlock-pdf","merge"],
-  "annotate-pdf":  ["compress","merge","sign-pdf"],
-  "redact-pdf":    ["compress","annotate-pdf","merge"],
+  "annotate-pdf":    ["compress","merge","sign-pdf"],
+  "redact-pdf":      ["compress","annotate-pdf","merge"],
+  "ocr-searchable":  ["pdf-word","compress","ocr-pdf"],
+  "chat-pdf":        ["ocr-pdf","pdf-word","compress"],
+  "visual-annotate": ["annotate-pdf","redact-pdf","compress"],
 };
 
 function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}, checkLimits=()=>true, preloadedFile=null, onGoToTool=null }) {
@@ -691,6 +700,9 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
       else if (tool.id==="redact-pdf") {
         if (!redactZones.length) { setErrMsg("Añade al menos una zona de redacción."); setStatus("error"); return; }
         await redactPdf(files[0], redactZones);
+      }
+      else if (tool.id==="ocr-searchable") {
+        await ocrSearchablePdf(files[0], ocrLang, pct => setProgress(pct));
       }
       else if (tool.id==="html-pdf") {
         const res = await htmlToPdf(files[0]);
@@ -1241,8 +1253,41 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
                   ))}
                 </div>
               )}
+              {/* ── chat-pdf: full chat UI (replaces normal conversion flow) ── */}
+              {tool.id==="chat-pdf" && files.length>0 && status!=="proc" && (
+                <ChatPdf file={files[0]} showToast={showToast} />
+              )}
+              {/* ── visual-annotate: canvas editor ── */}
+              {tool.id==="visual-annotate" && files.length>0 && status!=="proc" && (
+                <VisualAnnotate file={files[0]} showToast={showToast} />
+              )}
+              {/* ── ocr-searchable: lang selector (reuses ocrLang state) ── */}
+              {tool.id==="ocr-searchable" && files.length>0 && (
+                <div style={{marginBottom:12}}>
+                  <div style={{fontSize:11,fontWeight:500,color:"var(--t2)",marginBottom:5}}>
+                    {T.ocr_lang_label||"Idioma del documento"}
+                  </div>
+                  <select value={ocrLang} onChange={e=>setOcrLang(e.target.value)}
+                    style={{width:"100%",padding:"6px 10px",border:"1px solid var(--bd)",borderRadius:6,
+                      background:"var(--bg)",color:"var(--tf)",fontSize:12}}>
+                    <option value="eng">English</option>
+                    <option value="spa">Español</option>
+                    <option value="fra">Français</option>
+                    <option value="deu">Deutsch</option>
+                    <option value="por">Português</option>
+                    <option value="ita">Italiano</option>
+                    <option value="chi_sim">中文 (简体)</option>
+                    <option value="jpn">日本語</option>
+                    <option value="ara">العربية</option>
+                    <option value="rus">Русский</option>
+                  </select>
+                  <div style={{fontSize:10,color:"var(--t2)",marginTop:4}}>
+                    {T.ocr_hint||"El OCR descargará los datos del idioma (~4 MB) la primera vez."}
+                  </div>
+                </div>
+              )}
               {/* Thumbnail preview */}
-              {!isMulti && files.length===1 && thumbDataUrl && status!=="proc" && tool.id!=="organize-pdf" && (
+              {!isMulti && files.length===1 && thumbDataUrl && status!=="proc" && tool.id!=="organize-pdf" && tool.id!=="visual-annotate" && (
                 <div style={{display:"flex",justifyContent:"center",marginBottom:12}}>
                   <div style={{position:"relative",width:80,height:110,borderRadius:6,overflow:"hidden",
                     border:"1px solid var(--bd)",boxShadow:"0 2px 12px rgba(0,0,0,.1)",flexShrink:0}}>
@@ -1267,12 +1312,14 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
               )}
               <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
                 <button className="bg" onClick={onClose}>{T.cancel}</button>
+                {tool.id!=="chat-pdf" && tool.id!=="visual-annotate" && (
                 <button className="bp" disabled={!files.length||status==="proc"||(tool.id==="sign-pdf"&&!signatureDataUrl)||(tool.id==="organize-pdf"&&(!thumbsReady||pageOrder.length===0))||(tool.id==="annotate-pdf"&&!annotations.length)||(tool.id==="redact-pdf"&&!redactZones.length)} onClick={convert}>
                   {status==="proc"
                     ? <><div className="spn"/>{T.processing}</>
                     : <><Ic n="arrow" s={14}/>{tool.batch&&files.length>1?`Convertir ${files.length} archivos`:T.convert}</>
                   }
                 </button>
+                )}
               </div>
               {files.length>0&&(
                 <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:4,marginTop:6}}>

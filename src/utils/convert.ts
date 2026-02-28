@@ -1349,3 +1349,163 @@ export async function redactPdf(file: File, zones: RedactZone[]): Promise<void> 
   const out = await doc.save();
   download(pdfBlob(out), `${basename(file)}-redactado.pdf`);
 }
+
+// ── 31. OCR → PDF BUSCABLE (capa de texto invisible) ─────────────────────────
+export async function ocrSearchablePdf(
+  file: File,
+  lang = "eng",
+  onProgress?: (pct: number) => void
+): Promise<void> {
+  await ensurePdfJs();
+
+  if (!window.Tesseract) {
+    await new Promise<void>((res, rej) => {
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+      s.onload = () => res();
+      s.onerror = () => rej(new Error("Tesseract.js load error"));
+      document.head.appendChild(s);
+    });
+  }
+
+  const bytes = await file.arrayBuffer();
+  const pdfJs = await window.pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
+  const doc   = await PDFDocument.load(bytes, { ignoreEncryption: true });
+  const font  = await doc.embedFont(StandardFonts.Helvetica);
+  const pages = doc.getPages();
+
+  const worker = await window.Tesseract.createWorker(lang);
+
+  for (let p = 1; p <= pdfJs.numPages; p++) {
+    onProgress?.(Math.round((p - 1) / pdfJs.numPages * 90));
+
+    const pdfJsPage = await pdfJs.getPage(p);
+    const scale = 2.0;
+    const vp = pdfJsPage.getViewport({ scale });
+    const canvas = document.createElement("canvas");
+    canvas.width  = vp.width;
+    canvas.height = vp.height;
+    await pdfJsPage.render({ canvasContext: canvas.getContext("2d")!, viewport: vp }).promise;
+
+    const { data } = await worker.recognize(canvas);
+
+    const libPage = pages[p - 1];
+    const { width: pdfW, height: pdfH } = libPage.getSize();
+    const sx = pdfW / vp.width;
+    const sy = pdfH / vp.height;
+
+    for (const word of (data as any).words ?? []) {
+      if (!word.text?.trim() || (word.confidence ?? 0) < 30) continue;
+      const { x0, y0, x1, y1 } = word.bbox;
+      const fSize = Math.max(1, (y1 - y0) * sy * 0.85);
+      try {
+        libPage.drawText(word.text, {
+          x: x0 * sx,
+          y: pdfH - y1 * sy,
+          size: fSize,
+          font,
+          color: rgb(1, 1, 1),
+          opacity: 0.01, // invisible pero indexable por Ctrl+F
+        });
+      } catch { /* ignorar errores de codificación de fuente */ }
+    }
+  }
+
+  await worker.terminate();
+  onProgress?.(100);
+  const out = await doc.save();
+  download(pdfBlob(out), `${basename(file)}-buscable.pdf`);
+}
+
+// ── 32. EXTRAER TEXTO DE PDF (para chat) ─────────────────────────────────────
+export async function extractPdfText(file: File, maxChars = 80_000): Promise<string> {
+  await ensurePdfJs();
+  const bytes = await file.arrayBuffer();
+  const pdf   = await window.pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
+  const parts: string[] = [];
+  let total = 0;
+
+  for (let p = 1; p <= pdf.numPages && total < maxChars; p++) {
+    const page    = await pdf.getPage(p);
+    const content = await page.getTextContent();
+    const lines: Record<number, string[]> = {};
+    for (const item of (content.items as Array<{ str: string; transform: number[] }>)) {
+      if (!item.str.trim()) continue;
+      const y = Math.round(item.transform[5]);
+      (lines[y] ??= []).push(item.str);
+    }
+    const text = Object.keys(lines)
+      .sort((a, b) => +b - +a)
+      .map(y => lines[+y].join(" "))
+      .join("\n");
+    parts.push(`[Página ${p}]\n${text}`);
+    total += text.length;
+  }
+
+  return parts.join("\n\n").slice(0, maxChars);
+}
+
+// ── 33. RENDERIZAR PÁGINA DE PDF A CANVAS ────────────────────────────────────
+export async function renderPdfPage(
+  file: File,
+  pageNum: number,
+  canvas: HTMLCanvasElement,
+  maxWidth = 680
+): Promise<{ pdfW: number; pdfH: number; scale: number; numPages: number }> {
+  await ensurePdfJs();
+  const bytes   = await file.arrayBuffer();
+  const pdf     = await window.pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
+  const page    = await pdf.getPage(Math.min(pageNum, pdf.numPages));
+  const vp0     = page.getViewport({ scale: 1 });
+  const scale   = Math.min(maxWidth / vp0.width, 2.5);
+  const vp      = page.getViewport({ scale });
+  canvas.width  = vp.width;
+  canvas.height = vp.height;
+  await page.render({ canvasContext: canvas.getContext("2d")!, viewport: vp }).promise;
+  return { pdfW: vp0.width, pdfH: vp0.height, scale, numPages: pdf.numPages };
+}
+
+// ── 34. APLICAR EDICIONES VISUALES (texto + redacciones) ─────────────────────
+export interface TextEdit {
+  page: number;
+  text: string;
+  x: number;
+  y: number;
+  size: number;
+  color: "red" | "blue" | "black";
+}
+
+export async function applyEdits(
+  file: File,
+  textEdits: TextEdit[],
+  redactZones: RedactZone[]
+): Promise<void> {
+  const bytes = await file.arrayBuffer();
+  const doc   = await PDFDocument.load(bytes, { ignoreEncryption: true });
+  const font  = await doc.embedFont(StandardFonts.Helvetica);
+  const pages = doc.getPages();
+  const colorMap = { red: rgb(0.85, 0.1, 0.1), blue: rgb(0.1, 0.2, 0.85), black: rgb(0, 0, 0) };
+
+  for (const e of textEdits) {
+    const pg = pages[Math.min(e.page - 1, pages.length - 1)];
+    try {
+      pg.drawText(e.text, { x: e.x, y: e.y, size: e.size, font, color: colorMap[e.color ?? "red"] });
+    } catch { /* ignorar */ }
+  }
+
+  for (const z of redactZones) {
+    const pg = pages[Math.min(z.page - 1, pages.length - 1)];
+    const { width, height } = pg.getSize();
+    const pH = (z.h / 100) * height;
+    pg.drawRectangle({
+      x: (z.x / 100) * width,
+      y: height - (z.y / 100) * height - pH,
+      width: (z.w / 100) * width,
+      height: pH,
+      color: rgb(0, 0, 0),
+    });
+  }
+
+  const out = await doc.save();
+  download(pdfBlob(out), `${basename(file)}-editado.pdf`);
+}
