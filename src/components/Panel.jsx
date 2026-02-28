@@ -361,7 +361,33 @@ function SignaturePad({ onChange }) {
 /* ── Panel ───────────────────────────────────────────────────────────────── */
 const BATCH_TOOL_IDS = new Set(["merge","compress","png-jpg","jpg-png","rotate","watermark-pdf","number-pages","crop-pdf","grayscale-pdf","unlock-pdf"]);
 
-function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}, checkLimits=()=>true }) {
+const NEXT_TOOLS = {
+  "pdf-word":      ["compress","merge","split"],
+  "word-pdf":      ["compress","merge","pdf-word"],
+  "compress":      ["merge","pdf-word","split"],
+  "merge":         ["compress","split","pdf-word"],
+  "split":         ["merge","compress","pdf-word"],
+  "img-pdf":       ["merge","compress"],
+  "jpg-png":       ["png-jpg","img-pdf"],
+  "png-jpg":       ["jpg-png","img-pdf"],
+  "rotate":        ["compress","merge"],
+  "excel-pdf":     ["pdf-excel","compress"],
+  "pdf-excel":     ["excel-pdf","compress"],
+  "pptx-pdf":      ["pdf-pptx","compress"],
+  "pdf-pptx":      ["pptx-pdf","compress"],
+  "watermark-pdf": ["compress","merge"],
+  "number-pages":  ["compress","merge"],
+  "crop-pdf":      ["compress","rotate"],
+  "grayscale-pdf": ["compress","merge"],
+  "unlock-pdf":    ["compress","pdf-word"],
+  "sign-pdf":      ["compress","merge"],
+  "ocr-pdf":       ["pdf-word","compress"],
+  "pdf-img":       ["img-pdf","compress"],
+  "organize-pdf":  ["compress","merge"],
+  "delete-pages":  ["compress","merge"],
+};
+
+function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}, checkLimits=()=>true, preloadedFile=null, onGoToTool=null }) {
   const T = useLang();
   const [files,setFiles]       = useState([]);
   const [drag,setDrag]         = useState(false);
@@ -381,8 +407,43 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
   const [pageOrder,setPageOrder]              = useState([]); // [{idx,thumb}] para organize-pdf
   const [orgDrag,setOrgDrag]                  = useState(null);
   const [thumbsReady,setThumbsReady]          = useState(false);
+  const [thumbDataUrl,setThumbDataUrl]        = useState(null);
   const ref = useRef();
   const progressTimer = useRef(null);
+
+  // Pre-load file passed from home drag-and-drop
+  useEffect(() => {
+    if (preloadedFile) addFiles([preloadedFile]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Generate thumbnail for first file
+  useEffect(() => {
+    const f = files[0];
+    if (!f) { setThumbDataUrl(null); return; }
+    if (f.type.startsWith("image/")) {
+      const url = URL.createObjectURL(f);
+      setThumbDataUrl(url);
+      return () => URL.revokeObjectURL(url);
+    }
+    if (f.name.toLowerCase().endsWith(".pdf")) {
+      let cancelled = false;
+      (async () => {
+        try {
+          await ensurePdfJs();
+          const bytes = await f.arrayBuffer();
+          const pdf = await window.pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
+          const page = await pdf.getPage(1);
+          const vp = page.getViewport({ scale: 0.5 });
+          const cv = document.createElement("canvas");
+          cv.width = vp.width; cv.height = vp.height;
+          await page.render({ canvasContext: cv.getContext("2d"), viewport: vp }).promise;
+          if (!cancelled) setThumbDataUrl(cv.toDataURL("image/jpeg", 0.7));
+        } catch { /* ignore */ }
+      })();
+      return () => { cancelled = true; };
+    }
+    setThumbDataUrl(null);
+  }, [files[0]?.name, files[0]?.size]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Generar miniaturas para el organizador de páginas
   useEffect(() => {
@@ -600,7 +661,7 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
     }
   };
 
-  const dl = () => { setStatus("idle"); setFiles([]); setCompressResult(null); setSignatureDataUrl(null); setPageOrder([]); setThumbsReady(false); };
+  const dl = () => { setStatus("idle"); setFiles([]); setCompressResult(null); setSignatureDataUrl(null); setPageOrder([]); setThumbsReady(false); setThumbDataUrl(null); };
 
   return (
     <>
@@ -642,6 +703,30 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
                 );
               })()}
               <button className="bg" onClick={dl}>{T.other}</button>
+              {/* Next tool suggestions */}
+              {onGoToTool && (NEXT_TOOLS[tool.id]||[]).length > 0 && (()=>{
+                const nextTools = (NEXT_TOOLS[tool.id]||[]).slice(0,3).map(id=>{
+                  const idx = TOOL_BASE.findIndex(t=>t.id===id);
+                  if (idx<0) return null;
+                  return { ...TOOL_BASE[idx], ...(T.t?.[idx]||{}) };
+                }).filter(Boolean);
+                if (!nextTools.length) return null;
+                return (
+                  <div style={{marginTop:12,paddingTop:12,borderTop:"1px solid var(--bd)"}}>
+                    <div style={{fontSize:11,color:"var(--tm)",marginBottom:8}}>{T.next_tool||"Prueba también"}</div>
+                    <div style={{display:"flex",gap:6,justifyContent:"center",flexWrap:"wrap"}}>
+                      {nextTools.map(nt=>(
+                        <button key={nt.id} className="bg"
+                          style={{fontSize:11,padding:"5px 10px",display:"inline-flex",alignItems:"center",gap:4}}
+                          onClick={()=>{ dl(); onGoToTool(nt); }}>
+                          <Ic n={nt.icon} s={11} c="var(--t2)"/>
+                          {nt.label||nt.id}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
               {/* Share tool */}
               <div style={{marginTop:14,paddingTop:14,borderTop:"1px solid var(--bd)"}}>
                 <div style={{fontSize:11,color:"var(--tm)",marginBottom:8}}>{T.share_hint||"¿Te ha sido útil? Comparte la herramienta"}</div>
@@ -922,6 +1007,16 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
                     className="fi-inp" style={{fontFamily:"'DM Mono',monospace",fontSize:12}}
                     onFocus={e=>e.target.style.borderColor="var(--ac)"}
                     onBlur={e=>e.target.style.borderColor="var(--bd)"}/>
+                </div>
+              )}
+              {/* Thumbnail preview */}
+              {!isMulti && files.length===1 && thumbDataUrl && status!=="proc" && tool.id!=="organize-pdf" && (
+                <div style={{display:"flex",justifyContent:"center",marginBottom:12}}>
+                  <div style={{position:"relative",width:80,height:110,borderRadius:6,overflow:"hidden",
+                    border:"1px solid var(--bd)",boxShadow:"0 2px 12px rgba(0,0,0,.1)",flexShrink:0}}>
+                    <img src={thumbDataUrl} alt="preview"
+                      style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"top",display:"block"}}/>
+                  </div>
                 </div>
               )}
               {status==="proc"&&(
