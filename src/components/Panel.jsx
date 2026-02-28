@@ -6,14 +6,15 @@ import {
   mergePdfs, splitPdf, imagesToPdf, wordToPdf, pdfToWord,
   pngToJpg, jpgToPng, rotatePdf, excelToPdf,
   compressPdfToBlob, rotatePdfToBlob, pngToJpgBlob, jpgToPngBlob,
-  downloadAsZip, basename,
+  downloadAsZip, basename, parsePageRange,
   unlockPdf, unlockPdfToBlob,
   watermarkPdf, watermarkPdfToBlob,
   numberPagesPdf, numberPagesPdfToBlob,
   cropPdf, cropPdfToBlob,
   grayscalePdf, grayscalePdfToBlob,
-  pdfToPptx, pdfToExcel, signPdf, ocrPdf,
+  pdfToPptx, pdfToExcel, signPdfV2, ocrPdf,
   pdfToImages, organizePdf, deletePagesPdf, pptxToPdf, ensurePdfJs,
+  repairPdf, htmlToPdf, flattenPdf,
 } from "../utils/convert";
 
 /* ── Tools ───────────────────────────────────────────────────────────────── */
@@ -43,6 +44,9 @@ export const TOOL_BASE = [
   {id:"pdf-img",       icon:"img",       accepts:[".pdf"],                        from:"pdf",  to:"png"},
   {id:"organize-pdf",  icon:"split",     accepts:[".pdf"],                        from:"pdf",  to:"pdf"},
   {id:"delete-pages",  icon:"x",         accepts:[".pdf"],                        from:"pdf",  to:"pdf"},
+  {id:"repair-pdf",    icon:"file",      accepts:[".pdf"],                        from:"pdf",  to:"pdf"},
+  {id:"html-pdf",      icon:"pdf",       accepts:[".html",".htm"],                from:"html", to:"pdf"},
+  {id:"flatten-pdf",   icon:"compress",  accepts:[".pdf"],                        from:"pdf",  to:"pdf", batch:true},
 ];
 
 /* ── Preview modal ───────────────────────────────────────────────────────── */
@@ -359,7 +363,7 @@ function SignaturePad({ onChange }) {
 }
 
 /* ── Panel ───────────────────────────────────────────────────────────────── */
-const BATCH_TOOL_IDS = new Set(["merge","compress","png-jpg","jpg-png","rotate","watermark-pdf","number-pages","crop-pdf","grayscale-pdf","unlock-pdf"]);
+const BATCH_TOOL_IDS = new Set(["merge","compress","png-jpg","jpg-png","rotate","watermark-pdf","number-pages","crop-pdf","grayscale-pdf","unlock-pdf","flatten-pdf"]);
 
 const NEXT_TOOLS = {
   "pdf-word":      ["compress","merge","split"],
@@ -385,6 +389,9 @@ const NEXT_TOOLS = {
   "pdf-img":       ["img-pdf","compress"],
   "organize-pdf":  ["compress","merge"],
   "delete-pages":  ["compress","merge"],
+  "repair-pdf":    ["compress","pdf-word","merge"],
+  "html-pdf":      ["compress","merge","pdf-word"],
+  "flatten-pdf":   ["compress","unlock-pdf","merge"],
 };
 
 function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}, checkLimits=()=>true, preloadedFile=null, onGoToTool=null }) {
@@ -402,6 +409,9 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
   const [watermarkText,setWatermarkText] = useState("CONFIDENCIAL");
   const [cropMargins,setCropMargins]   = useState({top:10,bottom:10,left:10,right:10});
   const [signatureDataUrl,setSignatureDataUrl] = useState(null);
+  const [signPage,setSignPage]                 = useState("last"); // "first"|"last"|"all"|"num"
+  const [signPageNum,setSignPageNum]           = useState(1);
+  const [signPos,setSignPos]                   = useState("br");   // tl|tc|tr|bl|bc|br
   const [compressResult,setCompressResult]     = useState(null); // {before,after}
   const [ocrLang,setOcrLang]                  = useState("eng");
   const [pageOrder,setPageOrder]              = useState([]); // [{idx,thumb}] para organize-pdf
@@ -651,7 +661,18 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
       else if (tool.id==="unlock-pdf")    { await unlockPdf(files[0]); }
       else if (tool.id==="sign-pdf") {
         if (!signatureDataUrl) { setErrMsg("Dibuja tu firma antes de continuar."); setStatus("error"); return; }
-        await signPdf(files[0], signatureDataUrl);
+        await signPdfV2(files[0], signatureDataUrl, signPage==="num" ? signPageNum : signPage, signPos);
+      }
+      else if (tool.id==="repair-pdf")  { await repairPdf(files[0]); }
+      else if (tool.id==="flatten-pdf") { await flattenPdf(files[0]); }
+      else if (tool.id==="html-pdf") {
+        const res = await htmlToPdf(files[0]);
+        clearInterval(progressTimer.current);
+        if (res === "popup-blocked") { setErrMsg(T.err_popup); setStatus("error"); return; }
+        setProgress(100); showToast(T.conv_done); bumpCount();
+        addToHistory(files[0]?.name, tool.label);
+        notifyDone(files[0]?.name);
+        setStatus("idle"); setFiles([]); return;
       }
       else if (tool.id==="ocr-pdf") {
         await ocrPdf(files[0], ocrLang, pct => setProgress(pct));
@@ -686,7 +707,7 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
     }
   };
 
-  const dl = () => { setStatus("idle"); setFiles([]); setCompressResult(null); setSignatureDataUrl(null); setPageOrder([]); setThumbsReady(false); setThumbDataUrl(null); setPdfMeta(null); };
+  const dl = () => { setStatus("idle"); setFiles([]); setCompressResult(null); setSignatureDataUrl(null); setSignPage("last"); setSignPageNum(1); setSignPos("br"); setPageOrder([]); setThumbsReady(false); setThumbDataUrl(null); setPdfMeta(null); };
 
   return (
     <>
@@ -727,7 +748,12 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
                   </div>
                 );
               })()}
-              <button className="bg" onClick={dl}>{T.other}</button>
+              <div style={{display:"flex",gap:6,justifyContent:"center",flexWrap:"wrap"}}>
+                <button className="bg" onClick={()=>{ setStatus("idle"); setCompressResult(null); }}>
+                  {T.reconvert||"Repetir conversión"}
+                </button>
+                <button className="bg" onClick={dl}>{T.other}</button>
+              </div>
               {/* Next tool suggestions */}
               {onGoToTool && (NEXT_TOOLS[tool.id]||[]).length > 0 && (()=>{
                 const nextTools = (NEXT_TOOLS[tool.id]||[]).slice(0,3).map(id=>{
@@ -913,6 +939,19 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
                     className="fi-inp" style={{fontFamily:"'DM Mono',monospace",fontSize:12}}
                     onFocus={e=>e.target.style.borderColor="var(--ac)"}
                     onBlur={e=>e.target.style.borderColor="var(--bd)"}/>
+                  {/* Live range preview */}
+                  {pdfMeta?.pages && range.trim() && (()=>{
+                    try {
+                      const idxs = parsePageRange(range, pdfMeta.pages);
+                      return (
+                        <div style={{marginTop:5,fontSize:10,color:"var(--ac)",fontFamily:"'DM Mono',monospace"}}>
+                          ✓ {idxs.length} {idxs.length===1?"página":"páginas"} de {pdfMeta.pages}
+                        </div>
+                      );
+                    } catch {
+                      return <div style={{marginTop:5,fontSize:10,color:"#B91C1C"}}>Rango inválido</div>;
+                    }
+                  })()}
                 </div>
               )}
               {tool.id==="rotate"&&files.length>0&&(
@@ -977,7 +1016,42 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
                 <div style={{marginBottom:12}}>
                   <div style={{fontSize:11,fontWeight:500,color:"var(--t2)",marginBottom:6}}>{T.sign_label||"Dibuja tu firma"}</div>
                   <SignaturePad onChange={setSignatureDataUrl}/>
-                  <div style={{fontSize:10,color:"var(--tm)",marginTop:5}}>{T.sign_hint||"La firma se añadirá en la esquina inferior derecha de la última página."}</div>
+                  {/* Página */}
+                  <div style={{marginTop:10,marginBottom:6}}>
+                    <div style={{fontSize:10,fontWeight:500,color:"var(--t2)",marginBottom:5}}>Página</div>
+                    <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                      {[["first","Primera"],["last","Última"],["all","Todas"],["num","Nº específico"]].map(([v,l])=>(
+                        <button key={v} onClick={()=>setSignPage(v)}
+                          style={{padding:"4px 10px",fontSize:10,border:`1px solid ${signPage===v?"var(--ac)":"var(--bd)"}`,
+                            borderRadius:5,background:signPage===v?"var(--al)":"transparent",
+                            color:signPage===v?"var(--ac)":"var(--t2)",cursor:"pointer",fontWeight:signPage===v?500:400}}>
+                          {l}
+                        </button>
+                      ))}
+                    </div>
+                    {signPage==="num"&&(
+                      <input type="number" min={1} max={pdfMeta?.pages||999}
+                        value={signPageNum} onChange={e=>setSignPageNum(Math.max(1,Number(e.target.value)))}
+                        className="fi-inp" style={{marginTop:6,width:80,fontSize:12,textAlign:"center",fontFamily:"'DM Mono',monospace"}}
+                        onFocus={e=>e.target.style.borderColor="var(--ac)"}
+                        onBlur={e=>e.target.style.borderColor="var(--bd)"}/>
+                    )}
+                  </div>
+                  {/* Posición (3×2 grid visual) */}
+                  <div>
+                    <div style={{fontSize:10,fontWeight:500,color:"var(--t2)",marginBottom:5}}>Posición</div>
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(3,30px)",gap:3,width:"fit-content"}}>
+                      {[["tl","↖"],["tc","↑"],["tr","↗"],["bl","↙"],["bc","↓"],["br","↘"]].map(([v,arrow])=>(
+                        <button key={v} onClick={()=>setSignPos(v)}
+                          style={{width:30,height:30,display:"flex",alignItems:"center",justifyContent:"center",
+                            fontSize:14,border:`1px solid ${signPos===v?"var(--ac)":"var(--bd)"}`,
+                            borderRadius:5,background:signPos===v?"var(--al)":"transparent",
+                            color:signPos===v?"var(--ac)":"var(--t2)",cursor:"pointer"}}>
+                          {arrow}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
               {tool.id==="ocr-pdf"&&files.length>0&&(

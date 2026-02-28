@@ -302,8 +302,10 @@ function ToolCard({ t, i, goToTool }) {
 export default function App() {
   const [lang, setLang]       = useState(detectLang);
   const [toolPage, setToolPage] = useState(() => {
-    const hash = window.location.hash.replace(/^#\/?/, '');
-    return TOOL_BASE.find(t => t.id === hash) || null;
+    // Support both pathname (/compress) and legacy hash (#compress)
+    const path = window.location.pathname.replace(/^\//, '') ||
+                 window.location.hash.replace(/^#\/?/, '');
+    return TOOL_BASE.find(t => t.id === path) || null;
   });
   const [modal, setModal]     = useState(null);
   const [toast, setToast]     = useState(null);
@@ -339,8 +341,9 @@ export default function App() {
 
   useEffect(() => {
     const onPop = () => {
-      const hash = window.location.hash.replace(/^#\/?/, '');
-      setToolPage(hash ? (TOOL_BASE.find(t => t.id === hash) || null) : null);
+      const path = window.location.pathname.replace(/^\//, '') ||
+                   window.location.hash.replace(/^#\/?/, '');
+      setToolPage(path ? (TOOL_BASE.find(t => t.id === path) || null) : null);
     };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
@@ -478,12 +481,12 @@ export default function App() {
 
   const goToTool = (t, preFile=null) => {
     if (t.comingSoon) { showToast(T.coming_soon_toast||"¡Próximamente! Estamos trabajando en esta herramienta.","ok"); return; }
-    window.history.pushState(null, '', `#${t.id}`);
+    window.history.pushState(null, '', `/${t.id}`);
     setToolPage(t);
     setPreloadedFile(preFile || null);
   };
   const backHome = () => {
-    window.history.pushState(null, '', location.pathname + location.search);
+    window.history.pushState(null, '', '/');
     setToolPage(null);
     setPreloadedFile(null);
   };

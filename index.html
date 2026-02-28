@@ -7,17 +7,26 @@
     <!-- ── SEO básico ── -->
     <title>morf · Convertir PDF a Word gratis — Sin registro</title>
     <meta name="description" content="Convierte PDF a Word, Word a PDF, imágenes a PDF y más. Gratis, sin registro, sin marcas de agua. Todo se procesa en tu navegador — tus archivos nunca salen de tu dispositivo." />
-    <meta name="keywords" content="convertir PDF a Word gratis, PDF a Word online, Word a PDF, unir PDF, dividir PDF, comprimir PDF, convertir imágenes a PDF, conversor de archivos gratis" />
+    <meta name="keywords" content="convertir PDF a Word gratis, PDF a Word online, Word a PDF, unir PDF, dividir PDF, comprimir PDF, convertir imágenes a PDF, conversor de archivos gratis, reparar PDF, HTML a PDF, aplanar PDF, firmar PDF, OCR PDF, rotar PDF, comprimir PDF online, PDF a Excel, PDF a PowerPoint, marca de agua PDF" />
     <meta name="author" content="morf" />
     <meta name="robots" content="index, follow" />
     <link rel="canonical" href="https://morf-three.vercel.app/" />
-<!-- Verificación Google Search Console -->
-<meta name="google-site-verification" content="DbpYmnTWn5nAb7NyS8vgdNa26K5gMBxIeL280VaWCkE" />
+
+    <!-- ── hreflang (multi-idioma) ── -->
+    <link rel="alternate" hreflang="es"       href="https://morf-three.vercel.app/" />
+    <link rel="alternate" hreflang="en"       href="https://morf-three.vercel.app/?lang=en" />
+    <link rel="alternate" hreflang="fr"       href="https://morf-three.vercel.app/?lang=fr" />
+    <link rel="alternate" hreflang="de"       href="https://morf-three.vercel.app/?lang=de" />
+    <link rel="alternate" hreflang="pt"       href="https://morf-three.vercel.app/?lang=pt" />
+    <link rel="alternate" hreflang="x-default" href="https://morf-three.vercel.app/" />
+
+    <!-- Verificación Google Search Console -->
+    <meta name="google-site-verification" content="DbpYmnTWn5nAb7NyS8vgdNa26K5gMBxIeL280VaWCkE" />
+
     <!-- ── Open Graph (WhatsApp, Facebook, LinkedIn) ── -->
-<meta property="og:image" content="https://morf-three.vercel.app/og-image.svg" />
-<meta property="og:image:width" content="1200" />
-<meta property="og:image:height" content="630" />
-<meta name="twitter:image" content="https://morf-three.vercel.app/og-image.svg" />
+    <meta property="og:image" content="https://morf-three.vercel.app/og-image.svg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://morf-three.vercel.app/" />
     <meta property="og:title" content="morf · Convertir PDF a Word gratis — Sin registro" />
@@ -28,9 +37,11 @@
     <meta property="og:site_name" content="morf" />
 
     <!-- ── Twitter Card ── -->
-    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@morfpdf" />
     <meta name="twitter:title" content="morf · Convertir PDF a Word gratis" />
     <meta name="twitter:description" content="Convierte PDF a Word, Word a PDF e imágenes a PDF. Gratis, sin registro, sin marcas de agua." />
+    <meta name="twitter:image" content="https://morf-three.vercel.app/og-image.svg" />
 
     <!-- ── Datos estructurados (Google) ── -->
     <script type="application/ld+json">
@@ -53,7 +64,14 @@
         "Convertir imágenes a PDF",
         "Unir PDFs",
         "Dividir PDF",
-        "Comprimir PDF"
+        "Comprimir PDF",
+        "Rotar PDF",
+        "Marca de agua PDF",
+        "OCR PDF",
+        "Firmar PDF",
+        "Reparar PDF",
+        "HTML a PDF",
+        "Aplanar PDF"
       ],
       "inLanguage": ["es-ES", "es-MX", "es-AR", "en", "fr", "de", "pt"],
       "isAccessibleForFree": true,
@@ -79,6 +97,15 @@
     <!-- Google AdSense -->
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1101880383290833"
       crossorigin="anonymous"></script>
+
+    <!-- Service Worker registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {});
+        });
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
