@@ -272,6 +272,31 @@ function ToolPage({ tool, showToast, bumpCount, addToHistory, checkLimits, onBac
   );
 }
 
+/* ── ToolCard ────────────────────────────────────────────────────────────── */
+function ToolCard({ t, i, goToTool }) {
+  return (
+    <div className={`card fu fu${(i%6)+1}`}
+      role="button" tabIndex={0}
+      aria-label={t.label}
+      style={{opacity:t.comingSoon?.6:1}}
+      onClick={()=>goToTool(t)}
+      onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();goToTool(t);}}}>
+      <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:12}}>
+        <div style={{width:34,height:34,borderRadius:7,background:"#F5F5F3",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <Ic n={t.icon} s={15} c="var(--t2)"/>
+        </div>
+        <div style={{display:"flex",gap:4,alignItems:"center"}}>
+          {t.pro&&<span style={{fontSize:9,fontWeight:700,fontFamily:"'DM Mono',monospace",background:"var(--ac)",color:"#fff",borderRadius:3,padding:"1px 5px",letterSpacing:".04em"}}>PRO</span>}
+          {t.comingSoon&&<span style={{fontSize:9,fontWeight:600,fontFamily:"'DM Mono',monospace",background:"var(--al)",color:"var(--ac)",borderRadius:3,padding:"1px 5px"}}>SOON</span>}
+          <Tag type={t.from}/><span style={{color:"var(--tm)",fontSize:10}}>→</span><Tag type={t.to}/>
+        </div>
+      </div>
+      <div style={{fontWeight:500,fontSize:13,marginBottom:3}}>{t.label}</div>
+      <div style={{fontSize:11,color:"var(--t2)",lineHeight:1.5}}>{t.desc}</div>
+    </div>
+  );
+}
+
 /* ── App ─────────────────────────────────────────────────────────────────── */
 export default function App() {
   const [lang, setLang]       = useState(detectLang);
@@ -303,6 +328,7 @@ export default function App() {
   const [showAuth, setShowAuth]                        = useState(false);
   const [billingYear, setBillingYear] = useState(true);
   const [showAllTools, setShowAllTools] = useState(false);
+  const [toolSearch, setToolSearch] = useState("");
   useEffect(() => {
     document.body.style.background = dark ? '#0F1117' : '#F9F9F8';
   }, [dark]);
@@ -534,10 +560,10 @@ export default function App() {
           {/* Stats grid */}
           <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:48}}>
             {[
-              {value:"10",                                    label:T.tools_count},
-              {value:count>0?count.toLocaleString():"1000+", label:"archivos procesados"},
-              {value:"<3s",                                   label:"velocidad media"},
-              {value:"100%",                                  label:"privado siempre"},
+              {value:TOOLS.filter(t=>!t.comingSoon).length+"",  label:T.tools_count},
+              {value:count>0?count.toLocaleString():"1000+",    label:T.stat_files},
+              {value:"<3s",                                      label:T.stat_speed},
+              {value:"100%",                                     label:T.stat_priv},
             ].map((s,i)=>(
               <div key={i} style={{textAlign:"center",padding:"16px 12px",background:"var(--sf)",
                 border:"1px solid var(--bd)",borderRadius:10}}>
@@ -631,72 +657,91 @@ export default function App() {
 
           {/* Tools */}
           <div id="tools">
-            <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",marginBottom:14}}>
-              <span style={{fontSize:13,fontWeight:600}}>{T.tools_title}</span>
-              <span style={{fontSize:11,color:"var(--tm)",fontFamily:"'DM Mono',monospace"}}>{TOOLS.length} {T.tools_count}</span>
-            </div>
-            {/* Popular tools (always visible) */}
-            <div className="grid" style={{marginBottom:10}}>
-              {TOOLS.filter(t=>t.popular).map((t,i)=>(
-                <div key={t.id} className={`card fu fu${i+1}`}
-                  role="button" tabIndex={0}
-                  aria-label={t.label}
-                  style={{opacity:t.comingSoon?.6:1}}
-                  onClick={()=>goToTool(t)}
-                  onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();goToTool(t);}}}>
-                  <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:12}}>
-                    <div style={{width:34,height:34,borderRadius:7,background:"#F5F5F3",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                      <Ic n={t.icon} s={15} c="var(--t2)"/>
-                    </div>
-                    <div style={{display:"flex",gap:4,alignItems:"center"}}>
-                      {t.pro&&<span style={{fontSize:9,fontWeight:700,fontFamily:"'DM Mono',monospace",background:"var(--ac)",color:"#fff",borderRadius:3,padding:"1px 5px",letterSpacing:".04em"}}>PRO</span>}
-                      {t.comingSoon&&<span style={{fontSize:9,fontWeight:600,fontFamily:"'DM Mono',monospace",background:"var(--al)",color:"var(--ac)",borderRadius:3,padding:"1px 5px"}}>SOON</span>}
-                      <Tag type={t.from}/><span style={{color:"var(--tm)",fontSize:10}}>→</span><Tag type={t.to}/>
-                    </div>
-                  </div>
-                  <div style={{fontWeight:500,fontSize:13,marginBottom:3}}>{t.label}</div>
-                  <div style={{fontSize:11,color:"var(--t2)",lineHeight:1.5}}>{t.desc}</div>
-                </div>
-              ))}
-            </div>
-            {/* More tools toggle */}
-            <button
-              onClick={()=>setShowAllTools(s=>!s)}
-              style={{display:"flex",alignItems:"center",gap:5,background:"none",border:"none",
-                cursor:"pointer",color:"var(--tm)",fontSize:12,padding:"4px 0",marginBottom:10,
-                fontFamily:"'DM Sans',sans-serif",transition:"color .16s"}}
-              onMouseEnter={e=>e.currentTarget.style.color="var(--t2)"}
-              onMouseLeave={e=>e.currentTarget.style.color="var(--tm)"}>
-              <span style={{display:"inline-flex",transform:showAllTools?"rotate(180deg)":"rotate(0deg)",transition:"transform .2s"}}>
-                <Ic n="chevron" s={12} c="var(--tm)"/>
-              </span>
-              {showAllTools ? T.tools_less ?? "Menos herramientas" : T.tools_more ?? `+${TOOLS.filter(t=>!t.popular).length} más herramientas`}
-            </button>
-            {/* Extra tools (collapsible) */}
-            {showAllTools&&(
-              <div className="grid fu" style={{marginBottom:14}}>
-                {TOOLS.filter(t=>!t.popular).map((t,i)=>(
-                  <div key={t.id} className={`card fu fu${i+1}`}
-                    role="button" tabIndex={0}
-                    aria-label={t.label}
-                    style={{opacity:t.comingSoon?.6:1}}
-                    onClick={()=>goToTool(t)}
-                    onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();goToTool(t);}}}>
-                    <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:12}}>
-                      <div style={{width:34,height:34,borderRadius:7,background:"#F5F5F3",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                        <Ic n={t.icon} s={15} c="var(--t2)"/>
-                      </div>
-                      <div style={{display:"flex",gap:4,alignItems:"center"}}>
-                        {t.pro&&<span style={{fontSize:9,fontWeight:700,fontFamily:"'DM Mono',monospace",background:"var(--ac)",color:"#fff",borderRadius:3,padding:"1px 5px",letterSpacing:".04em"}}>PRO</span>}
-                        {t.comingSoon&&<span style={{fontSize:9,fontWeight:600,fontFamily:"'DM Mono',monospace",background:"var(--al)",color:"var(--ac)",borderRadius:3,padding:"1px 5px"}}>SOON</span>}
-                        <Tag type={t.from}/><span style={{color:"var(--tm)",fontSize:10}}>→</span><Tag type={t.to}/>
-                      </div>
-                    </div>
-                    <div style={{fontWeight:500,fontSize:13,marginBottom:3}}>{t.label}</div>
-                    <div style={{fontSize:11,color:"var(--t2)",lineHeight:1.5}}>{t.desc}</div>
-                  </div>
-                ))}
+            {/* Header + search */}
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,gap:10,flexWrap:"wrap"}}>
+              <span style={{fontSize:13,fontWeight:600}}>{T.tools_title} <span style={{fontWeight:400,color:"var(--tm)",fontFamily:"'DM Mono',monospace",fontSize:11}}>{TOOLS.filter(t=>!t.comingSoon).length} {T.tools_count}</span></span>
+              <div style={{position:"relative",flex:"1 1 180px",maxWidth:260}}>
+                <Ic n="search" s={13} c="var(--tm)" style={{position:"absolute",left:9,top:"50%",transform:"translateY(-50%)",pointerEvents:"none"}}/>
+                <input
+                  value={toolSearch}
+                  onChange={e=>setToolSearch(e.target.value)}
+                  placeholder={T.search_ph}
+                  style={{width:"100%",padding:"7px 28px 7px 28px",border:"1px solid var(--bd)",borderRadius:7,
+                    background:"var(--sf)",fontSize:12,color:"var(--t1)",outline:"none",
+                    fontFamily:"'DM Sans',sans-serif",transition:"border-color .15s"}}
+                  onFocus={e=>e.target.style.borderColor="var(--ac)"}
+                  onBlur={e=>e.target.style.borderColor="var(--bd)"}/>
+                {toolSearch&&(
+                  <button onClick={()=>setToolSearch("")}
+                    style={{position:"absolute",right:7,top:"50%",transform:"translateY(-50%)",
+                      background:"none",border:"none",cursor:"pointer",padding:0,display:"flex",alignItems:"center"}}>
+                    <Ic n="x" s={12} c="var(--tm)"/>
+                  </button>
+                )}
               </div>
+            </div>
+
+            {toolSearch.trim() ? (
+              /* ── Resultados de búsqueda ── */
+              (()=>{
+                const q = toolSearch.trim().toLowerCase();
+                const hits = TOOLS.filter(t=>
+                  t.label.toLowerCase().includes(q) ||
+                  t.desc.toLowerCase().includes(q) ||
+                  t.from.toLowerCase().includes(q) ||
+                  t.to.toLowerCase().includes(q)
+                );
+                return hits.length > 0 ? (
+                  <div className="grid fu" style={{marginBottom:14}}>
+                    {hits.map((t,i)=>(
+                      <ToolCard key={t.id} t={t} i={i} goToTool={goToTool}/>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{textAlign:"center",padding:"32px 0",color:"var(--tm)",fontSize:13}}>
+                    No se encontraron herramientas para «{toolSearch}»
+                  </div>
+                );
+              })()
+            ) : (
+              /* ── Vista por categorías ── */
+              <>
+                {[
+                  {key:"cat_conv", ids:["pdf-word","word-pdf","excel-pdf","pptx-pdf","pdf-pptx","pdf-excel","pdf-img"]},
+                  {key:"cat_img",  ids:["img-pdf","png-jpg","jpg-png"]},
+                  {key:"cat_ops",  ids:["merge","split","compress","rotate","organize-pdf","delete-pages"]},
+                  {key:"cat_edit", ids:["watermark-pdf","number-pages","crop-pdf","grayscale-pdf","sign-pdf"]},
+                  {key:"cat_sec",  ids:["unlock-pdf","ocr-pdf","protect-pdf"]},
+                ].map(({key,ids})=>{
+                  const catTools = ids.map(id=>TOOLS.find(t=>t.id===id)).filter(Boolean);
+                  if (!catTools.length) return null;
+                  const visible = showAllTools ? catTools : catTools.filter(t=>!t.comingSoon);
+                  if (!visible.length) return null;
+                  return (
+                    <div key={key} style={{marginBottom:22}}>
+                      <div style={{fontSize:10,fontWeight:600,letterSpacing:".07em",textTransform:"uppercase",
+                        color:"var(--tm)",marginBottom:8,paddingLeft:2}}>{T[key]}</div>
+                      <div className="grid">
+                        {visible.map((t,i)=>(
+                          <ToolCard key={t.id} t={t} i={i} goToTool={goToTool}/>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+                <button
+                  onClick={()=>setShowAllTools(s=>!s)}
+                  style={{display:"flex",alignItems:"center",gap:5,background:"none",border:"none",
+                    cursor:"pointer",color:"var(--tm)",fontSize:12,padding:"2px 0",marginTop:4,
+                    fontFamily:"'DM Sans',sans-serif",transition:"color .16s"}}
+                  onMouseEnter={e=>e.currentTarget.style.color="var(--t2)"}
+                  onMouseLeave={e=>e.currentTarget.style.color="var(--tm)"}>
+                  <span style={{display:"inline-flex",transform:showAllTools?"rotate(180deg)":"rotate(0deg)",transition:"transform .2s"}}>
+                    <Ic n="chevron" s={12} c="var(--tm)"/>
+                  </span>
+                  {showAllTools ? T.tools_less : T.tools_more}
+                </button>
+              </>
             )}
           </div>
 
@@ -764,9 +809,10 @@ export default function App() {
                 <div style={{fontWeight:600,fontSize:15,marginBottom:2,color:"var(--ac)"}}>{T.plan_pro}</div>
                 <div style={{fontSize:12,color:"var(--tm)",marginBottom:16}}>{T.plan_pro_desc}</div>
                 <div style={{fontSize:32,fontWeight:700,marginBottom:4,color:"var(--ac)"}}>
-                  €{billingYear?(5.99*12*0.75/12).toFixed(2):"5.99"}
+                  €{billingYear?"4.49":"5.99"}
                 </div>
-                <div style={{fontSize:11,color:"var(--tm)",marginBottom:20}}>{T.plan_monthly}{billingYear&&<span style={{color:"var(--ok)",fontWeight:500}}> · {T.plan_save}</span>}</div>
+                <div style={{fontSize:11,color:"var(--tm)",marginBottom:billingYear?4:20}}>{T.plan_monthly}{billingYear&&<span style={{color:"var(--ok)",fontWeight:500}}> · {T.plan_save}</span>}</div>
+                {billingYear&&<div style={{fontSize:10,color:"var(--tm)",marginBottom:20}}>{T.plan_annual_total}</div>}
                 {[T.feat_unlimited, T.feat_size_pro, T.feat_tools, T.feat_noad, T.feat_priority].map((f,i)=>(
                   <div key={i} style={{display:"flex",gap:8,alignItems:"flex-start",fontSize:13,color:"var(--t1)",marginBottom:8}}>
                     <Ic n="check" s={13} c="var(--ok)"/>{f}
@@ -837,16 +883,49 @@ export default function App() {
 
         {/* Footer */}
         <footer style={{display:fullToolPage?'none':'block',borderTop:"1px solid var(--bd)",background:"var(--sf)"}}>
-          <div style={{maxWidth:960,margin:"0 auto",padding:"18px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10}}>
-            <div style={{display:"flex",alignItems:"center",gap:7}}>
-              <span style={{fontSize:12,fontWeight:700,letterSpacing:"-.02em",color:"var(--tm)"}}>morf<span style={{fontWeight:300,color:"var(--ac)"}}>.</span><span style={{fontWeight:400,color:"var(--ac)"}}>pdf</span></span>
-              <span style={{fontSize:12,color:"var(--tm)"}}>{T.footer_copy}</span>
+          <div style={{maxWidth:960,margin:"0 auto",padding:"32px 20px 20px"}}>
+            {/* Top row: brand + columns */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr auto auto",gap:32,marginBottom:28,flexWrap:"wrap"}}>
+              {/* Brand */}
+              <div>
+                <div style={{fontSize:14,fontWeight:700,letterSpacing:"-.02em",marginBottom:6}}>
+                  morf<span style={{fontWeight:300,color:"var(--ac)"}}>.</span><span style={{fontWeight:400,color:"var(--ac)"}}>pdf</span>
+                </div>
+                <p style={{fontSize:11,color:"var(--tm)",lineHeight:1.6,maxWidth:200,margin:0}}>
+                  {T.hero_sub?.split(".")[0]}.
+                </p>
+              </div>
+              {/* Tools column */}
+              <div>
+                <div style={{fontSize:11,fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",color:"var(--tm)",marginBottom:10}}>{T.footer_tools}</div>
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  {["merge","compress","pdf-word","word-pdf","split"].map(id=>{
+                    const t = TOOLS.find(x=>x.id===id);
+                    return t ? (
+                      <button key={id} className="fl" style={{textAlign:"left",fontSize:12}}
+                        onClick={()=>goToTool(t)}>{t.label}</button>
+                    ) : null;
+                  })}
+                </div>
+              </div>
+              {/* Company column */}
+              <div>
+                <div style={{fontSize:11,fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",color:"var(--tm)",marginBottom:10}}>{T.footer_company}</div>
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  <button className="fl" style={{textAlign:"left",fontSize:12}} onClick={()=>setModal("privacy")}>{T.modal_privacy}</button>
+                  <button className="fl" style={{textAlign:"left",fontSize:12}} onClick={()=>setModal("terms")}>{T.modal_terms}</button>
+                  <button className="fl" style={{textAlign:"left",fontSize:12}} onClick={()=>setModal("contact")}>{T.modal_contact}</button>
+                  <button className="fl" style={{textAlign:"left",fontSize:12}} onClick={()=>setModal("api")}>{T.modal_api}</button>
+                </div>
+              </div>
             </div>
-            <div style={{display:"flex",gap:16}}>
-              <button className="fl" onClick={()=>setModal("privacy")}>{T.modal_privacy}</button>
-              <button className="fl" onClick={()=>setModal("terms")}>{T.modal_terms}</button>
-              <button className="fl" onClick={()=>setModal("contact")}>{T.modal_contact}</button>
-              <button className="fl" onClick={()=>setModal("api")}>{T.modal_api}</button>
+            {/* Bottom row: copyright */}
+            <div style={{borderTop:"1px solid var(--bd)",paddingTop:14,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+              <span style={{fontSize:11,color:"var(--tm)"}}>{T.footer_copy}</span>
+              <div style={{display:"flex",alignItems:"center",gap:4}}>
+                <Ic n="lock" s={10} c="var(--ok)"/>
+                <span style={{fontSize:10,color:"var(--tm)"}}>{T.privacy_note}</span>
+              </div>
             </div>
           </div>
         </footer>
