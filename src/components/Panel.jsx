@@ -15,7 +15,11 @@ import {
   pdfToPptx, pdfToExcel, signPdfV2, ocrPdf,
   pdfToImages, organizePdf, deletePagesPdf, pptxToPdf, ensurePdfJs,
   repairPdf, htmlToPdf, flattenPdf,
+  annotatePdf, redactPdf,
+  ocrSearchablePdf,
 } from "../utils/convert";
+import ChatPdf from "./ChatPdf";
+import VisualAnnotate from "./VisualAnnotate";
 
 /* ── Tools ───────────────────────────────────────────────────────────────── */
 // eslint-disable-next-line react-refresh/only-export-components
@@ -47,6 +51,11 @@ export const TOOL_BASE = [
   {id:"repair-pdf",    icon:"file",      accepts:[".pdf"],                        from:"pdf",  to:"pdf"},
   {id:"html-pdf",      icon:"pdf",       accepts:[".html",".htm"],                from:"html", to:"pdf"},
   {id:"flatten-pdf",   icon:"compress",  accepts:[".pdf"],                        from:"pdf",  to:"pdf", batch:true},
+  {id:"annotate-pdf",    icon:"edit",      accepts:[".pdf"],  from:"pdf",  to:"pdf"},
+  {id:"redact-pdf",      icon:"x",         accepts:[".pdf"],  from:"pdf",  to:"pdf"},
+  {id:"ocr-searchable",  icon:"file",      accepts:[".pdf"],  from:"pdf",  to:"pdf"},
+  {id:"chat-pdf",        icon:"pdf",       accepts:[".pdf"],  from:"pdf",  to:"chat"},
+  {id:"visual-annotate", icon:"edit",      accepts:[".pdf"],  from:"pdf",  to:"pdf"},
 ];
 
 /* ── Preview modal ───────────────────────────────────────────────────────── */
@@ -392,6 +401,11 @@ const NEXT_TOOLS = {
   "repair-pdf":    ["compress","pdf-word","merge"],
   "html-pdf":      ["compress","merge","pdf-word"],
   "flatten-pdf":   ["compress","unlock-pdf","merge"],
+  "annotate-pdf":    ["compress","merge","sign-pdf"],
+  "redact-pdf":      ["compress","annotate-pdf","merge"],
+  "ocr-searchable":  ["pdf-word","compress","ocr-pdf"],
+  "chat-pdf":        ["ocr-pdf","pdf-word","compress"],
+  "visual-annotate": ["annotate-pdf","redact-pdf","compress"],
 };
 
 function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}, checkLimits=()=>true, preloadedFile=null, onGoToTool=null }) {
@@ -419,6 +433,20 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
   const [thumbsReady,setThumbsReady]          = useState(false);
   const [thumbDataUrl,setThumbDataUrl]        = useState(null);
   const [pdfMeta,setPdfMeta]                 = useState(null); // {pages, encrypted}
+  // annotate-pdf
+  const [annotations,setAnnotations]         = useState([]); // [{page,text,pos,size,color}]
+  const [annotText,setAnnotText]             = useState("");
+  const [annotPage,setAnnotPage]             = useState(1);
+  const [annotPos,setAnnotPos]               = useState("tc");
+  const [annotSize,setAnnotSize]             = useState(16);
+  const [annotColor,setAnnotColor]           = useState("red");
+  // redact-pdf
+  const [redactZones,setRedactZones]         = useState([]); // [{page,x,y,w,h}]
+  const [redactPage,setRedactPage]           = useState(1);
+  const [redactX,setRedactX]                 = useState(10);
+  const [redactY,setRedactY]                 = useState(10);
+  const [redactW,setRedactW]                 = useState(80);
+  const [redactH,setRedactH]                 = useState(10);
   const ref = useRef();
   const progressTimer = useRef(null);
   const convertRef    = useRef(null);
@@ -663,8 +691,19 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
         if (!signatureDataUrl) { setErrMsg("Dibuja tu firma antes de continuar."); setStatus("error"); return; }
         await signPdfV2(files[0], signatureDataUrl, signPage==="num" ? signPageNum : signPage, signPos);
       }
-      else if (tool.id==="repair-pdf")  { await repairPdf(files[0]); }
-      else if (tool.id==="flatten-pdf") { await flattenPdf(files[0]); }
+      else if (tool.id==="repair-pdf")   { await repairPdf(files[0]); }
+      else if (tool.id==="flatten-pdf")  { await flattenPdf(files[0]); }
+      else if (tool.id==="annotate-pdf") {
+        if (!annotations.length) { setErrMsg("Añade al menos una anotación."); setStatus("error"); return; }
+        await annotatePdf(files[0], annotations);
+      }
+      else if (tool.id==="redact-pdf") {
+        if (!redactZones.length) { setErrMsg("Añade al menos una zona de redacción."); setStatus("error"); return; }
+        await redactPdf(files[0], redactZones);
+      }
+      else if (tool.id==="ocr-searchable") {
+        await ocrSearchablePdf(files[0], ocrLang, pct => setProgress(pct));
+      }
       else if (tool.id==="html-pdf") {
         const res = await htmlToPdf(files[0]);
         clearInterval(progressTimer.current);
@@ -1126,8 +1165,129 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
                     onBlur={e=>e.target.style.borderColor="var(--bd)"}/>
                 </div>
               )}
+              {/* ── annotate-pdf UI ── */}
+              {tool.id==="annotate-pdf"&&files.length>0&&(
+                <div style={{marginBottom:12}}>
+                  <div style={{fontSize:11,fontWeight:600,color:"var(--t2)",marginBottom:8}}>
+                    {T.annot_add||"Añadir anotación de texto"}
+                  </div>
+                  <input value={annotText} onChange={e=>setAnnotText(e.target.value)}
+                    placeholder={T.annot_text||"Texto de la anotación…"}
+                    className="fi-inp" style={{marginBottom:8}}
+                    onFocus={e=>e.target.style.borderColor="var(--ac)"}
+                    onBlur={e=>e.target.style.borderColor="var(--bd)"}/>
+                  <div style={{display:"flex",gap:6,marginBottom:8,flexWrap:"wrap",alignItems:"center"}}>
+                    <label style={{fontSize:11,color:"var(--t2)"}}>{T.annot_page||"Página"}</label>
+                    <input type="number" min={1} max={pdfMeta?.pages||999} value={annotPage}
+                      onChange={e=>setAnnotPage(Math.max(1,Number(e.target.value)))}
+                      style={{width:56,padding:"3px 6px",border:"1px solid var(--bd)",borderRadius:5,fontSize:12,background:"var(--bg)"}}/>
+                    <label style={{fontSize:11,color:"var(--t2)",marginLeft:6}}>{T.annot_size||"Tamaño"}</label>
+                    <input type="number" min={8} max={72} value={annotSize}
+                      onChange={e=>setAnnotSize(Math.max(8,Number(e.target.value)))}
+                      style={{width:56,padding:"3px 6px",border:"1px solid var(--bd)",borderRadius:5,fontSize:12,background:"var(--bg)"}}/>
+                    {["red","blue","black"].map(c=>(
+                      <button key={c} onClick={()=>setAnnotColor(c)}
+                        style={{width:22,height:22,borderRadius:"50%",border:`2px solid ${annotColor===c?"var(--ac)":"transparent"}`,
+                          background:c==="red"?"#e11d48":c==="blue"?"#2563eb":"#111",cursor:"pointer",padding:0}}/>
+                    ))}
+                  </div>
+                  {/* Position 3x3 grid */}
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:4,marginBottom:8}}>
+                    {[["tl","↖"],["tc","↑"],["tr","↗"],["ml","←"],["mc","·"],["mr","→"],["bl","↙"],["bc","↓"],["br","↘"]].map(([v,arrow])=>(
+                      <button key={v} onClick={()=>setAnnotPos(v)}
+                        style={{padding:"5px",fontSize:13,border:`1px solid ${annotPos===v?"var(--ac)":"var(--bd)"}`,
+                          borderRadius:5,background:annotPos===v?"var(--al)":"transparent",
+                          color:annotPos===v?"var(--ac)":"var(--t2)",cursor:"pointer"}}>
+                        {arrow}
+                      </button>
+                    ))}
+                  </div>
+                  <button className="bg" style={{fontSize:12,marginBottom:8}} onClick={()=>{
+                    if(!annotText.trim()) return;
+                    setAnnotations(a=>[...a,{page:annotPage,text:annotText,pos:annotPos,size:annotSize,color:annotColor}]);
+                    setAnnotText("");
+                  }}>{T.annot_add_btn||"+ Añadir"}</button>
+                  {annotations.map((a,i)=>(
+                    <div key={i} style={{display:"flex",alignItems:"center",gap:6,marginBottom:4,padding:"4px 8px",
+                      background:"var(--al)",borderRadius:5,fontSize:11}}>
+                      <span style={{flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                        p.{a.page} · {a.text}
+                      </span>
+                      <button onClick={()=>setAnnotations(aa=>aa.filter((_,j)=>j!==i))}
+                        style={{background:"none",border:"none",cursor:"pointer",color:"var(--t2)",fontSize:14,lineHeight:1}}>×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/* ── redact-pdf UI ── */}
+              {tool.id==="redact-pdf"&&files.length>0&&(
+                <div style={{marginBottom:12}}>
+                  <div style={{fontSize:11,fontWeight:600,color:"var(--t2)",marginBottom:8}}>
+                    {T.redact_add||"Añadir zona de redacción (en % del tamaño de página)"}
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:8}}>
+                    {[["Página",redactPage,setRedactPage,1,999,1],
+                      ["X %",redactX,setRedactX,0,100,0.1],
+                      ["Y %",redactY,setRedactY,0,100,0.1],
+                      ["Ancho %",redactW,setRedactW,1,100,0.1],
+                      ["Alto %",redactH,setRedactH,1,100,0.1]].map(([label,val,setter,min,max,step])=>(
+                      <label key={label} style={{fontSize:11,color:"var(--t2)"}}>
+                        {label}
+                        <input type="number" min={min} max={max} step={step} value={val}
+                          onChange={e=>setter(Number(e.target.value))}
+                          style={{display:"block",width:"100%",padding:"4px 6px",border:"1px solid var(--bd)",
+                            borderRadius:5,fontSize:12,marginTop:2,background:"var(--bg)"}}/>
+                      </label>
+                    ))}
+                  </div>
+                  <button className="bg" style={{fontSize:12,marginBottom:8}} onClick={()=>{
+                    setRedactZones(z=>[...z,{page:redactPage,x:redactX,y:redactY,w:redactW,h:redactH}]);
+                  }}>{T.redact_add_btn||"+ Añadir zona"}</button>
+                  {redactZones.map((z,i)=>(
+                    <div key={i} style={{display:"flex",alignItems:"center",gap:6,marginBottom:4,padding:"4px 8px",
+                      background:"var(--al)",borderRadius:5,fontSize:11}}>
+                      <span style={{flex:1}}>p.{z.page} · X:{z.x}% Y:{z.y}% {z.w}×{z.h}%</span>
+                      <button onClick={()=>setRedactZones(zz=>zz.filter((_,j)=>j!==i))}
+                        style={{background:"none",border:"none",cursor:"pointer",color:"var(--t2)",fontSize:14,lineHeight:1}}>×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/* ── chat-pdf: full chat UI (replaces normal conversion flow) ── */}
+              {tool.id==="chat-pdf" && files.length>0 && status!=="proc" && (
+                <ChatPdf file={files[0]} showToast={showToast} />
+              )}
+              {/* ── visual-annotate: canvas editor ── */}
+              {tool.id==="visual-annotate" && files.length>0 && status!=="proc" && (
+                <VisualAnnotate file={files[0]} showToast={showToast} />
+              )}
+              {/* ── ocr-searchable: lang selector (reuses ocrLang state) ── */}
+              {tool.id==="ocr-searchable" && files.length>0 && (
+                <div style={{marginBottom:12}}>
+                  <div style={{fontSize:11,fontWeight:500,color:"var(--t2)",marginBottom:5}}>
+                    {T.ocr_lang_label||"Idioma del documento"}
+                  </div>
+                  <select value={ocrLang} onChange={e=>setOcrLang(e.target.value)}
+                    style={{width:"100%",padding:"6px 10px",border:"1px solid var(--bd)",borderRadius:6,
+                      background:"var(--bg)",color:"var(--tf)",fontSize:12}}>
+                    <option value="eng">English</option>
+                    <option value="spa">Español</option>
+                    <option value="fra">Français</option>
+                    <option value="deu">Deutsch</option>
+                    <option value="por">Português</option>
+                    <option value="ita">Italiano</option>
+                    <option value="chi_sim">中文 (简体)</option>
+                    <option value="jpn">日本語</option>
+                    <option value="ara">العربية</option>
+                    <option value="rus">Русский</option>
+                  </select>
+                  <div style={{fontSize:10,color:"var(--t2)",marginTop:4}}>
+                    {T.ocr_hint||"El OCR descargará los datos del idioma (~4 MB) la primera vez."}
+                  </div>
+                </div>
+              )}
               {/* Thumbnail preview */}
-              {!isMulti && files.length===1 && thumbDataUrl && status!=="proc" && tool.id!=="organize-pdf" && (
+              {!isMulti && files.length===1 && thumbDataUrl && status!=="proc" && tool.id!=="organize-pdf" && tool.id!=="visual-annotate" && (
                 <div style={{display:"flex",justifyContent:"center",marginBottom:12}}>
                   <div style={{position:"relative",width:80,height:110,borderRadius:6,overflow:"hidden",
                     border:"1px solid var(--bd)",boxShadow:"0 2px 12px rgba(0,0,0,.1)",flexShrink:0}}>
@@ -1152,12 +1312,14 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
               )}
               <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
                 <button className="bg" onClick={onClose}>{T.cancel}</button>
-                <button className="bp" disabled={!files.length||status==="proc"||(tool.id==="sign-pdf"&&!signatureDataUrl)||(tool.id==="organize-pdf"&&(!thumbsReady||pageOrder.length===0))} onClick={convert}>
+                {tool.id!=="chat-pdf" && tool.id!=="visual-annotate" && (
+                <button className="bp" disabled={!files.length||status==="proc"||(tool.id==="sign-pdf"&&!signatureDataUrl)||(tool.id==="organize-pdf"&&(!thumbsReady||pageOrder.length===0))||(tool.id==="annotate-pdf"&&!annotations.length)||(tool.id==="redact-pdf"&&!redactZones.length)} onClick={convert}>
                   {status==="proc"
                     ? <><div className="spn"/>{T.processing}</>
                     : <><Ic n="arrow" s={14}/>{tool.batch&&files.length>1?`Convertir ${files.length} archivos`:T.convert}</>
                   }
                 </button>
+                )}
               </div>
               {files.length>0&&(
                 <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:4,marginTop:6}}>

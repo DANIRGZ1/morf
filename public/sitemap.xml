@@ -176,4 +176,44 @@
     <priority>0.5</priority>
   </url>
 
+  <!-- Repair PDF -->
+  <url>
+    <loc>https://morf-three.vercel.app/repair-pdf</loc>
+    <lastmod>2026-02-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- HTML to PDF -->
+  <url>
+    <loc>https://morf-three.vercel.app/html-pdf</loc>
+    <lastmod>2026-02-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Flatten PDF -->
+  <url>
+    <loc>https://morf-three.vercel.app/flatten-pdf</loc>
+    <lastmod>2026-02-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Annotate PDF -->
+  <url>
+    <loc>https://morf-three.vercel.app/annotate-pdf</loc>
+    <lastmod>2026-02-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Redact PDF -->
+  <url>
+    <loc>https://morf-three.vercel.app/redact-pdf</loc>
+    <lastmod>2026-02-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
 </urlset>
