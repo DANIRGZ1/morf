@@ -218,7 +218,7 @@ function AdUnit({ slot, style={} }) {
 }
 
 /* ── Tool Page (hash routing + SEO) ─────────────────────────────────────── */
-function ToolPage({ tool, showToast, bumpCount, addToHistory, checkLimits, onBack }) {
+function ToolPage({ tool, showToast, bumpCount, addToHistory, checkLimits, onBack, preloadedFile=null, onGoToTool=null }) {
   useEffect(() => {
     document.title = `${tool.label} — morf`;
     const meta = document.querySelector('meta[name="description"]');
@@ -262,7 +262,8 @@ function ToolPage({ tool, showToast, bumpCount, addToHistory, checkLimits, onBac
       </div>
       <div style={{maxWidth:560,margin:"0 auto",padding:"0 20px 32px"}}>
         <Panel tool={tool} onClose={onBack} showToast={showToast}
-          bumpCount={bumpCount} addToHistory={addToHistory} checkLimits={checkLimits}/>
+          bumpCount={bumpCount} addToHistory={addToHistory} checkLimits={checkLimits}
+          preloadedFile={preloadedFile} onGoToTool={onGoToTool}/>
       </div>
       {/* Anuncio 4 — post-conversión */}
       <div style={{maxWidth:560,margin:"0 auto",padding:"0 20px 48px"}}>
@@ -329,6 +330,9 @@ export default function App() {
   const [billingYear, setBillingYear] = useState(true);
   const [showAllTools, setShowAllTools] = useState(false);
   const [toolSearch, setToolSearch] = useState("");
+  const [preloadedFile, setPreloadedFile] = useState(null);
+  const [dropCandidates, setDropCandidates] = useState(null); // {file, tools[]}
+  const searchInputRef = useRef(null);
   useEffect(() => {
     document.body.style.background = dark ? '#0F1117' : '#F9F9F8';
   }, [dark]);
@@ -341,6 +345,21 @@ export default function App() {
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
   }, []);
+
+  // Ctrl+K / Cmd+K → focus search
+  useEffect(() => {
+    const h = e => {
+      if ((e.ctrlKey||e.metaKey) && e.key==='k') {
+        e.preventDefault();
+        if (toolPage) return;
+        document.getElementById('tools')?.scrollIntoView({behavior:'smooth'});
+        setTimeout(() => { searchInputRef.current?.focus(); }, 380);
+      }
+      if (e.key==='Escape') { setDropCandidates(null); }
+    };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, [toolPage]);
 
   // Stripe return handling
   useEffect(() => {
@@ -397,20 +416,23 @@ export default function App() {
 
   const heroDrop = e => {
     e.preventDefault(); setGlobalDrag(false);
+    if (fullToolPage) return; // let Panel handle its own drops
     const file = e.dataTransfer.files[0];
     if (!file) return;
     const ext = "."+file.name.split(".").pop().toLowerCase();
     const mime = file.type.toLowerCase();
     if (ext === ".odt" || mime === "application/vnd.oasis.opendocument.text") {
-      showToast(T.err_odt,"err");
-      return;
+      showToast(T.err_odt,"err"); return;
     }
-    const found = TOOLS.find(t =>
-      (t.accepts||[]).includes(ext) ||
-      (t.mimeTypes||[]).includes(mime)
+    const compatible = TOOLS.filter(t =>
+      !t.comingSoon && (
+        (t.accepts||[]).some(a => ext === a || ext === "."+a.replace(/^\./,"")) ||
+        (t.mimeTypes||[]).includes(mime)
+      )
     );
-    if (found){ goToTool(found); showToast(`${T.detected}: ${found.label}`); }
-    else showToast(T.unknown_fmt,"err");
+    if (!compatible.length) { showToast(T.unknown_fmt,"err"); return; }
+    if (compatible.length === 1) { goToTool(compatible[0], file); return; }
+    setDropCandidates({ file, tools: compatible });
   };
 
   const modalCfg = {
@@ -420,11 +442,17 @@ export default function App() {
     api:    { title:T.modal_api,     icon:"code"   },
   };
 
-  const goToTool = t => {
+  const goToTool = (t, preFile=null) => {
     if (t.comingSoon) { showToast(T.coming_soon_toast||"¡Próximamente! Estamos trabajando en esta herramienta.","ok"); return; }
-    window.history.pushState(null, '', `#${t.id}`); setToolPage(t);
+    window.history.pushState(null, '', `#${t.id}`);
+    setToolPage(t);
+    setPreloadedFile(preFile || null);
   };
-  const backHome = () => { window.history.pushState(null, '', location.pathname + location.search); setToolPage(null); };
+  const backHome = () => {
+    window.history.pushState(null, '', location.pathname + location.search);
+    setToolPage(null);
+    setPreloadedFile(null);
+  };
   const fullToolPage = toolPage ? TOOLS.find(t => t.id === toolPage.id) || toolPage : null;
 
   return (
@@ -439,7 +467,7 @@ export default function App() {
         {fullToolPage&&(
           <ToolPage tool={fullToolPage} showToast={showToast}
             bumpCount={bumpCount} addToHistory={addToHistory} checkLimits={checkLimits}
-            onBack={backHome}/>
+            onBack={backHome} preloadedFile={preloadedFile} onGoToTool={goToTool}/>
         )}
 
         {/* Main app — hidden (not unmounted) when tool page is active */}
@@ -549,6 +577,15 @@ export default function App() {
               {T.hero_cta}
             </button>
 
+            {/* Trust badges */}
+            <div style={{display:"flex",gap:18,justifyContent:"center",flexWrap:"wrap",marginTop:18,marginBottom:count>0?8:0}}>
+              {[[T.trust_browser,"lock"],[T.trust_noreg,"check"],[T.trust_free,"zap"]].map(([label,icon])=>(
+                <div key={label} style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:"var(--tm)"}}>
+                  <Ic n={icon} s={11} c="var(--ok)"/>
+                  {label}
+                </div>
+              ))}
+            </div>
             {count>0&&(
               <div style={{fontSize:12,color:"var(--tm)",fontFamily:"'DM Mono',monospace"}}>
                 <span>{count.toLocaleString()}</span> {T.counter}
@@ -663,20 +700,27 @@ export default function App() {
               <div style={{position:"relative",flex:"1 1 180px",maxWidth:260}}>
                 <Ic n="search" s={13} c="var(--tm)" style={{position:"absolute",left:9,top:"50%",transform:"translateY(-50%)",pointerEvents:"none"}}/>
                 <input
+                  ref={searchInputRef}
                   value={toolSearch}
                   onChange={e=>setToolSearch(e.target.value)}
                   placeholder={T.search_ph}
-                  style={{width:"100%",padding:"7px 28px 7px 28px",border:"1px solid var(--bd)",borderRadius:7,
+                  style={{width:"100%",padding:"7px 52px 7px 28px",border:"1px solid var(--bd)",borderRadius:7,
                     background:"var(--sf)",fontSize:12,color:"var(--t1)",outline:"none",
                     fontFamily:"'DM Sans',sans-serif",transition:"border-color .15s"}}
                   onFocus={e=>e.target.style.borderColor="var(--ac)"}
                   onBlur={e=>e.target.style.borderColor="var(--bd)"}/>
-                {toolSearch&&(
+                {toolSearch ? (
                   <button onClick={()=>setToolSearch("")}
                     style={{position:"absolute",right:7,top:"50%",transform:"translateY(-50%)",
                       background:"none",border:"none",cursor:"pointer",padding:0,display:"flex",alignItems:"center"}}>
                     <Ic n="x" s={12} c="var(--tm)"/>
                   </button>
+                ) : (
+                  <span style={{position:"absolute",right:7,top:"50%",transform:"translateY(-50%)",
+                    fontSize:9,fontFamily:"'DM Mono',monospace",color:"var(--tm)",background:"var(--bd)",
+                    padding:"2px 4px",borderRadius:3,pointerEvents:"none"}}>
+                    Ctrl K
+                  </span>
                 )}
               </div>
             </div>
@@ -947,6 +991,61 @@ export default function App() {
         )}
 
         {toast&&<Toast message={toast.msg} type={toast.type} onClose={()=>setToast(null)}/>}
+
+        {/* Drop overlay — choose tool for dropped file */}
+        {dropCandidates&&(
+          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",zIndex:300,
+            display:"flex",alignItems:"center",justifyContent:"center",padding:20}}
+            onClick={()=>setDropCandidates(null)}>
+            <div style={{background:"var(--sf)",borderRadius:14,width:"92vw",maxWidth:500,
+              border:"1px solid var(--bd)",overflow:"hidden",animation:"fu .22s ease both"}}
+              onClick={e=>e.stopPropagation()}>
+              <div style={{padding:"14px 18px",borderBottom:"1px solid var(--bd)",
+                display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
+                <div>
+                  <div style={{fontWeight:600,fontSize:14,marginBottom:2}}>{T.home_drop_title}</div>
+                  <div style={{fontSize:11,color:"var(--tm)",display:"flex",alignItems:"center",gap:4}}>
+                    <Ic n="file" s={11} c="var(--tm)"/>
+                    {dropCandidates.file.name}
+                    <span style={{color:"var(--tm)"}}>·</span>
+                    {(dropCandidates.file.size/1048576).toFixed(1)} MB
+                  </div>
+                </div>
+                <button className="bg" style={{padding:"4px 8px",flexShrink:0}}
+                  onClick={()=>setDropCandidates(null)}>
+                  <Ic n="x" s={13}/>
+                </button>
+              </div>
+              <div style={{padding:"12px 18px 18px",maxHeight:"60vh",overflowY:"auto"}}>
+                <div style={{fontSize:11,color:"var(--tm)",marginBottom:10}}>{T.home_drop_sub}</div>
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  {dropCandidates.tools.map((t)=>(
+                    <button key={t.id}
+                      onClick={()=>{ goToTool(t, dropCandidates.file); setDropCandidates(null); }}
+                      style={{display:"flex",alignItems:"center",gap:12,padding:"10px 12px",
+                        background:"var(--sf)",border:"1px solid var(--bd)",borderRadius:8,
+                        cursor:"pointer",textAlign:"left",width:"100%",
+                        fontFamily:"'DM Sans',sans-serif",transition:"background .15s"}}
+                      onMouseEnter={e=>e.currentTarget.style.background="var(--al)"}
+                      onMouseLeave={e=>e.currentTarget.style.background="var(--sf)"}>
+                      <div style={{width:32,height:32,borderRadius:7,background:"var(--al)",
+                        display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                        <Ic n={t.icon} s={15} c="var(--ac)"/>
+                      </div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontWeight:500,fontSize:13}}>{t.label}</div>
+                        <div style={{fontSize:11,color:"var(--tm)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.desc}</div>
+                      </div>
+                      <div style={{display:"flex",gap:3,alignItems:"center",flexShrink:0}}>
+                        <Tag type={t.from}/><span style={{color:"var(--tm)",fontSize:10}}>→</span><Tag type={t.to}/>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </LangCtx.Provider>
   );
