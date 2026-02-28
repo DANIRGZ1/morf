@@ -1,13 +1,9 @@
-/* ── Service Worker — morf ─────────────────────────────────────────────────
-   Cache-first para assets estáticos; stale-while-revalidate para HTML.    */
-
 const CACHE = 'morf-v1';
-const PRECACHE = ['/', '/favicon.svg', '/manifest.json'];
+const PRECACHE = ['/', '/index.html'];
 
 self.addEventListener('install', e => {
-  self.skipWaiting();
   e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(PRECACHE).catch(() => {}))
+    caches.open(CACHE).then(c => c.addAll(PRECACHE)).then(() => self.skipWaiting())
   );
 });
 
@@ -20,41 +16,25 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  const { request } = e;
-  const url = new URL(request.url);
-
-  // Solo interceptar misma origen
-  if (url.origin !== self.location.origin) return;
-
-  // Archivos estáticos (JS, CSS, imágenes, fuentes) → cache-first
-  if (/\.(js|css|woff2?|png|svg|ico|webp|jpg)(\?.*)?$/.test(url.pathname)) {
+  // Only cache GET requests for same origin
+  if (e.request.method !== 'GET' || !e.request.url.startsWith(self.location.origin)) return;
+  // Network-first for HTML, cache-first for assets
+  if (e.request.destination === 'document') {
     e.respondWith(
-      caches.match(request).then(cached =>
-        cached || fetch(request).then(res => {
-          const clone = res.clone();
-          caches.open(CACHE).then(c => c.put(request, clone));
+      fetch(e.request).catch(() => caches.match('/index.html'))
+    );
+  } else {
+    e.respondWith(
+      caches.match(e.request).then(cached => {
+        if (cached) return cached;
+        return fetch(e.request).then(res => {
+          if (res.ok) {
+            const clone = res.clone();
+            caches.open(CACHE).then(c => c.put(e.request, clone));
+          }
           return res;
-        })
-      )
+        });
+      })
     );
-    return;
   }
-
-  // Navegación HTML → stale-while-revalidate (siempre sirve index.html offline)
-  if (request.mode === 'navigate') {
-    e.respondWith(
-      fetch(request).catch(() => caches.match('/') )
-    );
-    return;
-  }
-});
-
-self.addEventListener('notificationclick', e => {
-  e.notification.close();
-  e.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(cs => {
-      const win = cs.find(c => c.url.startsWith(self.location.origin));
-      return win ? win.focus() : self.clients.openWindow('/');
-    })
-  );
 });

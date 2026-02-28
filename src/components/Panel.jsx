@@ -16,10 +16,12 @@ import {
   pdfToImages, organizePdf, deletePagesPdf, pptxToPdf, ensurePdfJs,
   repairPdf, htmlToPdf, flattenPdf,
   annotatePdf, redactPdf,
-  ocrSearchablePdf,
+  ocrSearchablePdf, pdfToMarkdown,
 } from "../utils/convert";
 import ChatPdf from "./ChatPdf";
 import VisualAnnotate from "./VisualAnnotate";
+import SummarizePdf from "./SummarizePdf";
+import ComparePdf from "./ComparePdf";
 
 /* ── Tools ───────────────────────────────────────────────────────────────── */
 // eslint-disable-next-line react-refresh/only-export-components
@@ -56,6 +58,9 @@ export const TOOL_BASE = [
   {id:"ocr-searchable",  icon:"file",      accepts:[".pdf"],  from:"pdf",  to:"pdf"},
   {id:"chat-pdf",        icon:"pdf",       accepts:[".pdf"],  from:"pdf",  to:"chat"},
   {id:"visual-annotate", icon:"edit",      accepts:[".pdf"],  from:"pdf",  to:"pdf"},
+  {id:"pdf-markdown",    icon:"file",      accepts:[".pdf"],  from:"pdf",  to:"md"},
+  {id:"summarize-pdf",   icon:"pdf",       accepts:[".pdf"],  from:"pdf",  to:"ai"},
+  {id:"compare-pdf",     icon:"split",     accepts:[".pdf"],  from:"pdf",  to:"pdf"},
 ];
 
 /* ── Preview modal ───────────────────────────────────────────────────────── */
@@ -406,6 +411,9 @@ const NEXT_TOOLS = {
   "ocr-searchable":  ["pdf-word","compress","ocr-pdf"],
   "chat-pdf":        ["ocr-pdf","pdf-word","compress"],
   "visual-annotate": ["annotate-pdf","redact-pdf","compress"],
+  "pdf-markdown":    ["ocr-pdf","pdf-word","compress"],
+  "summarize-pdf":   ["chat-pdf","ocr-pdf","compress"],
+  "compare-pdf":     ["merge","split","annotate-pdf"],
 };
 
 function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}, checkLimits=()=>true, preloadedFile=null, onGoToTool=null }) {
@@ -586,7 +594,7 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
     showToast(T.conv_done);
     bumpCount();
     const label = histName ?? files[0]?.name;
-    addToHistory(label, tool.label);
+    addToHistory(label, tool.label, files[0]?.size);
     notifyDone(label);
   };
 
@@ -663,7 +671,7 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
         clearInterval(progressTimer.current);
         if (res === "popup-blocked") { setErrMsg(T.err_popup); setStatus("error"); return; }
         setProgress(100); showToast(T.conv_done); bumpCount();
-        addToHistory(files[0]?.name, tool.label);
+        addToHistory(files[0]?.name, tool.label, files[0]?.size);
         notifyDone(files[0]?.name);
         setStatus("idle"); setFiles([]); return;
       }
@@ -676,7 +684,7 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
         clearInterval(progressTimer.current);
         if (res === "popup-blocked") { setErrMsg(T.err_popup); setStatus("error"); return; }
         setProgress(100); showToast(T.conv_done); bumpCount();
-        addToHistory(files[0]?.name, tool.label);
+        addToHistory(files[0]?.name, tool.label, files[0]?.size);
         notifyDone(files[0]?.name);
         setStatus("idle"); setFiles([]); return;
       }
@@ -704,12 +712,15 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
       else if (tool.id==="ocr-searchable") {
         await ocrSearchablePdf(files[0], ocrLang, pct => setProgress(pct));
       }
+      else if (tool.id==="pdf-markdown") {
+        await pdfToMarkdown(files[0], pct => setProgress(pct));
+      }
       else if (tool.id==="html-pdf") {
         const res = await htmlToPdf(files[0]);
         clearInterval(progressTimer.current);
         if (res === "popup-blocked") { setErrMsg(T.err_popup); setStatus("error"); return; }
         setProgress(100); showToast(T.conv_done); bumpCount();
-        addToHistory(files[0]?.name, tool.label);
+        addToHistory(files[0]?.name, tool.label, files[0]?.size);
         notifyDone(files[0]?.name);
         setStatus("idle"); setFiles([]); return;
       }
@@ -721,7 +732,7 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
         clearInterval(progressTimer.current);
         if (res==="popup-blocked") { setErrMsg(T.err_popup); setStatus("error"); return; }
         setProgress(100); showToast(T.conv_done); bumpCount();
-        addToHistory(files[0]?.name, tool.label);
+        addToHistory(files[0]?.name, tool.label, files[0]?.size);
         notifyDone(files[0]?.name);
         setStatus("idle"); setFiles([]); return;
       }
@@ -1253,13 +1264,21 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
                   ))}
                 </div>
               )}
-              {/* ── chat-pdf: full chat UI (replaces normal conversion flow) ── */}
+              {/* ── chat-pdf: full chat UI ── */}
               {tool.id==="chat-pdf" && files.length>0 && status!=="proc" && (
                 <ChatPdf file={files[0]} showToast={showToast} />
               )}
               {/* ── visual-annotate: canvas editor ── */}
               {tool.id==="visual-annotate" && files.length>0 && status!=="proc" && (
                 <VisualAnnotate file={files[0]} showToast={showToast} />
+              )}
+              {/* ── summarize-pdf: AI one-shot summary ── */}
+              {tool.id==="summarize-pdf" && files.length>0 && status!=="proc" && (
+                <SummarizePdf file={files[0]} />
+              )}
+              {/* ── compare-pdf: text diff ── */}
+              {tool.id==="compare-pdf" && files.length>0 && status!=="proc" && (
+                <ComparePdf file={files[0]} />
               )}
               {/* ── ocr-searchable: lang selector (reuses ocrLang state) ── */}
               {tool.id==="ocr-searchable" && files.length>0 && (
@@ -1312,7 +1331,7 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
               )}
               <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
                 <button className="bg" onClick={onClose}>{T.cancel}</button>
-                {tool.id!=="chat-pdf" && tool.id!=="visual-annotate" && (
+                {!["chat-pdf","visual-annotate","summarize-pdf","compare-pdf"].includes(tool.id) && (
                 <button className="bp" disabled={!files.length||status==="proc"||(tool.id==="sign-pdf"&&!signatureDataUrl)||(tool.id==="organize-pdf"&&(!thumbsReady||pageOrder.length===0))||(tool.id==="annotate-pdf"&&!annotations.length)||(tool.id==="redact-pdf"&&!redactZones.length)} onClick={convert}>
                   {status==="proc"
                     ? <><div className="spn"/>{T.processing}</>

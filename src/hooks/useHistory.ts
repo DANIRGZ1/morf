@@ -5,11 +5,12 @@ export interface HistoryEntry {
   filename: string;
   tool: string;
   date: string;
+  size?: number; // bytes del archivo de entrada
 }
 
 export interface HistoryState {
   history: HistoryEntry[];
-  addToHistory: (filename: string, toolLabel: string) => void;
+  addToHistory: (filename: string, toolLabel: string, size?: number) => void;
   clearHistory: () => void;
 }
 
@@ -47,11 +48,12 @@ export function useHistory(userId?: string): HistoryState {
       });
   }, [userId]);
 
-  const addToHistory = (filename: string, toolLabel: string) => {
+  const addToHistory = (filename: string, toolLabel: string, size?: number) => {
     const entry: HistoryEntry = {
       filename,
       tool: toolLabel,
       date: new Date().toISOString(),
+      ...(size !== undefined && { size }),
     };
     setHistory((prev) => {
       const next = [entry, ...prev].slice(0, 10);
