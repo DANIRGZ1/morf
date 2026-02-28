@@ -346,6 +346,40 @@ export default function App() {
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
+  // Ctrl+V / Cmd+V → paste file from clipboard (home only)
+  useEffect(() => {
+    const h = e => {
+      if (toolPage) return;
+      const tag = e.target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      // Try clipboard files first, then image items
+      let file = e.clipboardData?.files?.[0];
+      if (!file) {
+        const imgItem = Array.from(e.clipboardData?.items||[]).find(i=>i.type.startsWith("image/"));
+        if (imgItem) {
+          const blob = imgItem.getAsFile();
+          if (blob) file = new File([blob], `imagen-portapapeles.${imgItem.type.split("/")[1]||"png"}`, {type:imgItem.type});
+        }
+      }
+      if (!file) return;
+      e.preventDefault();
+      const ext  = "."+file.name.split(".").pop().toLowerCase();
+      const mime = file.type.toLowerCase();
+      if (ext===".odt"||mime==="application/vnd.oasis.opendocument.text"){showToast(T.err_odt,"err");return;}
+      const compatible = TOOLS.filter(t=>
+        !t.comingSoon&&(
+          (t.accepts||[]).some(a=>ext===a||ext==="."+a.replace(/^\./,""))||
+          (t.mimeTypes||[]).includes(mime)
+        )
+      );
+      if (!compatible.length){showToast(T.unknown_fmt,"err");return;}
+      if (compatible.length===1){goToTool(compatible[0],file);return;}
+      setDropCandidates({file,tools:compatible});
+    };
+    window.addEventListener("paste", h);
+    return () => window.removeEventListener("paste", h);
+  }, [toolPage]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Ctrl+K / Cmd+K → focus search
   useEffect(() => {
     const h = e => {
@@ -724,6 +758,33 @@ export default function App() {
                 )}
               </div>
             </div>
+
+            {/* Recent tools row */}
+            {!toolSearch.trim() && history.length > 0 && (()=>{
+              const seen = new Set();
+              const recent = history
+                .map(h => TOOLS.find(t => t.label === h.tool))
+                .filter(t => t && !t.comingSoon && !seen.has(t.id) && seen.add(t.id))
+                .slice(0, 4);
+              if (!recent.length) return null;
+              return (
+                <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginBottom:14}}>
+                  <span style={{fontSize:11,color:"var(--tm)",flexShrink:0}}>{T.hist_title||"Recientes"}:</span>
+                  {recent.map(t=>(
+                    <button key={t.id} onClick={()=>goToTool(t)}
+                      style={{display:"inline-flex",alignItems:"center",gap:5,padding:"4px 10px",
+                        border:"1px solid var(--bd)",borderRadius:20,background:"var(--sf)",
+                        cursor:"pointer",fontSize:11,color:"var(--t2)",
+                        fontFamily:"'DM Sans',sans-serif",transition:"all .15s"}}
+                      onMouseEnter={e=>{e.currentTarget.style.background="var(--al)";e.currentTarget.style.borderColor="var(--ac)";}}
+                      onMouseLeave={e=>{e.currentTarget.style.background="var(--sf)";e.currentTarget.style.borderColor="var(--bd)";}}>
+                      <Ic n={t.icon} s={11} c="var(--ac)"/>
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
 
             {toolSearch.trim() ? (
               /* ── Resultados de búsqueda ── */
