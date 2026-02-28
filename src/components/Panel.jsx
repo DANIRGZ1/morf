@@ -408,21 +408,23 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
   const [orgDrag,setOrgDrag]                  = useState(null);
   const [thumbsReady,setThumbsReady]          = useState(false);
   const [thumbDataUrl,setThumbDataUrl]        = useState(null);
+  const [pdfMeta,setPdfMeta]                 = useState(null); // {pages, encrypted}
   const ref = useRef();
   const progressTimer = useRef(null);
+  const convertRef    = useRef(null);
 
   // Pre-load file passed from home drag-and-drop
   useEffect(() => {
     if (preloadedFile) addFiles([preloadedFile]);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Generate thumbnail for first file
+  // Generate thumbnail + PDF metadata for first file (combined to load PDF once)
   useEffect(() => {
     const f = files[0];
-    if (!f) { setThumbDataUrl(null); return; }
+    if (!f) { setThumbDataUrl(null); setPdfMeta(null); return; }
     if (f.type.startsWith("image/")) {
       const url = URL.createObjectURL(f);
-      setThumbDataUrl(url);
+      setThumbDataUrl(url); setPdfMeta(null);
       return () => URL.revokeObjectURL(url);
     }
     if (f.name.toLowerCase().endsWith(".pdf")) {
@@ -432,18 +434,41 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
           await ensurePdfJs();
           const bytes = await f.arrayBuffer();
           const pdf = await window.pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
+          if (cancelled) return;
+          setPdfMeta({ pages: pdf.numPages, encrypted: false });
           const page = await pdf.getPage(1);
-          const vp = page.getViewport({ scale: 0.5 });
-          const cv = document.createElement("canvas");
+          const vp   = page.getViewport({ scale: 0.5 });
+          const cv   = document.createElement("canvas");
           cv.width = vp.width; cv.height = vp.height;
           await page.render({ canvasContext: cv.getContext("2d"), viewport: vp }).promise;
           if (!cancelled) setThumbDataUrl(cv.toDataURL("image/jpeg", 0.7));
-        } catch { /* ignore */ }
+        } catch(e) {
+          const isEnc = /password|encrypt/i.test(e.message||"");
+          if (!cancelled) { setPdfMeta({ pages: null, encrypted: isEnc }); setThumbDataUrl(null); }
+        }
       })();
       return () => { cancelled = true; };
     }
-    setThumbDataUrl(null);
+    setThumbDataUrl(null); setPdfMeta(null);
   }, [files[0]?.name, files[0]?.size]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keep convertRef current so the keyboard handler always calls the latest version
+  useEffect(() => { convertRef.current = convert; });
+
+  // Enter key → convert (when not focused on input/button)
+  useEffect(() => {
+    const h = e => {
+      if (e.key !== "Enter") return;
+      const tag = e.target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "BUTTON" || tag === "SELECT") return;
+      const canConvert = files.length > 0 && status === "idle" &&
+        !(tool.id === "sign-pdf"     && !signatureDataUrl) &&
+        !(tool.id === "organize-pdf" && (!thumbsReady || pageOrder.length === 0));
+      if (canConvert) { e.preventDefault(); convertRef.current?.(); }
+    };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [files.length, status, signatureDataUrl, thumbsReady, pageOrder.length, tool.id]);
 
   // Generar miniaturas para el organizador de páginas
   useEffect(() => {
@@ -661,7 +686,7 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
     }
   };
 
-  const dl = () => { setStatus("idle"); setFiles([]); setCompressResult(null); setSignatureDataUrl(null); setPageOrder([]); setThumbsReady(false); setThumbDataUrl(null); };
+  const dl = () => { setStatus("idle"); setFiles([]); setCompressResult(null); setSignatureDataUrl(null); setPageOrder([]); setThumbsReady(false); setThumbDataUrl(null); setPdfMeta(null); };
 
   return (
     <>
@@ -860,6 +885,24 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
                       </div>
                     );
                   })()}
+                </div>
+              )}
+
+              {/* PDF metadata badges */}
+              {pdfMeta && files.length===1 && status!=="proc" && (
+                <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:10,marginTop:-4}}>
+                  {pdfMeta.pages && (
+                    <span style={{fontSize:10,fontFamily:"'DM Mono',monospace",color:"var(--tm)",
+                      background:"var(--bd)",borderRadius:3,padding:"2px 6px"}}>
+                      {pdfMeta.pages} {pdfMeta.pages===1?"página":"páginas"}
+                    </span>
+                  )}
+                  {pdfMeta.encrypted && (
+                    <span style={{fontSize:10,fontWeight:600,color:"#92400E",
+                      background:"#FEF3C7",borderRadius:3,padding:"2px 6px"}}>
+                      {T.err_protected||"Protegido con contraseña"}
+                    </span>
+                  )}
                 </div>
               )}
 
