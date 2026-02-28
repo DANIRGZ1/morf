@@ -23,7 +23,7 @@ export function Privacy() {
     <h2>{T.code==="es"?"Retención de archivos":T.code==="en"?"File retention":T.code==="fr"?"Conservation des fichiers":T.code==="de"?"Dateispeicherung":"Retenção de ficheiros"}</h2>
     <p>{T.code==="es"?"Los archivos procesados existen únicamente en memoria temporal durante la sesión activa. Al cerrar la pestaña o el navegador, todos los datos son eliminados automáticamente.":T.code==="en"?"Processed files exist only in temporary browser memory during the active session. When you close the tab or browser, all processing data is automatically deleted.":T.code==="fr"?"Les fichiers traités n'existent que dans la mémoire temporaire du navigateur. Lorsque vous fermez l'onglet, toutes les données sont automatiquement supprimées.":T.code==="de"?"Verarbeitete Dateien existieren nur im temporären Browserspeicher während der aktiven Sitzung. Beim Schließen des Tabs werden alle Daten automatisch gelöscht.":"Os ficheiros processados existem apenas na memória temporária do browser durante a sessão. Ao fechar o separador, todos os dados são eliminados automaticamente."}</p>
     <div className="divv"/>
-    <p style={{fontSize:11,color:"var(--tm)"}}>{T.code==="es"?"Última actualización: enero 2025 · morf v0.1 Beta":T.code==="en"?"Last updated: January 2025 · morf v0.1 Beta":T.code==="fr"?"Dernière mise à jour : janvier 2025 · morf v0.1 Beta":T.code==="de"?"Letzte Aktualisierung: Januar 2025 · morf v0.1 Beta":"Última atualização: janeiro de 2025 · morf v0.1 Beta"}</p>
+    <p style={{fontSize:11,color:"var(--tm)"}}>{T.code==="es"?"Última actualización: febrero 2026 · morf v0.1 Beta":T.code==="en"?"Last updated: February 2026 · morf v0.1 Beta":T.code==="fr"?"Dernière mise à jour : février 2026 · morf v0.1 Beta":T.code==="de"?"Letzte Aktualisierung: Februar 2026 · morf v0.1 Beta":"Última atualização: fevereiro de 2026 · morf v0.1 Beta"}</p>
   </>;
 }
 
@@ -40,7 +40,7 @@ export function Terms() {
     <h2>{isEs?"3. Limitación de responsabilidad":isEn?"3. Limitation of liability":isFr?"3. Limitation de responsabilité":isDe?"3. Haftungsbeschränkung":"3. Limitação de responsabilidade"}</h2>
     <p>{isEs?"morf no se hace responsable de pérdida de datos o incompatibilidades de formato. Recomendamos mantener siempre una copia de seguridad de los archivos originales.":isEn?"morf is not responsible for data loss or format incompatibilities. We recommend always keeping a backup of your original files.":isFr?"morf n'est pas responsable de la perte de données ou des incompatibilités de format. Conservez toujours une copie de sauvegarde de vos fichiers originaux.":isDe?"morf haftet nicht für Datenverlust oder Formatinkompatibilitäten. Behalte immer eine Sicherungskopie deiner Originaldateien.":"morf não se responsabiliza por perda de dados ou incompatibilidades de formato. Recomendamos manter sempre uma cópia de segurança dos ficheiros originais."}</p>
     <div className="divv"/>
-    <p style={{fontSize:11,color:"var(--tm)"}}>{isEs?"Última actualización: enero 2025":isEn?"Last updated: January 2025":isFr?"Dernière mise à jour : janvier 2025":isDe?"Letzte Aktualisierung: Januar 2025":"Última atualização: janeiro de 2025"}</p>
+    <p style={{fontSize:11,color:"var(--tm)"}}>{isEs?"Última actualización: febrero 2026":isEn?"Last updated: February 2026":isFr?"Dernière mise à jour : février 2026":isDe?"Letzte Aktualisierung: Februar 2026":"Última atualização: fevereiro de 2026"}</p>
   </>;
 }
 
