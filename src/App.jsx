@@ -18,7 +18,7 @@ import { Privacy, Terms, Contact, API } from "./components/ModalContents";
 /* ── CSS ──────────────────────────────────────────────────────────────────── */
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
-  html,body,#root{margin:0;padding:0;min-height:100vh;background:inherit}
+  html,body,#root{margin:0;padding:0;min-height:100vh;background:inherit;overflow-x:hidden}
   .m*{box-sizing:border-box;margin:0;padding:0}
   .m{
     --bg:#F9F9F8;--sf:#FFF;--bd:#E3E3E0;--bh:#C4C4C0;
@@ -100,11 +100,19 @@ const css = `
     /* Header */
     .m-header-inner{padding:0 14px!important}
     .m-logo-text{font-size:13px!important}
-    .m-nav-labels{display:none}
+    /* !important so it overrides any inline display style */
+    .m-nav-labels{display:none!important}
 
     /* Hero */
     .m-hero{padding:32px 14px 48px!important}
     .m-hero-drop{padding:28px 14px!important;margin-bottom:32px!important}
+
+    /* Stats: 2 columns on mobile */
+    .m-stats{grid-template-columns:1fr 1fr!important}
+
+    /* How-it-works: full rounded + hide arrows when stacked */
+    .m-how-step{border-radius:10px!important}
+    .m-how-arrow{display:none!important}
 
     /* Panel */
     .m-panel{margin:0 -14px!important;border-radius:0!important;border-left:none!important;border-right:none!important}
@@ -124,11 +132,13 @@ const css = `
 
     /* Steps UI */
     .m-steps{padding:12px!important}
+
+    /* Footer grid: stack on mobile */
+    .m-footer-grid{grid-template-columns:1fr!important;gap:20px!important}
   }
 
   @media(max-width:400px){
     .grid{grid-template-columns:1fr 1fr!important}
-    .m-nav-privacy{display:none}
   }
 
   /* lang picker */
@@ -843,7 +853,7 @@ export default function App() {
           </div>
 
           {/* Stats grid */}
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:48}}>
+          <div className="m-stats" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:48}}>
             {[
               {value:TOOLS.filter(t=>!t.comingSoon).length+"",  label:T.tools_count},
               {value:count>0?count.toLocaleString():"1000+",    label:T.stat_files},
@@ -872,7 +882,7 @@ export default function App() {
             </div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:2,position:"relative"}}>
               {T.how_steps.map(([title,desc],i)=>(
-                <div key={i} style={{display:"flex",flexDirection:"column",alignItems:"center",textAlign:"center",
+                <div key={i} className="m-how-step" style={{display:"flex",flexDirection:"column",alignItems:"center",textAlign:"center",
                   padding:"24px 20px",background:"var(--sf)",border:"1px solid var(--bd)",
                   borderRadius:i===0?"10px 0 0 10px":i===2?"0 10px 10px 0":"0",
                   position:"relative"}}>
@@ -887,7 +897,7 @@ export default function App() {
                   <div style={{fontWeight:600,fontSize:13,marginBottom:6}}>{title}</div>
                   <div style={{fontSize:12,color:"var(--t2)",lineHeight:1.6}}>{desc}</div>
                   {i<2&&(
-                    <div style={{position:"absolute",right:-12,top:"50%",transform:"translateY(-50%)",
+                    <div className="m-how-arrow" style={{position:"absolute",right:-12,top:"50%",transform:"translateY(-50%)",
                       zIndex:1,background:"var(--sf)",padding:"2px 0",display:"flex",alignItems:"center"}}>
                       <span style={{display:"block",transform:"rotate(-90deg)"}}><Ic n="chevron" s={16} c="var(--tm)"/></span>
                     </div>
@@ -1211,7 +1221,7 @@ export default function App() {
         <footer style={{display:fullToolPage?'none':'block',borderTop:"1px solid var(--bd)",background:"var(--sf)"}}>
           <div style={{maxWidth:960,margin:"0 auto",padding:"32px 20px 20px"}}>
             {/* Top row: brand + columns */}
-            <div style={{display:"grid",gridTemplateColumns:"1fr auto auto",gap:32,marginBottom:28,flexWrap:"wrap"}}>
+            <div className="m-footer-grid" style={{display:"grid",gridTemplateColumns:"1fr auto auto",gap:32,marginBottom:28}}>
               {/* Brand */}
               <div>
                 <div style={{fontSize:14,fontWeight:700,letterSpacing:"-.02em",marginBottom:6}}>
