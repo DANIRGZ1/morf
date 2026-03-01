@@ -17,3 +17,11 @@ HTMLCanvasElement.prototype.toBlob = vi.fn((callback, type) => {
 
 // window.open — suppress actual popup attempts
 global.open = vi.fn()
+
+// IntersectionObserver — not implemented in jsdom
+global.IntersectionObserver = class IntersectionObserver {
+  constructor() {}
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
