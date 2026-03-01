@@ -893,6 +893,22 @@ export default function App() {
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
+  const T = LANGS[lang];
+  const showToast = (msg, type="ok") => setToast({msg,type});
+  // Build tools with translated labels
+  const TOOLS = TOOL_BASE.map((t,i) => ({ ...t, ...T.t[i] }));
+  const dismissOnboarding = () => {
+    if (showOnboarding) { setShowOnboarding(false); localStorage.setItem('morf-onboarded','1'); }
+  };
+  const goToTool = (t, preFile=null) => {
+    dismissOnboarding();
+    if (t.comingSoon) { showToast(T.coming_soon_toast||"¡Próximamente! Estamos trabajando en esta herramienta.","ok"); return; }
+    window.history.pushState(null, '', `/${t.id}`);
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    setToolPage(t);
+    setPreloadedFile(preFile || null);
+  };
+
   // Ctrl+V / Cmd+V → paste file from clipboard (home only)
   useEffect(() => {
     const h = e => {
@@ -989,16 +1005,6 @@ export default function App() {
     document.head.appendChild(s);
   }, [lang]);
 
-  const T = LANGS[lang];
-  const showToast = (msg, type="ok") => setToast({msg,type});
-
-  // Build tools with translated labels
-  const TOOLS = TOOL_BASE.map((t,i) => ({ ...t, ...T.t[i] }));
-
-  const dismissOnboarding = () => {
-    if (showOnboarding) { setShowOnboarding(false); localStorage.setItem('morf-onboarded','1'); }
-  };
-
   const heroDrop = e => {
     e.preventDefault(); setGlobalDrag(false);
     if (fullToolPage) return; // let Panel handle its own drops
@@ -1028,14 +1034,6 @@ export default function App() {
     api:    { title:T.modal_api,     icon:"code"   },
   };
 
-  const goToTool = (t, preFile=null) => {
-    dismissOnboarding();
-    if (t.comingSoon) { showToast(T.coming_soon_toast||"¡Próximamente! Estamos trabajando en esta herramienta.","ok"); return; }
-    window.history.pushState(null, '', `/${t.id}`);
-    window.scrollTo({ top: 0, behavior: 'instant' });
-    setToolPage(t);
-    setPreloadedFile(preFile || null);
-  };
   const backHome = () => {
     window.history.pushState(null, '', '/');
     setToolPage(null);
