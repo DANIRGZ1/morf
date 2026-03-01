@@ -373,6 +373,118 @@ function ToolCard({ t, i, goToTool }) {
   );
 }
 
+/* ── Tools Menu Overlay (pantalla completa) ─────────────────────────────── */
+const MENU_CATS = [
+  {key:"cat_conv", color:"#2563EB", ids:["pdf-word","word-pdf","excel-pdf","pptx-pdf","pdf-pptx","pdf-excel","pdf-img","html-pdf"]},
+  {key:"cat_img",  color:"#10B981", ids:["img-pdf","png-jpg","jpg-png"]},
+  {key:"cat_ops",  color:"#EF4444", ids:["merge","split","compress","rotate","organize-pdf","delete-pages","repair-pdf","flatten-pdf"]},
+  {key:"cat_edit", color:"#D97706", ids:["watermark-pdf","number-pages","crop-pdf","grayscale-pdf","sign-pdf","annotate-pdf","visual-annotate","redact-pdf"]},
+  {key:"cat_sec",  color:"#0D9488", ids:["unlock-pdf","protect-pdf","ocr-pdf","ocr-searchable","chat-pdf","summarize-pdf","compare-pdf","pdf-markdown"]},
+];
+
+function ToolsMenuOverlay({ TOOLS, goToTool, T, onClose }) {
+  const [search, setSearch] = useState("");
+  const inputRef = useRef(null);
+
+  useEffect(() => { setTimeout(() => inputRef.current?.focus(), 120); }, []);
+  useEffect(() => {
+    const h = e => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [onClose]);
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, []);
+
+  const q = search.trim().toLowerCase();
+  const hits = q ? TOOLS.filter(t =>
+    t.label.toLowerCase().includes(q) ||
+    (t.desc||"").toLowerCase().includes(q) ||
+    t.from.toLowerCase().includes(q) ||
+    t.to.toLowerCase().includes(q)
+  ) : null;
+
+  return (
+    <div style={{position:"fixed",inset:0,zIndex:500,background:"var(--bg)",
+      display:"flex",flexDirection:"column",animation:"fo .18s ease both"}}>
+      {/* Header */}
+      <div style={{borderBottom:"1px solid var(--bd)",background:"var(--sf)",flexShrink:0,
+        padding:"0 20px",height:56,display:"flex",alignItems:"center",gap:12}}>
+        <span style={{fontWeight:700,fontSize:15,letterSpacing:"-.03em",color:"var(--t1)",flexShrink:0}}>
+          morf<span style={{fontWeight:300,color:"var(--ac)"}}>.</span><span style={{fontWeight:400,color:"var(--ac)"}}>pdf</span>
+        </span>
+        <div style={{flex:1,position:"relative",maxWidth:440}}>
+          <Ic n="search" s={13} c="var(--tm)"
+            style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",pointerEvents:"none"}}/>
+          <input ref={inputRef} value={search} onChange={e=>setSearch(e.target.value)}
+            placeholder={T.search_ph}
+            style={{width:"100%",padding:"8px 32px 8px 30px",border:"1px solid var(--bd)",
+              borderRadius:8,background:"var(--bg)",fontSize:13,color:"var(--t1)",
+              outline:"none",fontFamily:"'DM Sans',sans-serif",transition:"border-color .15s"}}
+            onFocus={e=>e.target.style.borderColor="var(--ac)"}
+            onBlur={e=>e.target.style.borderColor="var(--bd)"}/>
+          {search&&<button onClick={()=>setSearch("")}
+            style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",
+              background:"none",border:"none",cursor:"pointer",padding:0,display:"flex"}}>
+            <Ic n="x" s={12} c="var(--tm)"/>
+          </button>}
+        </div>
+        <button onClick={onClose}
+          style={{display:"inline-flex",alignItems:"center",gap:6,background:"transparent",
+            border:"1px solid var(--bd)",borderRadius:7,padding:"6px 13px",cursor:"pointer",
+            fontSize:12,color:"var(--t2)",fontFamily:"'DM Sans',sans-serif",flexShrink:0,
+            transition:"all .15s"}}
+          onMouseEnter={e=>{e.currentTarget.style.background="var(--al)";e.currentTarget.style.borderColor="var(--ac)"}}
+          onMouseLeave={e=>{e.currentTarget.style.background="transparent";e.currentTarget.style.borderColor="var(--bd)"}}>
+          <Ic n="x" s={14} c="var(--t2)"/>
+          Cerrar
+        </button>
+      </div>
+      {/* Body */}
+      <div style={{flex:1,overflowY:"auto",padding:"28px 20px 48px"}}>
+        <div style={{maxWidth:960,margin:"0 auto"}}>
+          {hits ? (
+            hits.length > 0 ? (
+              <div className="grid">
+                {hits.map((t,i)=>(
+                  <ToolCard key={t.id} t={t} i={i} goToTool={t2=>{goToTool(t2);onClose();}}/>
+                ))}
+              </div>
+            ) : (
+              <div style={{textAlign:"center",padding:"72px 0",color:"var(--tm)",fontSize:13}}>
+                No se encontraron herramientas para «{search}»
+              </div>
+            )
+          ) : (
+            MENU_CATS.map(({key,color,ids})=>{
+              const tools = ids.map(id=>TOOLS.find(t=>t.id===id)).filter(Boolean);
+              if (!tools.length) return null;
+              return (
+                <div key={key} style={{marginBottom:32}}>
+                  <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:12}}>
+                    <span style={{width:8,height:8,borderRadius:"50%",background:color,display:"inline-block",flexShrink:0}}/>
+                    <span style={{fontSize:11,fontWeight:700,letterSpacing:".08em",
+                      textTransform:"uppercase",color:"var(--t2)"}}>{T[key]}</span>
+                    <span style={{fontSize:10,color:"var(--tm)",fontFamily:"'DM Mono',monospace"}}>
+                      · {tools.filter(t=>!t.comingSoon).length}
+                    </span>
+                  </div>
+                  <div className="grid">
+                    {tools.map((t,i)=>(
+                      <ToolCard key={t.id} t={t} i={i} goToTool={t2=>{goToTool(t2);onClose();}}/>
+                    ))}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── App ─────────────────────────────────────────────────────────────────── */
 export default function App() {
   const [lang, setLang]       = useState(detectLang);
@@ -407,6 +519,7 @@ export default function App() {
   const [billingYear, setBillingYear] = useState(true);
   const [showAllTools, setShowAllTools] = useState(false);
   const [showDashboard, setShowDashboard] = useState(false);
+  const [showToolsMenu, setShowToolsMenu] = useState(false);
   const [toolSearch, setToolSearch] = useState("");
   const [preloadedFile, setPreloadedFile] = useState(null);
   const [dropCandidates, setDropCandidates] = useState(null); // {file, tools[]}
@@ -604,6 +717,19 @@ export default function App() {
               <span style={{fontSize:9,fontFamily:"'DM Mono',monospace",background:"var(--al)",color:"var(--ac)",padding:"2px 6px",borderRadius:3,fontWeight:500}}>BETA</span>
             </div>
             <nav aria-label="Menú principal" style={{display:"flex",gap:16,alignItems:"center"}}>
+              {/* Todas las herramientas — hamburguer */}
+              <button onClick={()=>setShowToolsMenu(true)}
+                aria-label="Ver todas las herramientas"
+                style={{display:"inline-flex",alignItems:"center",gap:6,
+                  background:"var(--al)",border:"1px solid var(--bd)",
+                  borderRadius:7,padding:"5px 11px",cursor:"pointer",
+                  fontSize:12,color:"var(--ac)",fontFamily:"'DM Sans',sans-serif",
+                  fontWeight:500,transition:"all .16s"}}
+                onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--ac)";e.currentTarget.style.background="var(--al)"}}
+                onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--bd)";e.currentTarget.style.background="var(--al)"}}>
+                <Ic n="grid" s={13} c="var(--ac)"/>
+                <span className="m-nav-labels">Herramientas</span>
+              </button>
               {history.length > 0 && (
                 <button className="nl m-nav-labels" onClick={()=>setShowDashboard(true)}
                   style={{display:"inline-flex",alignItems:"center",gap:4}}>
@@ -1156,6 +1282,12 @@ export default function App() {
         )}
 
         {toast&&<Toast message={toast.msg} type={toast.type} onClose={()=>setToast(null)}/>}
+
+        {/* Tools full-screen menu */}
+        {showToolsMenu&&(
+          <ToolsMenuOverlay TOOLS={TOOLS} goToTool={goToTool} T={T}
+            onClose={()=>setShowToolsMenu(false)}/>
+        )}
 
         {/* Drop overlay — choose tool for dropped file */}
         {dropCandidates&&(
