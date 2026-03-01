@@ -211,6 +211,14 @@ const css = `
   /* Overlay: el título sólo se muestra en móvil (logo visible en desktop) */
   .m-overlay-title{display:none}
 
+  /* Onboarding banner */
+  @keyframes ob{0%{transform:translateY(-8px);opacity:0}100%{transform:translateY(0);opacity:1}}
+  .onboarding-banner{animation:ob .4s .6s ease both}
+
+  /* PWA install banner (desliza desde abajo) */
+  @keyframes pwa-in{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  .pwa-banner{animation:pwa-in .35s cubic-bezier(.25,.46,.45,.94) both}
+
   /* Tool list item hover */
   .tli:hover{background:var(--al)}
   .tli:focus-visible{outline:2px solid var(--ac);outline-offset:-2px;background:var(--al)}
@@ -417,7 +425,7 @@ function useReveal(threshold=0.12) {
 }
 
 /* ── Tool Page (hash routing + SEO) ─────────────────────────────────────── */
-function ToolPage({ tool, showToast, bumpCount, addToHistory, checkLimits, onBack, preloadedFile=null, onGoToTool=null }) {
+function ToolPage({ tool, showToast, bumpCount, addToHistory, checkLimits, onBack, preloadedFile=null, onGoToTool=null, TOOLS=[] }) {
   useEffect(() => {
     document.title = `${tool.label} — morf`;
     const meta = document.querySelector('meta[name="description"]');
@@ -442,32 +450,90 @@ function ToolPage({ tool, showToast, bumpCount, addToHistory, checkLimits, onBac
     if (!existing) document.head.appendChild(s);
     return () => { document.title = 'morf'; document.getElementById('ld-tool')?.remove(); };
   }, [tool.id, tool.label, tool.desc, tool.pro]);
+  // Herramientas relacionadas: misma categoría, excluye la actual
+  const related = (() => {
+    const cat = MENU_CATS.find(c => c.ids.includes(tool.id));
+    if (!cat) return [];
+    return cat.ids
+      .filter(id => id !== tool.id)
+      .map(id => TOOLS.find(t => t.id === id))
+      .filter(Boolean)
+      .slice(0, 4);
+  })();
+
+  const shareUrl = `${window.location.origin}/${tool.id}`;
+  const handleShare = () => {
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      showToast('Enlace copiado', 'ok');
+    }).catch(() => {
+      showToast('No se pudo copiar', 'err');
+    });
+  };
+
   return (
     <div className="tool-page-enter" style={{minHeight:"100vh"}}>
-      <div style={{maxWidth:960,margin:"0 auto",padding:"16px 20px"}}>
+      {/* Cabecera de navegación */}
+      <div style={{maxWidth:960,margin:"0 auto",padding:"16px 20px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
         <button onClick={onBack} className="nl"
           style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:13,color:"var(--t2)",minHeight:44,padding:"0 4px"}}>
           <span style={{display:"inline-flex",transform:"rotate(90deg)"}}><Ic n="chevron" s={14} c="var(--t2)"/></span>
           morf
         </button>
+        {/* Botón compartir */}
+        <button onClick={handleShare} className="bg"
+          style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:12,padding:"5px 11px",height:32}}
+          title={`Copiar enlace: ${shareUrl}`}>
+          <Ic n="share" s={13} c="var(--t2)"/>
+          <span className="m-nav-labels">Compartir</span>
+        </button>
       </div>
+
+      {/* Hero de la herramienta */}
       <div style={{maxWidth:960,margin:"0 auto",padding:"0 20px 32px",textAlign:"center"}}>
-        <div style={{width:52,height:52,borderRadius:14,background:"var(--al)",
-          display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px"}}>
-          <Ic n={tool.icon} s={22} c="var(--ac)"/>
+        <div style={{width:56,height:56,borderRadius:15,background:"var(--al)",
+          display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px",
+          border:"1px solid var(--bd)"}}>
+          <Ic n={tool.icon} s={24} c="var(--ac)"/>
         </div>
         <h1 style={{fontSize:"clamp(22px,4vw,36px)",fontWeight:700,letterSpacing:"-.02em",marginBottom:8}}>{tool.label}</h1>
-        <p style={{fontSize:15,color:"var(--t2)",maxWidth:440,margin:"0 auto"}}>{tool.desc}</p>
+        <p style={{fontSize:15,color:"var(--t2)",maxWidth:440,margin:"0 auto 14px",lineHeight:1.7}}>{tool.desc}</p>
+        {/* Tags de formato */}
+        <div style={{display:"flex",gap:6,justifyContent:"center",alignItems:"center"}}>
+          <Tag type={tool.from}/>
+          <Ic n="arrow" s={14} c="var(--tm)"/>
+          <Tag type={tool.to}/>
+          {tool.pro&&<span style={{fontSize:9,fontWeight:700,fontFamily:"'DM Mono',monospace",
+            background:"var(--ac)",color:"#fff",borderRadius:3,padding:"2px 6px",letterSpacing:".04em"}}>PRO</span>}
+        </div>
       </div>
+
+      {/* Panel principal */}
       <div style={{maxWidth:560,margin:"0 auto",padding:"0 20px 32px"}}>
         <Panel tool={tool} onClose={onBack} showToast={showToast}
           bumpCount={bumpCount} addToHistory={addToHistory} checkLimits={checkLimits}
           preloadedFile={preloadedFile} onGoToTool={onGoToTool}/>
       </div>
-      {/* Anuncio 4 — post-conversión */}
-      <div style={{maxWidth:560,margin:"0 auto",padding:"0 20px 48px"}}>
+
+      {/* Anuncio */}
+      <div style={{maxWidth:560,margin:"0 auto",padding:"0 20px 32px"}}>
         <AdUnit slot="5009358755" style={{minHeight:90}}/>
       </div>
+
+      {/* Herramientas relacionadas */}
+      {related.length > 0 && (
+        <div style={{maxWidth:960,margin:"0 auto",padding:"0 20px 48px"}}>
+          <div style={{borderTop:"1px solid var(--bd)",paddingTop:28}}>
+            <h2 style={{fontSize:14,fontWeight:600,marginBottom:16,color:"var(--t2)",letterSpacing:"-.01em"}}>
+              Herramientas relacionadas
+            </h2>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:10}}>
+              {related.map((t,i)=>(
+                <ToolCard key={t.id} t={t} i={i} goToTool={onGoToTool||onBack}/>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -766,6 +832,8 @@ export default function App() {
   const [toolSearch, setToolSearch] = useState("");
   const [preloadedFile, setPreloadedFile] = useState(null);
   const [dropCandidates, setDropCandidates] = useState(null); // {file, tools[]}
+  const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('morf-onboarded'));
+  const [pwaPrompt, setPwaPrompt] = useState(null); // beforeinstallprompt event
   const searchInputRef = useRef(null);
   // Scroll-reveal refs para las secciones de la landing
   const rvStats    = useReveal(0.1);
@@ -777,6 +845,13 @@ export default function App() {
   useEffect(() => {
     document.body.style.background = dark ? '#0F1117' : '#F9F9F8';
   }, [dark]);
+
+  // Captura el evento de instalación PWA
+  useEffect(() => {
+    const handler = e => { e.preventDefault(); setPwaPrompt(e); };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
 
   useEffect(() => {
     const onPop = () => {
@@ -890,9 +965,14 @@ export default function App() {
   // Build tools with translated labels
   const TOOLS = TOOL_BASE.map((t,i) => ({ ...t, ...T.t[i] }));
 
+  const dismissOnboarding = () => {
+    if (showOnboarding) { setShowOnboarding(false); localStorage.setItem('morf-onboarded','1'); }
+  };
+
   const heroDrop = e => {
     e.preventDefault(); setGlobalDrag(false);
     if (fullToolPage) return; // let Panel handle its own drops
+    dismissOnboarding();
     const file = e.dataTransfer.files[0];
     if (!file) return;
     const ext = "."+file.name.split(".").pop().toLowerCase();
@@ -919,6 +999,7 @@ export default function App() {
   };
 
   const goToTool = (t, preFile=null) => {
+    dismissOnboarding();
     if (t.comingSoon) { showToast(T.coming_soon_toast||"¡Próximamente! Estamos trabajando en esta herramienta.","ok"); return; }
     window.history.pushState(null, '', `/${t.id}`);
     setToolPage(t);
@@ -944,7 +1025,8 @@ export default function App() {
         {fullToolPage&&(
           <ToolPage tool={fullToolPage} showToast={showToast}
             bumpCount={bumpCount} addToHistory={addToHistory} checkLimits={checkLimits}
-            onBack={backHome} preloadedFile={preloadedFile} onGoToTool={goToTool}/>
+            onBack={backHome} preloadedFile={preloadedFile} onGoToTool={goToTool}
+            TOOLS={TOOLS}/>
         )}
 
         {/* Main app — hidden (not unmounted) when tool page is active */}
@@ -1105,6 +1187,31 @@ export default function App() {
             )}
 
           </div>
+
+          {/* Onboarding hint — primer uso */}
+          {showOnboarding && !fullToolPage && (
+            <div className="onboarding-banner" style={{
+              display:"flex",alignItems:"center",gap:10,background:"var(--al)",
+              border:"1px solid var(--ac)",borderRadius:10,padding:"11px 16px",
+              marginBottom:24,maxWidth:440,margin:"0 auto 24px"}}>
+              <div style={{width:28,height:28,borderRadius:7,background:"var(--ac)",
+                display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                <Ic n="upload" s={13} c="#fff"/>
+              </div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:12,fontWeight:600,color:"var(--ac)",marginBottom:1}}>
+                  Arrastra un archivo aquí
+                </div>
+                <div style={{fontSize:11,color:"var(--t2)"}}>
+                  O pulsa en cualquier herramienta para empezar
+                </div>
+              </div>
+              <button onClick={()=>{setShowOnboarding(false);localStorage.setItem('morf-onboarded','1');}}
+                style={{background:"none",border:"none",cursor:"pointer",padding:4,display:"flex",flexShrink:0}}>
+                <Ic n="x" s={13} c="var(--tm)"/>
+              </button>
+            </div>
+          )}
 
           {/* Stats grid */}
           <div ref={rvStats} className="rv-wrap m-stats" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:48}}>
@@ -1511,6 +1618,35 @@ export default function App() {
         )}
 
         {toast&&<Toast message={toast.msg} type={toast.type} onClose={()=>setToast(null)}/>}
+
+        {/* PWA install banner */}
+        {pwaPrompt&&(
+          <div className="pwa-banner" style={{position:"fixed",bottom:0,left:0,right:0,zIndex:190,
+            background:"var(--sf)",borderTop:"1px solid var(--bd)",padding:"14px 20px",
+            display:"flex",alignItems:"center",gap:12,boxShadow:"0 -4px 20px rgba(0,0,0,.08)"}}>
+            <div style={{width:36,height:36,borderRadius:9,background:"var(--al)",
+              display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              <Ic n="zap" s={16} c="var(--ac)"/>
+            </div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:13,fontWeight:600,color:"var(--t1)"}}>Instala morf en tu dispositivo</div>
+              <div style={{fontSize:11,color:"var(--tm)"}}>Acceso rápido sin abrir el navegador</div>
+            </div>
+            <button className="bp" style={{fontSize:12,padding:"7px 14px",flexShrink:0}}
+              onClick={async()=>{
+                pwaPrompt.prompt();
+                const {outcome} = await pwaPrompt.userChoice;
+                if(outcome==='accepted') setPwaPrompt(null);
+              }}>
+              Instalar
+            </button>
+            <button onClick={()=>setPwaPrompt(null)}
+              style={{background:"none",border:"none",cursor:"pointer",padding:4,display:"flex",flexShrink:0}}>
+              <Ic n="x" s={15} c="var(--tm)"/>
+            </button>
+          </div>
+        )}
+
         <ScrollTop/>
 
         {/* Tools full-screen menu */}
