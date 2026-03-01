@@ -1002,6 +1002,7 @@ export default function App() {
     dismissOnboarding();
     if (t.comingSoon) { showToast(T.coming_soon_toast||"¡Próximamente! Estamos trabajando en esta herramienta.","ok"); return; }
     window.history.pushState(null, '', `/${t.id}`);
+    window.scrollTo({ top: 0, behavior: 'instant' });
     setToolPage(t);
     setPreloadedFile(preFile || null);
   };
