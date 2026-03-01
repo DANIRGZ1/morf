@@ -104,7 +104,7 @@ describe('UpgradeModal — interactions', () => {
   })
 
   it('calls onClose when the backdrop is clicked', async () => {
-    const { user } = setup()
+    setup()
     // The overlay div has onClick=onClose
     const overlay = document.querySelector('.ov')
     if (overlay) fireEvent.click(overlay)
@@ -164,7 +164,6 @@ describe('UpgradeModal — interactions', () => {
   })
 
   it('redirects when the API returns a url', async () => {
-    const originalLocation = window.location.href
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       json: () => Promise.resolve({ url: 'https://checkout.stripe.com/test' }),
     }))

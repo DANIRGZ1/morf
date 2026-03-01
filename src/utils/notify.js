@@ -24,7 +24,7 @@ export async function notifyDone(label) {
       const reg = await navigator.serviceWorker.ready;
       await reg.showNotification(title, opts);
       return;
-    } catch (_) { /* fallback */ }
+    } catch { /* fallback */ }
   }
   new Notification(title, opts);
 }

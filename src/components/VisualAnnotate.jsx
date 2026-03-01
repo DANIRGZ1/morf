@@ -5,7 +5,6 @@ const COLORS = { red: "#e11d48", blue: "#2563eb", black: "#111" };
 
 export default function VisualAnnotate({ file, showToast }) {
   const canvasRef  = useRef(null);
-  const svgRef     = useRef(null);
   const [page, setPage]         = useState(1);
   const [numPages, setNumPages] = useState(1);
   const [dims, setDims]         = useState({ pdfW: 595, pdfH: 842, scale: 1 });

@@ -1239,7 +1239,7 @@ describe('htmlToPdf', () => {
   })
 
   it('does not inject script when window.print already present', async () => {
-    const withPrint = '<html><body><script>window.print();<\/script></body></html>'
+    const withPrint = '<html><body><script>window.print();</script></body></html>'
     const mockWin = { document: { open: vi.fn(), write: vi.fn(), close: vi.fn() } }
     vi.spyOn(window, 'open').mockReturnValue(mockWin)
     const result = await htmlToPdf(makeHtml(withPrint))
