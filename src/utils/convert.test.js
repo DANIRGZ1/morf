@@ -28,7 +28,9 @@ vi.mock('pdf-lib', () => ({
     create: vi.fn().mockResolvedValue(mockPdfDoc),
     load:   vi.fn().mockResolvedValue(mockPdfDoc),
   },
-  degrees: vi.fn(angle => ({ type: 'degrees', angle })),
+  degrees:       vi.fn(angle => ({ type: 'degrees', angle })),
+  rgb:           vi.fn((r, g, b) => ({ r, g, b })),
+  StandardFonts: { Helvetica: 'Helvetica', HelveticaBold: 'Helvetica-Bold' },
 }))
 
 vi.mock('mammoth', () => ({
@@ -594,5 +596,345 @@ describe('jpgToPng', () => {
     await jpgToPng(makeFile())
     // 1st call: source blob for Image.src; 2nd call: download anchor href
     expect(URL.createObjectURL).toHaveBeenCalledTimes(2)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────
+// Additional imports for the extended test suite
+// ─────────────────────────────────────────────────────────────────
+import {
+  unlockPdf,
+  unlockPdfToBlob,
+  watermarkPdf,
+  watermarkPdfToBlob,
+  numberPagesPdf,
+  numberPagesPdfToBlob,
+  cropPdf,
+  cropPdfToBlob,
+  compressPdfToBlob,
+  rotatePdfToBlob,
+  excelToPdf,
+  splitPdf,
+} from './convert'
+
+const makeFilePdf = (name = 'doc.pdf') =>
+  new File([new Uint8Array(10)], name, { type: 'application/pdf' })
+
+// ─────────────────────────────────────────────────────────────────
+// unlockPdf / unlockPdfToBlob
+// ─────────────────────────────────────────────────────────────────
+describe('unlockPdf', () => {
+  beforeEach(() => {
+    mockPdfSave.mockReset().mockResolvedValue(new Uint8Array([1, 2, 3]))
+    URL.createObjectURL.mockClear()
+  })
+
+  it('saves the document and triggers a download', async () => {
+    await unlockPdf(makeFilePdf())
+    expect(mockPdfSave).toHaveBeenCalled()
+    expect(URL.createObjectURL).toHaveBeenCalled()
+  })
+
+  it('download filename contains "-unlocked"', async () => {
+    const spy = vi.spyOn(document.body, 'appendChild')
+    await unlockPdf(new File([new Uint8Array(10)], 'locked.pdf', { type: 'application/pdf' }))
+    const anchor = spy.mock.calls.find(([el]) => el.tagName === 'A')?.[0]
+    expect(anchor?.download).toContain('unlocked')
+    spy.mockRestore()
+  })
+})
+
+describe('unlockPdfToBlob', () => {
+  beforeEach(() => {
+    mockPdfSave.mockReset().mockResolvedValue(new Uint8Array([1, 2, 3]))
+  })
+
+  it('returns a PDF Blob', async () => {
+    const blob = await unlockPdfToBlob(makeFilePdf())
+    expect(blob).toBeInstanceOf(Blob)
+    expect(blob.type).toBe('application/pdf')
+  })
+
+  it('does NOT trigger a download', async () => {
+    URL.createObjectURL.mockClear()
+    await unlockPdfToBlob(makeFilePdf())
+    expect(URL.createObjectURL).not.toHaveBeenCalled()
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────
+// watermarkPdf / watermarkPdfToBlob
+// ─────────────────────────────────────────────────────────────────
+describe('watermarkPdf', () => {
+  beforeEach(() => {
+    mockPdfSave.mockReset().mockResolvedValue(new Uint8Array([1, 2, 3]))
+    URL.createObjectURL.mockClear()
+    mockPdfDoc.embedFont = vi.fn().mockResolvedValue({
+      widthOfTextAtSize: vi.fn().mockReturnValue(100),
+    })
+    mockPage.getSize  = vi.fn().mockReturnValue({ width: 595, height: 842 })
+    mockPage.drawText = vi.fn()
+  })
+
+  it('saves the PDF and triggers a download', async () => {
+    await watermarkPdf(makeFilePdf(), 'CONFIDENTIAL')
+    expect(mockPdfSave).toHaveBeenCalled()
+    expect(URL.createObjectURL).toHaveBeenCalled()
+  })
+
+  it('calls drawText on each page', async () => {
+    await watermarkPdf(makeFilePdf(), 'DRAFT')
+    expect(mockPage.drawText).toHaveBeenCalledWith('DRAFT', expect.any(Object))
+  })
+
+  it('uses the default opacity of 0.15', async () => {
+    await watermarkPdf(makeFilePdf(), 'SECRET')
+    const opts = mockPage.drawText.mock.calls[0][1]
+    expect(opts.opacity).toBe(0.15)
+  })
+
+  it('respects a custom opacity', async () => {
+    await watermarkPdf(makeFilePdf(), 'LOW', 0.05)
+    const opts = mockPage.drawText.mock.calls[0][1]
+    expect(opts.opacity).toBe(0.05)
+  })
+})
+
+describe('watermarkPdfToBlob', () => {
+  beforeEach(() => {
+    mockPdfSave.mockReset().mockResolvedValue(new Uint8Array([4, 5, 6]))
+    mockPdfDoc.embedFont = vi.fn().mockResolvedValue({ widthOfTextAtSize: vi.fn().mockReturnValue(80) })
+    mockPage.getSize  = vi.fn().mockReturnValue({ width: 595, height: 842 })
+    mockPage.drawText = vi.fn()
+  })
+
+  it('returns a PDF Blob without downloading', async () => {
+    URL.createObjectURL.mockClear()
+    const blob = await watermarkPdfToBlob(makeFilePdf(), 'DRAFT')
+    expect(blob).toBeInstanceOf(Blob)
+    expect(blob.type).toBe('application/pdf')
+    expect(URL.createObjectURL).not.toHaveBeenCalled()
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────
+// numberPagesPdf / numberPagesPdfToBlob
+// ─────────────────────────────────────────────────────────────────
+describe('numberPagesPdf', () => {
+  beforeEach(() => {
+    mockPdfSave.mockReset().mockResolvedValue(new Uint8Array([1, 2, 3]))
+    URL.createObjectURL.mockClear()
+    mockPdfDoc.embedFont = vi.fn().mockResolvedValue({ widthOfTextAtSize: vi.fn().mockReturnValue(30) })
+    mockPage.getSize  = vi.fn().mockReturnValue({ width: 595, height: 842 })
+    mockPage.drawText = vi.fn()
+  })
+
+  it('triggers a download', async () => {
+    await numberPagesPdf(makeFilePdf())
+    expect(URL.createObjectURL).toHaveBeenCalled()
+  })
+
+  it('draws page numbers on every page', async () => {
+    await numberPagesPdf(makeFilePdf())
+    expect(mockPage.drawText).toHaveBeenCalled()
+  })
+
+  it('download filename contains "-numerado"', async () => {
+    const spy = vi.spyOn(document.body, 'appendChild')
+    await numberPagesPdf(new File([new Uint8Array(10)], 'report.pdf', { type: 'application/pdf' }))
+    const anchor = spy.mock.calls.find(([el]) => el.tagName === 'A')?.[0]
+    expect(anchor?.download).toContain('numerado')
+    spy.mockRestore()
+  })
+})
+
+describe('numberPagesPdfToBlob', () => {
+  beforeEach(() => {
+    mockPdfSave.mockReset().mockResolvedValue(new Uint8Array([7, 8, 9]))
+    mockPdfDoc.embedFont = vi.fn().mockResolvedValue({ widthOfTextAtSize: vi.fn().mockReturnValue(30) })
+    mockPage.getSize  = vi.fn().mockReturnValue({ width: 595, height: 842 })
+    mockPage.drawText = vi.fn()
+  })
+
+  it('returns a PDF Blob without downloading', async () => {
+    URL.createObjectURL.mockClear()
+    const blob = await numberPagesPdfToBlob(makeFilePdf())
+    expect(blob).toBeInstanceOf(Blob)
+    expect(URL.createObjectURL).not.toHaveBeenCalled()
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────
+// cropPdf / cropPdfToBlob
+// ─────────────────────────────────────────────────────────────────
+describe('cropPdf', () => {
+  beforeEach(() => {
+    mockPdfSave.mockReset().mockResolvedValue(new Uint8Array([1, 2, 3]))
+    URL.createObjectURL.mockClear()
+    mockPage.getSize    = vi.fn().mockReturnValue({ width: 595, height: 842 })
+    mockPage.setCropBox = vi.fn()
+  })
+
+  it('triggers a download', async () => {
+    await cropPdf(makeFilePdf(), { top: 0, bottom: 0, left: 0, right: 0 })
+    expect(URL.createObjectURL).toHaveBeenCalled()
+  })
+
+  it('calls setCropBox on pages with positive dimensions', async () => {
+    await cropPdf(makeFilePdf(), { top: 0, bottom: 0, left: 0, right: 0 })
+    expect(mockPage.setCropBox).toHaveBeenCalled()
+  })
+
+  it('download filename contains "-recortado"', async () => {
+    const spy = vi.spyOn(document.body, 'appendChild')
+    await cropPdf(new File([new Uint8Array(10)], 'img.pdf', { type: 'application/pdf' }), { top: 5, bottom: 5, left: 5, right: 5 })
+    const anchor = spy.mock.calls.find(([el]) => el.tagName === 'A')?.[0]
+    expect(anchor?.download).toContain('recortado')
+    spy.mockRestore()
+  })
+})
+
+describe('cropPdfToBlob', () => {
+  beforeEach(() => {
+    mockPdfSave.mockReset().mockResolvedValue(new Uint8Array([1]))
+    mockPage.getSize    = vi.fn().mockReturnValue({ width: 595, height: 842 })
+    mockPage.setCropBox = vi.fn()
+  })
+
+  it('returns a PDF Blob without downloading', async () => {
+    URL.createObjectURL.mockClear()
+    const blob = await cropPdfToBlob(makeFilePdf(), { top: 0, bottom: 0, left: 0, right: 0 })
+    expect(blob).toBeInstanceOf(Blob)
+    expect(URL.createObjectURL).not.toHaveBeenCalled()
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────
+// compressPdfToBlob
+// ─────────────────────────────────────────────────────────────────
+describe('compressPdfToBlob', () => {
+  beforeEach(() => {
+    mockPdfSave.mockReset().mockResolvedValue(new Uint8Array([1, 2, 3]))
+  })
+
+  it('returns a PDF Blob', async () => {
+    const blob = await compressPdfToBlob(makeFilePdf(), 'medium')
+    expect(blob).toBeInstanceOf(Blob)
+    expect(blob.type).toBe('application/pdf')
+  })
+
+  it('does NOT trigger a download', async () => {
+    URL.createObjectURL.mockClear()
+    await compressPdfToBlob(makeFilePdf(), 'high')
+    expect(URL.createObjectURL).not.toHaveBeenCalled()
+  })
+
+  it('passes objectsPerTick=100 for high compression', async () => {
+    await compressPdfToBlob(makeFilePdf(), 'high')
+    expect(mockPdfSave).toHaveBeenCalledWith(
+      expect.objectContaining({ objectsPerTick: 100 })
+    )
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────
+// rotatePdfToBlob
+// ─────────────────────────────────────────────────────────────────
+describe('rotatePdfToBlob', () => {
+  beforeEach(() => {
+    mockPdfSave.mockReset().mockResolvedValue(new Uint8Array([1, 2, 3]))
+    mockSetRotation.mockClear()
+    mockPage.getRotation.mockReturnValue({ angle: 0 })
+  })
+
+  it('returns a PDF Blob', async () => {
+    const blob = await rotatePdfToBlob(makeFilePdf(), 90)
+    expect(blob).toBeInstanceOf(Blob)
+    expect(blob.type).toBe('application/pdf')
+  })
+
+  it('does NOT trigger a download', async () => {
+    URL.createObjectURL.mockClear()
+    await rotatePdfToBlob(makeFilePdf(), 90)
+    expect(URL.createObjectURL).not.toHaveBeenCalled()
+  })
+
+  it('calls setRotation on all pages', async () => {
+    await rotatePdfToBlob(makeFilePdf(), 180)
+    expect(mockSetRotation).toHaveBeenCalled()
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────
+// splitPdf
+// ─────────────────────────────────────────────────────────────────
+describe('splitPdf', () => {
+  beforeEach(() => {
+    mockPdfSave.mockReset().mockResolvedValue(new Uint8Array([1, 2, 3]))
+    mockPdfDoc.getPageCount.mockReturnValue(5)
+    mockPdfDoc.copyPages.mockClear()
+    URL.createObjectURL.mockClear()
+  })
+
+  it('creates one output PDF per page in the range', async () => {
+    await splitPdf(makeFilePdf(), '1-2')
+    expect(mockPdfDoc.copyPages).toHaveBeenCalledTimes(2)
+  })
+
+  it('triggers a download for each page', async () => {
+    await splitPdf(makeFilePdf(), '1-3')
+    expect(URL.createObjectURL).toHaveBeenCalledTimes(3)
+  })
+
+  it('throws when the range is invalid', async () => {
+    await expect(splitPdf(makeFilePdf(), '99')).rejects.toThrow('Rango de páginas inválido')
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────
+// excelToPdf
+// ─────────────────────────────────────────────────────────────────
+describe('excelToPdf', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+    delete window.XLSX
+  })
+
+  const makeXls = () =>
+    new File([new Uint8Array(10)], 'data.xlsx', { type: 'application/vnd.ms-excel' })
+
+  it('returns "popup-blocked" when window.open returns null', async () => {
+    window.XLSX = {
+      read: vi.fn().mockReturnValue({ SheetNames: ['Sheet1'], Sheets: { Sheet1: {} } }),
+      utils: { sheet_to_html: vi.fn().mockReturnValue('<table></table>') },
+    }
+    vi.spyOn(window, 'open').mockReturnValue(null)
+    expect(await excelToPdf(makeXls())).toBe('popup-blocked')
+  })
+
+  it('returns "print-dialog" when popup opens', async () => {
+    window.XLSX = {
+      read: vi.fn().mockReturnValue({ SheetNames: ['Sheet1'], Sheets: { Sheet1: {} } }),
+      utils: { sheet_to_html: vi.fn().mockReturnValue('<table></table>') },
+    }
+    const mockWin = { document: { open: vi.fn(), write: vi.fn(), close: vi.fn() } }
+    vi.spyOn(window, 'open').mockReturnValue(mockWin)
+    expect(await excelToPdf(makeXls())).toBe('print-dialog')
+  })
+
+  it('writes HTML containing each sheet name', async () => {
+    window.XLSX = {
+      read: vi.fn().mockReturnValue({
+        SheetNames: ['Ventas', 'Gastos'],
+        Sheets: { Ventas: {}, Gastos: {} },
+      }),
+      utils: { sheet_to_html: vi.fn().mockReturnValue('<table></table>') },
+    }
+    const mockWin = { document: { open: vi.fn(), write: vi.fn(), close: vi.fn() } }
+    vi.spyOn(window, 'open').mockReturnValue(mockWin)
+    await excelToPdf(makeXls())
+    const html = mockWin.document.write.mock.calls[0][0]
+    expect(html).toContain('Ventas')
+    expect(html).toContain('Gastos')
   })
 })
