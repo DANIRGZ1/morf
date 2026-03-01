@@ -353,6 +353,36 @@ const css = `
     background:radial-gradient(ellipse at 15% 60%,rgba(99,102,241,.08) 0%,transparent 55%),
                radial-gradient(ellipse at 85% 40%,rgba(16,185,129,.06) 0%,transparent 55%);
   }
+
+  /* ── Stat cards: hover lift ──────────────────────────────────────────── */
+  .stat-card{transition:border-color .2s,transform .22s,box-shadow .22s!important}
+  .stat-card:hover{border-color:var(--ac)!important;transform:translateY(-3px)!important;
+    box-shadow:0 8px 24px rgba(0,0,0,.09)!important}
+
+  /* ── Hero badge dot: pulse ───────────────────────────────────────────── */
+  @keyframes hpulse{
+    0%{box-shadow:0 0 0 0 rgba(34,197,94,.5)}
+    70%{box-shadow:0 0 0 7px rgba(34,197,94,0)}
+    100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}
+  }
+  .hero-dot{animation:hpulse 2.5s ease-out infinite;border-radius:50%}
+
+  /* ── How-it-works step circles: gradient ────────────────────────────── */
+  .how-step-num{background:linear-gradient(145deg,var(--ac),var(--ah))!important;
+    box-shadow:0 4px 12px rgba(28,48,66,.2)}
+  .m.dark .how-step-num{box-shadow:0 4px 12px rgba(123,167,196,.2)}
+
+  /* ── Pro plan badge: subtle shimmer ─────────────────────────────────── */
+  @keyframes prsh{0%,100%{opacity:1}50%{opacity:.82}}
+  .pro-badge-pill{animation:prsh 3.2s ease infinite}
+
+  /* ── Feature icons: depth + hover scale ─────────────────────────────── */
+  .feat-icon{box-shadow:0 2px 10px rgba(0,0,0,.07);transition:transform .22s cubic-bezier(.34,1.56,.64,1)}
+  .rv-item:hover .feat-icon{transform:scale(1.1)}
+
+  /* ── Pro pricing card: soft glow ─────────────────────────────────────── */
+  .pro-card{box-shadow:0 6px 32px rgba(28,48,66,.13)!important}
+  .m.dark .pro-card{box-shadow:0 6px 32px rgba(123,167,196,.14)!important}
 `;
 
 /* ── AdSense Unit ────────────────────────────────────────────────────────── */
@@ -1034,7 +1064,10 @@ export default function App() {
         <div style={{display:fullToolPage?'none':'block'}}>
 
         {/* Header */}
-        <header style={{borderBottom:"1px solid var(--bd)",background:"var(--sf)",position:"sticky",top:0,zIndex:100}}>
+        <header style={{borderBottom:"1px solid var(--bd)",
+          background:dark?"rgba(15,17,23,.88)":"rgba(255,255,255,.88)",
+          backdropFilter:"blur(16px)",WebkitBackdropFilter:"blur(16px)",
+          position:"sticky",top:0,zIndex:100}}>
           <div className="m-header-inner" style={{maxWidth:960,margin:"0 auto",padding:"0 20px",height:52,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
             {/* Hamburger — solo visible en móvil, a la izquierda */}
             <button className="m-hamburger" onClick={()=>setShowToolsMenu(true)}
@@ -1148,7 +1181,7 @@ export default function App() {
           <div className="hero-seq" style={{textAlign:"center",marginBottom:44}}>
             {/* Badge */}
             <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"var(--sf)",border:"1px solid var(--bd)",borderRadius:20,padding:"3px 11px 3px 7px",fontSize:11,color:"var(--tm)",marginBottom:24,fontFamily:"'DM Mono',monospace"}}>
-              <span style={{width:6,height:6,borderRadius:"50%",background:"#22C55E",display:"inline-block"}}/>
+              <span className="hero-dot" style={{width:6,height:6,borderRadius:"50%",background:"#22C55E",display:"inline-block"}}/>
               {T.tagline}
             </div>
 
@@ -1222,7 +1255,7 @@ export default function App() {
               {value:"<3s",                                      label:T.stat_speed},
               {value:"100%",                                     label:T.stat_priv},
             ].map((s,i)=>(
-              <div key={i} className="rv-item" style={{textAlign:"center",padding:"16px 12px",background:"var(--sf)",
+              <div key={i} className="rv-item stat-card" style={{textAlign:"center",padding:"16px 12px",background:"var(--sf)",
                 border:"1px solid var(--bd)",borderRadius:10}}>
                 <div style={{fontSize:22,fontWeight:700,color:"var(--ac)",
                   fontFamily:"'DM Mono',monospace",marginBottom:4,letterSpacing:"-.02em"}}>{s.value}</div>
@@ -1248,7 +1281,7 @@ export default function App() {
                   padding:"24px 20px",background:"var(--sf)",border:"1px solid var(--bd)",
                   borderRadius:i===0?"10px 0 0 10px":i===2?"0 10px 10px 0":"0",
                   position:"relative"}}>
-                  <div style={{width:36,height:36,borderRadius:"50%",
+                  <div className="how-step-num" style={{width:36,height:36,borderRadius:"50%",
                     background:i===0?"var(--ac)":i===1?"var(--ah)":"var(--ok)",
                     display:"flex",alignItems:"center",justifyContent:"center",marginBottom:14,flexShrink:0}}>
                     <span style={{fontSize:14,fontWeight:700,color:"#fff",fontFamily:"'DM Mono',monospace"}}>{i+1}</span>
@@ -1447,7 +1480,7 @@ export default function App() {
           <div ref={rvFeatures} className="rv-wrap m-feat" style={{borderTop:"1px solid var(--bd)",marginTop:48,paddingTop:36,display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:20}}>
             {T.feat.map(([title,desc],i)=>(
               <div key={i} className="rv-item" style={{display:"flex",gap:11,alignItems:"flex-start"}}>
-                <div style={{width:30,height:30,borderRadius:7,
+                <div className="feat-icon" style={{width:30,height:30,borderRadius:7,
                   background:["#DBEAFE","#D1FAE5","#ECFDF5","#EDE9FE"][i],
                   display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                   <Ic n={["file","check","download","compress"][i]} s={14}
@@ -1501,8 +1534,8 @@ export default function App() {
                 </button>
               </div>
               {/* Pro */}
-              <div style={{border:"2px solid var(--ac)",borderRadius:12,padding:"24px 20px",background:"var(--al)",position:"relative",marginTop:12}}>
-                <div style={{position:"absolute",top:-12,left:"50%",transform:"translateX(-50%)",
+              <div className="pro-card" style={{border:"2px solid var(--ac)",borderRadius:12,padding:"24px 20px",background:"var(--al)",position:"relative",marginTop:12}}>
+                <div className="pro-badge-pill" style={{position:"absolute",top:-12,left:"50%",transform:"translateX(-50%)",
                   background:"var(--ac)",color:"#fff",fontSize:10,fontWeight:600,padding:"3px 10px",borderRadius:10,
                   fontFamily:"'DM Mono',monospace",letterSpacing:".05em",whiteSpace:"nowrap"}}>MÁS POPULAR</div>
                 <div style={{fontWeight:600,fontSize:15,marginBottom:2,color:"var(--ac)"}}>{T.plan_pro}</div>
