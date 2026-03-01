@@ -5,8 +5,8 @@
  * Heavy convert utilities and AI sub-components are mocked so the suite
  * stays fast and purely unit-level.
  */
-import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 // ── mock all heavy convert utilities ─────────────────────────────
@@ -53,6 +53,7 @@ vi.mock('./icons', () => ({
 import { TOOL_BASE } from './Panel'
 import Panel from './Panel'
 import { LangCtx, LANGS } from '../contexts/LangContext'
+import * as convert from '../utils/convert'
 
 const T_ES = LANGS.es
 const Wrapper = ({ children }) => (
@@ -306,5 +307,491 @@ describe('Panel — preloadedFile prop', () => {
     expect(screen.getByText('90°')).toBeInTheDocument()
     expect(screen.getByText('180°')).toBeInTheDocument()
     expect(screen.getByText('270°')).toBeInTheDocument()
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────
+// Panel — convert flow (done state)
+// ─────────────────────────────────────────────────────────────────
+describe('Panel — convert flow', () => {
+  beforeEach(() => vi.clearAllMocks())
+  afterEach(() => vi.restoreAllMocks())
+
+  it('shows done state after successful pdf-word conversion', async () => {
+    const user = userEvent.setup()
+    convert.pdfToWord.mockResolvedValue(undefined)
+
+    const file = new File(['content'], 'test.pdf', { type: 'application/pdf' })
+    render(
+      <Wrapper>
+        <Panel
+          tool={mkTool('pdf-word')}
+          onClose={vi.fn()}
+          showToast={vi.fn()}
+          preloadedFile={file}
+        />
+      </Wrapper>
+    )
+
+    await user.click(screen.getByText(T_ES.convert))
+    await waitFor(() => expect(screen.getByText(T_ES.conv_done)).toBeInTheDocument())
+  })
+
+  it('shows done state after successful split conversion', async () => {
+    const user = userEvent.setup()
+    convert.splitPdf.mockResolvedValue(undefined)
+
+    const file = new File(['content'], 'test.pdf', { type: 'application/pdf' })
+    render(
+      <Wrapper>
+        <Panel
+          tool={mkTool('split')}
+          onClose={vi.fn()}
+          showToast={vi.fn()}
+          preloadedFile={file}
+        />
+      </Wrapper>
+    )
+
+    await user.click(screen.getByText(T_ES.convert))
+    await waitFor(() => expect(screen.getByText(T_ES.conv_done)).toBeInTheDocument())
+  })
+
+  it('shows done state after successful merge conversion', async () => {
+    const user = userEvent.setup()
+    convert.mergePdfs.mockResolvedValue(undefined)
+
+    const file = new File(['content'], 'test.pdf', { type: 'application/pdf' })
+    render(
+      <Wrapper>
+        <Panel
+          tool={mkTool('merge')}
+          onClose={vi.fn()}
+          showToast={vi.fn()}
+          preloadedFile={file}
+        />
+      </Wrapper>
+    )
+
+    await user.click(screen.getByText(T_ES.convert))
+    await waitFor(() => expect(screen.getByText(T_ES.conv_done)).toBeInTheDocument())
+  })
+
+  it('shows done state after compress with compress result', async () => {
+    const user = userEvent.setup()
+    const mockBlob = new Blob(['x'.repeat(512)], { type: 'application/pdf' })
+    convert.compressPdfToBlob.mockResolvedValue(mockBlob)
+
+    const file = new File(['x'.repeat(1024)], 'test.pdf', { type: 'application/pdf' })
+    render(
+      <Wrapper>
+        <Panel
+          tool={mkTool('compress')}
+          onClose={vi.fn()}
+          showToast={vi.fn()}
+          preloadedFile={file}
+        />
+      </Wrapper>
+    )
+
+    await user.click(screen.getByText(T_ES.convert))
+    await waitFor(() => expect(screen.getByText(T_ES.conv_done)).toBeInTheDocument())
+  })
+
+  it('shows error state after failed conversion', async () => {
+    const user = userEvent.setup()
+    convert.splitPdf.mockRejectedValue(new Error('PDF corrupted'))
+
+    const file = new File(['content'], 'test.pdf', { type: 'application/pdf' })
+    render(
+      <Wrapper>
+        <Panel
+          tool={mkTool('split')}
+          onClose={vi.fn()}
+          showToast={vi.fn()}
+          preloadedFile={file}
+        />
+      </Wrapper>
+    )
+
+    await user.click(screen.getByText(T_ES.convert))
+    await waitFor(() => expect(screen.getByText(T_ES.err_title)).toBeInTheDocument())
+  })
+
+  it('retry button in error state returns to idle', async () => {
+    const user = userEvent.setup()
+    convert.splitPdf.mockRejectedValue(new Error('fail'))
+
+    const file = new File(['content'], 'test.pdf', { type: 'application/pdf' })
+    render(
+      <Wrapper>
+        <Panel
+          tool={mkTool('split')}
+          onClose={vi.fn()}
+          showToast={vi.fn()}
+          preloadedFile={file}
+        />
+      </Wrapper>
+    )
+
+    await user.click(screen.getByText(T_ES.convert))
+    await waitFor(() => screen.getByText(T_ES.err_retry))
+    await user.click(screen.getByText(T_ES.err_retry))
+    expect(screen.getByText(T_ES.convert)).toBeInTheDocument()
+  })
+
+  it('shows error state when file is too large', async () => {
+    const user = userEvent.setup()
+
+    // Create file > 200MB by faking the size
+    const file = new File(['content'], 'huge.pdf', { type: 'application/pdf' })
+    Object.defineProperty(file, 'size', { value: 201 * 1024 * 1024, configurable: true })
+
+    render(
+      <Wrapper>
+        <Panel
+          tool={mkTool('compress')}
+          onClose={vi.fn()}
+          showToast={vi.fn()}
+          preloadedFile={file}
+        />
+      </Wrapper>
+    )
+
+    await user.click(screen.getByText(T_ES.convert))
+    await waitFor(() => expect(screen.getByText(T_ES.err_title)).toBeInTheDocument())
+  })
+
+  it('shows reconvert button in done state', async () => {
+    const user = userEvent.setup()
+    convert.pdfToWord.mockResolvedValue(undefined)
+
+    const file = new File(['content'], 'test.pdf', { type: 'application/pdf' })
+    render(
+      <Wrapper>
+        <Panel
+          tool={mkTool('pdf-word')}
+          onClose={vi.fn()}
+          showToast={vi.fn()}
+          preloadedFile={file}
+        />
+      </Wrapper>
+    )
+
+    await user.click(screen.getByText(T_ES.convert))
+    await waitFor(() => screen.getByText(T_ES.conv_done))
+    expect(screen.getByText(T_ES.reconvert || 'Repetir conversión')).toBeInTheDocument()
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────
+// Panel — tool-specific UIs
+// ─────────────────────────────────────────────────────────────────
+describe('Panel — sign-pdf UI', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it('shows signature pad for sign-pdf with preloaded file', () => {
+    const file = new File(['content'], 'test.pdf', { type: 'application/pdf' })
+    render(
+      <Wrapper>
+        <Panel tool={mkTool('sign-pdf')} onClose={vi.fn()} showToast={vi.fn()} preloadedFile={file} />
+      </Wrapper>
+    )
+    expect(screen.getAllByText(/Dibuja tu firma/).length).toBeGreaterThan(0)
+  })
+
+  it('shows page options for sign-pdf', () => {
+    const file = new File(['content'], 'test.pdf', { type: 'application/pdf' })
+    render(
+      <Wrapper>
+        <Panel tool={mkTool('sign-pdf')} onClose={vi.fn()} showToast={vi.fn()} preloadedFile={file} />
+      </Wrapper>
+    )
+    expect(screen.getByText('Primera')).toBeInTheDocument()
+    expect(screen.getByText('Última')).toBeInTheDocument()
+    expect(screen.getByText('Todas')).toBeInTheDocument()
+  })
+
+  it('convert button is disabled without signature', () => {
+    const file = new File(['content'], 'test.pdf', { type: 'application/pdf' })
+    render(
+      <Wrapper>
+        <Panel tool={mkTool('sign-pdf')} onClose={vi.fn()} showToast={vi.fn()} preloadedFile={file} />
+      </Wrapper>
+    )
+    expect(screen.getByText(T_ES.convert).closest('button')).toBeDisabled()
+  })
+
+  it('shows position arrow buttons for sign-pdf', () => {
+    const file = new File(['content'], 'test.pdf', { type: 'application/pdf' })
+    render(
+      <Wrapper>
+        <Panel tool={mkTool('sign-pdf')} onClose={vi.fn()} showToast={vi.fn()} preloadedFile={file} />
+      </Wrapper>
+    )
+    // Arrow buttons like ↖, ↗, etc.
+    expect(screen.getByText('↖')).toBeInTheDocument()
+    expect(screen.getByText('↘')).toBeInTheDocument()
+  })
+})
+
+describe('Panel — crop-pdf UI', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it('shows crop margin inputs for crop-pdf with preloaded file', () => {
+    const file = new File(['content'], 'test.pdf', { type: 'application/pdf' })
+    render(
+      <Wrapper>
+        <Panel tool={mkTool('crop-pdf')} onClose={vi.fn()} showToast={vi.fn()} preloadedFile={file} />
+      </Wrapper>
+    )
+    expect(screen.getByText(T_ES.crop_label || 'Márgenes a recortar (mm)')).toBeInTheDocument()
+  })
+})
+
+describe('Panel — annotate-pdf UI', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it('shows annotation text input for annotate-pdf with preloaded file', () => {
+    const file = new File(['content'], 'test.pdf', { type: 'application/pdf' })
+    render(
+      <Wrapper>
+        <Panel tool={mkTool('annotate-pdf')} onClose={vi.fn()} showToast={vi.fn()} preloadedFile={file} />
+      </Wrapper>
+    )
+    expect(screen.getByPlaceholderText(T_ES.annot_text || 'Texto de la anotación…')).toBeInTheDocument()
+  })
+
+  it('convert is disabled without annotations', () => {
+    const file = new File(['content'], 'test.pdf', { type: 'application/pdf' })
+    render(
+      <Wrapper>
+        <Panel tool={mkTool('annotate-pdf')} onClose={vi.fn()} showToast={vi.fn()} preloadedFile={file} />
+      </Wrapper>
+    )
+    expect(screen.getByText(T_ES.convert).closest('button')).toBeDisabled()
+  })
+
+  it('can add an annotation and it appears in the list', async () => {
+    const user = userEvent.setup()
+    const file = new File(['content'], 'test.pdf', { type: 'application/pdf' })
+    render(
+      <Wrapper>
+        <Panel tool={mkTool('annotate-pdf')} onClose={vi.fn()} showToast={vi.fn()} preloadedFile={file} />
+      </Wrapper>
+    )
+
+    const input = screen.getByPlaceholderText(T_ES.annot_text || 'Texto de la anotación…')
+    await user.type(input, 'My annotation text')
+    await user.click(screen.getByText(T_ES.annot_add_btn || '+ Añadir'))
+
+    expect(screen.getByText(/My annotation text/)).toBeInTheDocument()
+  })
+})
+
+describe('Panel — redact-pdf UI', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it('shows redact zone inputs for redact-pdf with preloaded file', () => {
+    const file = new File(['content'], 'test.pdf', { type: 'application/pdf' })
+    render(
+      <Wrapper>
+        <Panel tool={mkTool('redact-pdf')} onClose={vi.fn()} showToast={vi.fn()} preloadedFile={file} />
+      </Wrapper>
+    )
+    expect(screen.getByText(T_ES.redact_add || 'Añadir zona de redacción (en % del tamaño de página)')).toBeInTheDocument()
+  })
+
+  it('can add a redact zone', async () => {
+    const user = userEvent.setup()
+    const file = new File(['content'], 'test.pdf', { type: 'application/pdf' })
+    render(
+      <Wrapper>
+        <Panel tool={mkTool('redact-pdf')} onClose={vi.fn()} showToast={vi.fn()} preloadedFile={file} />
+      </Wrapper>
+    )
+
+    await user.click(screen.getByText(T_ES.redact_add_btn || '+ Añadir zona'))
+    // A redact zone entry should appear
+    expect(screen.getByText(/X:10%/)).toBeInTheDocument()
+  })
+})
+
+describe('Panel — AI sub-component tools', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it('renders ChatPdf for chat-pdf tool with preloaded file', () => {
+    const file = new File(['content'], 'test.pdf', { type: 'application/pdf' })
+    render(
+      <Wrapper>
+        <Panel tool={mkTool('chat-pdf')} onClose={vi.fn()} showToast={vi.fn()} preloadedFile={file} />
+      </Wrapper>
+    )
+    expect(screen.getByText('ChatPdf')).toBeInTheDocument()
+  })
+
+  it('renders VisualAnnotate for visual-annotate tool with preloaded file', () => {
+    const file = new File(['content'], 'test.pdf', { type: 'application/pdf' })
+    render(
+      <Wrapper>
+        <Panel tool={mkTool('visual-annotate')} onClose={vi.fn()} showToast={vi.fn()} preloadedFile={file} />
+      </Wrapper>
+    )
+    expect(screen.getByText('VisualAnnotate')).toBeInTheDocument()
+  })
+
+  it('renders SummarizePdf for summarize-pdf tool with preloaded file', () => {
+    const file = new File(['content'], 'test.pdf', { type: 'application/pdf' })
+    render(
+      <Wrapper>
+        <Panel tool={mkTool('summarize-pdf')} onClose={vi.fn()} showToast={vi.fn()} preloadedFile={file} />
+      </Wrapper>
+    )
+    expect(screen.getByText('SummarizePdf')).toBeInTheDocument()
+  })
+
+  it('renders ComparePdf for compare-pdf tool with preloaded file', () => {
+    const file = new File(['content'], 'test.pdf', { type: 'application/pdf' })
+    render(
+      <Wrapper>
+        <Panel tool={mkTool('compare-pdf')} onClose={vi.fn()} showToast={vi.fn()} preloadedFile={file} />
+      </Wrapper>
+    )
+    expect(screen.getByText('ComparePdf')).toBeInTheDocument()
+  })
+
+  it('does not show convert button for AI tools', () => {
+    const file = new File(['content'], 'test.pdf', { type: 'application/pdf' })
+    render(
+      <Wrapper>
+        <Panel tool={mkTool('chat-pdf')} onClose={vi.fn()} showToast={vi.fn()} preloadedFile={file} />
+      </Wrapper>
+    )
+    expect(screen.queryByText(T_ES.convert)).not.toBeInTheDocument()
+  })
+})
+
+describe('Panel — ocr-pdf UI', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it('shows language buttons for ocr-pdf with preloaded file', () => {
+    const file = new File(['content'], 'test.pdf', { type: 'application/pdf' })
+    render(
+      <Wrapper>
+        <Panel tool={mkTool('ocr-pdf')} onClose={vi.fn()} showToast={vi.fn()} preloadedFile={file} />
+      </Wrapper>
+    )
+    expect(screen.getByText('English')).toBeInTheDocument()
+    expect(screen.getByText('Español')).toBeInTheDocument()
+  })
+
+  it('changing ocr language selects the button', async () => {
+    const user = userEvent.setup()
+    const file = new File(['content'], 'test.pdf', { type: 'application/pdf' })
+    render(
+      <Wrapper>
+        <Panel tool={mkTool('ocr-pdf')} onClose={vi.fn()} showToast={vi.fn()} preloadedFile={file} />
+      </Wrapper>
+    )
+    await user.click(screen.getByText('Español'))
+    // Español button should now be active (no crash)
+    expect(screen.getByText('Español')).toBeInTheDocument()
+  })
+})
+
+describe('Panel — delete-pages UI', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it('shows pages input for delete-pages with preloaded file', () => {
+    const file = new File(['content'], 'test.pdf', { type: 'application/pdf' })
+    render(
+      <Wrapper>
+        <Panel tool={mkTool('delete-pages')} onClose={vi.fn()} showToast={vi.fn()} preloadedFile={file} />
+      </Wrapper>
+    )
+    expect(screen.getByPlaceholderText('1, 3, 5-7')).toBeInTheDocument()
+  })
+})
+
+describe('Panel — coming soon tool', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it('renders coming soon message for protect-pdf', () => {
+    render(
+      <Wrapper>
+        <Panel tool={mkTool('protect-pdf')} onClose={vi.fn()} showToast={vi.fn()} />
+      </Wrapper>
+    )
+    expect(screen.getByText('Próximamente')).toBeInTheDocument()
+  })
+
+  it('shows cancel button for coming soon tool', () => {
+    render(
+      <Wrapper>
+        <Panel tool={mkTool('protect-pdf')} onClose={vi.fn()} showToast={vi.fn()} />
+      </Wrapper>
+    )
+    expect(screen.getByText(T_ES.cancel)).toBeInTheDocument()
+  })
+})
+
+describe('Panel — file removal', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it('remove button removes the file from the list', async () => {
+    const user = userEvent.setup()
+    const file = new File(['content'], 'remove-me.pdf', { type: 'application/pdf' })
+    render(
+      <Wrapper>
+        <Panel tool={mkTool('compress')} onClose={vi.fn()} showToast={vi.fn()} preloadedFile={file} />
+      </Wrapper>
+    )
+
+    expect(screen.getByText('remove-me.pdf')).toBeInTheDocument()
+    await user.click(screen.getByLabelText('Eliminar remove-me.pdf'))
+    expect(screen.queryByText('remove-me.pdf')).not.toBeInTheDocument()
+  })
+})
+
+describe('Panel — compress quality buttons', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it('can change compress quality to low', async () => {
+    const user = userEvent.setup()
+    const file = new File(['content'], 'test.pdf', { type: 'application/pdf' })
+    render(
+      <Wrapper>
+        <Panel tool={mkTool('compress')} onClose={vi.fn()} showToast={vi.fn()} preloadedFile={file} />
+      </Wrapper>
+    )
+    await user.click(screen.getByText(T_ES.q_low))
+    // No crash, button exists
+    expect(screen.getByText(T_ES.q_low)).toBeInTheDocument()
+  })
+
+  it('can change compress quality to high', async () => {
+    const user = userEvent.setup()
+    const file = new File(['content'], 'test.pdf', { type: 'application/pdf' })
+    render(
+      <Wrapper>
+        <Panel tool={mkTool('compress')} onClose={vi.fn()} showToast={vi.fn()} preloadedFile={file} />
+      </Wrapper>
+    )
+    await user.click(screen.getByText(T_ES.q_high))
+    expect(screen.getByText(T_ES.q_high)).toBeInTheDocument()
+  })
+})
+
+describe('Panel — ocr-searchable UI', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it('shows language dropdown for ocr-searchable with preloaded file', () => {
+    const file = new File(['content'], 'test.pdf', { type: 'application/pdf' })
+    render(
+      <Wrapper>
+        <Panel tool={mkTool('ocr-searchable')} onClose={vi.fn()} showToast={vi.fn()} preloadedFile={file} />
+      </Wrapper>
+    )
+    expect(screen.getByRole('combobox')).toBeInTheDocument()
   })
 })

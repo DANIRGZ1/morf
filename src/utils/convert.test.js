@@ -1289,3 +1289,206 @@ describe('downloadAsZip', () => {
     expect(URL.createObjectURL).toHaveBeenCalled()
   })
 })
+
+// ─────────────────────────────────────────────────────────────────
+// imagesToPdf — embeds JPG, PNG images into a new PDF
+// ─────────────────────────────────────────────────────────────────
+import { imagesToPdf, pngToJpgBlob, jpgToPngBlob, ensurePdfJs } from './convert'
+
+describe('imagesToPdf', () => {
+  beforeEach(() => {
+    mockPdfSave.mockReset().mockResolvedValue(new Uint8Array([1, 2, 3]))
+    mockPdfDoc.embedJpg.mockClear()
+    mockPdfDoc.embedPng.mockClear()
+    mockPdfDoc.addPage.mockClear()
+    // Restore drawImage in case a prior afterEach deleted it
+    mockPage.drawImage = vi.fn()
+    URL.createObjectURL.mockClear()
+  })
+
+  it('embeds a JPG file', async () => {
+    const file = new File([new Uint8Array(10)], 'photo.jpg', { type: 'image/jpeg' })
+    await imagesToPdf([file])
+    expect(mockPdfDoc.embedJpg).toHaveBeenCalledOnce()
+  })
+
+  it('embeds a PNG file', async () => {
+    const file = new File([new Uint8Array(10)], 'image.png', { type: 'image/png' })
+    await imagesToPdf([file])
+    expect(mockPdfDoc.embedPng).toHaveBeenCalledOnce()
+  })
+
+  it('embeds a JPEG file (alternate extension)', async () => {
+    const file = new File([new Uint8Array(10)], 'photo.jpeg', { type: 'image/jpeg' })
+    await imagesToPdf([file])
+    expect(mockPdfDoc.embedJpg).toHaveBeenCalledOnce()
+  })
+
+  it('adds a page for each image', async () => {
+    const jpg = new File([new Uint8Array(10)], 'a.jpg', { type: 'image/jpeg' })
+    const png = new File([new Uint8Array(10)], 'b.png', { type: 'image/png' })
+    await imagesToPdf([jpg, png])
+    expect(mockPdfDoc.addPage).toHaveBeenCalledTimes(2)
+  })
+
+  it('draws the image on the page', async () => {
+    const file = new File([new Uint8Array(10)], 'photo.jpg', { type: 'image/jpeg' })
+    mockPage.drawImage = vi.fn()
+    await imagesToPdf([file])
+    expect(mockPage.drawImage).toHaveBeenCalled()
+  })
+
+  it('saves the PDF and triggers a download', async () => {
+    const file = new File([new Uint8Array(10)], 'photo.png', { type: 'image/png' })
+    await imagesToPdf([file])
+    expect(mockPdfSave).toHaveBeenCalled()
+    expect(URL.createObjectURL).toHaveBeenCalled()
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────
+// pngToJpgBlob / jpgToPngBlob — canvas-based blob conversions
+// ─────────────────────────────────────────────────────────────────
+describe('pngToJpgBlob', () => {
+  beforeEach(() => {
+    URL.createObjectURL.mockClear()
+    URL.revokeObjectURL.mockClear()
+    vi.stubGlobal('Image', class MockImage {
+      set src(_val) { setTimeout(() => this.onload?.(), 0) }
+      get naturalWidth()  { return 100 }
+      get naturalHeight() { return 80  }
+    })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('returns a Blob', async () => {
+    const file = new File([new Uint8Array(10)], 'img.png', { type: 'image/png' })
+    const blob = await pngToJpgBlob(file)
+    expect(blob).toBeInstanceOf(Blob)
+  })
+
+  it('revokes the source object URL', async () => {
+    const file = new File([new Uint8Array(10)], 'img.png', { type: 'image/png' })
+    await pngToJpgBlob(file)
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-url')
+  })
+
+  it('does NOT trigger a download', async () => {
+    const file = new File([new Uint8Array(10)], 'img.png', { type: 'image/png' })
+    // Only the source blob URL should be created (not a download anchor)
+    await pngToJpgBlob(file)
+    expect(URL.createObjectURL).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('jpgToPngBlob', () => {
+  beforeEach(() => {
+    URL.createObjectURL.mockClear()
+    URL.revokeObjectURL.mockClear()
+    vi.stubGlobal('Image', class MockImage {
+      set src(_val) { setTimeout(() => this.onload?.(), 0) }
+      get naturalWidth()  { return 120 }
+      get naturalHeight() { return 90  }
+    })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('returns a Blob', async () => {
+    const file = new File([new Uint8Array(10)], 'photo.jpg', { type: 'image/jpeg' })
+    const blob = await jpgToPngBlob(file)
+    expect(blob).toBeInstanceOf(Blob)
+  })
+
+  it('revokes the source object URL', async () => {
+    const file = new File([new Uint8Array(10)], 'photo.jpg', { type: 'image/jpeg' })
+    await jpgToPngBlob(file)
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-url')
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────
+// ensurePdfJs — skips loading when pdfjsLib already exists
+// ─────────────────────────────────────────────────────────────────
+describe('ensurePdfJs', () => {
+  afterEach(() => {
+    delete window.pdfjsLib
+  })
+
+  it('does not append a script tag when pdfjsLib is already loaded', async () => {
+    window.pdfjsLib = { GlobalWorkerOptions: { workerSrc: '' } }
+    const spy = vi.spyOn(document.head, 'appendChild')
+    await ensurePdfJs()
+    expect(spy).not.toHaveBeenCalled()
+    spy.mockRestore()
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────
+// applyEdits — text annotations + redact zones via pdf-lib
+// ─────────────────────────────────────────────────────────────────
+import { applyEdits } from './convert'
+
+describe('applyEdits', () => {
+  beforeEach(() => {
+    mockPdfSave.mockReset().mockResolvedValue(new Uint8Array([1, 2, 3]))
+    mockPdfDoc.embedFont = vi.fn().mockResolvedValue({})
+    mockPage.getSize = vi.fn(() => ({ width: 612, height: 792 }))
+    mockPage.drawText = vi.fn()
+    mockPage.drawRectangle = vi.fn()
+    URL.createObjectURL.mockClear()
+  })
+
+  afterEach(() => {
+    delete mockPdfDoc.embedFont
+    delete mockPage.getSize
+    delete mockPage.drawText
+    delete mockPage.drawRectangle
+  })
+
+  it('draws text annotations via drawText', async () => {
+    const file = makeFilePdf()
+    await applyEdits(file, [{ page: 1, text: 'Hello', x: 100, y: 200, size: 14, color: 'red' }], [])
+    expect(mockPage.drawText).toHaveBeenCalledWith('Hello', expect.objectContaining({ size: 14 }))
+  })
+
+  it('draws redact zones via drawRectangle', async () => {
+    const file = makeFilePdf()
+    await applyEdits(file, [], [{ page: 1, x: 10, y: 20, w: 50, h: 10 }])
+    expect(mockPage.drawRectangle).toHaveBeenCalledTimes(1)
+  })
+
+  it('saves and downloads the edited PDF', async () => {
+    const file = makeFilePdf()
+    await applyEdits(file, [], [])
+    expect(mockPdfSave).toHaveBeenCalled()
+    expect(URL.createObjectURL).toHaveBeenCalled()
+  })
+
+  it('handles empty edits and zones without crashing', async () => {
+    const file = makeFilePdf()
+    await expect(applyEdits(file, [], [])).resolves.toBeUndefined()
+  })
+
+  it('supports blue and black text colors', async () => {
+    const file = makeFilePdf()
+    const edits = [
+      { page: 1, text: 'Blue', x: 10, y: 10, size: 12, color: 'blue' },
+      { page: 1, text: 'Black', x: 20, y: 20, size: 12, color: 'black' },
+    ]
+    await applyEdits(file, edits, [])
+    expect(mockPage.drawText).toHaveBeenCalledTimes(2)
+  })
+
+  it('uses the last valid page when page index exceeds total', async () => {
+    const file = makeFilePdf()
+    // page 999 should clamp to last page (getPages returns [mockPage])
+    await applyEdits(file, [{ page: 999, text: 'Clamped', x: 0, y: 0, size: 10, color: 'black' }], [])
+    expect(mockPage.drawText).toHaveBeenCalled()
+  })
+})
