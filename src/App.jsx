@@ -195,6 +195,49 @@ const css = `
   .fl{color:var(--tm);text-decoration:none;font-size:11px;background:none;border:none;
     cursor:pointer;font-family:'DM Sans',sans-serif;transition:color .16s;padding:0}
   .fl:hover{color:var(--t1)}
+
+  /* ── Tool color themes ───────────────────────────────────────────────────── */
+  .tc-blue   {--ti-bg:#DBEAFE;--ti-ic:#2563EB}
+  .tc-green  {--ti-bg:#D1FAE5;--ti-ic:#059669}
+  .tc-orange {--ti-bg:#FFEDD5;--ti-ic:#EA580C}
+  .tc-emerald{--ti-bg:#ECFDF5;--ti-ic:#10B981}
+  .tc-red    {--ti-bg:#FEE2E2;--ti-ic:#EF4444}
+  .tc-amber  {--ti-bg:#FEF3C7;--ti-ic:#D97706}
+  .tc-teal   {--ti-bg:#CCFBF1;--ti-ic:#0D9488}
+  .tc-purple {--ti-bg:#EDE9FE;--ti-ic:#7C3AED}
+  .tc-gray   {--ti-bg:#F3F4F6;--ti-ic:#6B7280}
+  .m.dark .tc-blue   {--ti-bg:#1E3A5F;--ti-ic:#60A5FA}
+  .m.dark .tc-green  {--ti-bg:#064E3B;--ti-ic:#34D399}
+  .m.dark .tc-orange {--ti-bg:#431407;--ti-ic:#FB923C}
+  .m.dark .tc-emerald{--ti-bg:#022C22;--ti-ic:#34D399}
+  .m.dark .tc-red    {--ti-bg:#450A0A;--ti-ic:#F87171}
+  .m.dark .tc-amber  {--ti-bg:#451A03;--ti-ic:#FCD34D}
+  .m.dark .tc-teal   {--ti-bg:#042F2E;--ti-ic:#2DD4BF}
+  .m.dark .tc-purple {--ti-bg:#2E1065;--ti-ic:#A78BFA}
+  .m.dark .tc-gray   {--ti-bg:#1F2937;--ti-ic:#9CA3AF}
+
+  /* card with color theme: hover border matches icon color */
+  .card.tc-blue:hover  {border-color:#2563EB;box-shadow:0 2px 12px rgba(37,99,235,.12)}
+  .card.tc-green:hover {border-color:#059669;box-shadow:0 2px 12px rgba(5,150,105,.12)}
+  .card.tc-orange:hover{border-color:#EA580C;box-shadow:0 2px 12px rgba(234,88,12,.12)}
+  .card.tc-emerald:hover{border-color:#10B981;box-shadow:0 2px 12px rgba(16,185,129,.12)}
+  .card.tc-red:hover   {border-color:#EF4444;box-shadow:0 2px 12px rgba(239,68,68,.12)}
+  .card.tc-amber:hover {border-color:#D97706;box-shadow:0 2px 12px rgba(217,119,6,.12)}
+  .card.tc-teal:hover  {border-color:#0D9488;box-shadow:0 2px 12px rgba(13,148,136,.12)}
+  .card.tc-purple:hover{border-color:#7C3AED;box-shadow:0 2px 12px rgba(124,58,237,.12)}
+
+  /* category header color dots */
+  .cat-dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0}
+
+  /* hero subtle gradient */
+  .m-hero-wrap{
+    background:radial-gradient(ellipse at 15% 60%,rgba(99,102,241,.05) 0%,transparent 55%),
+               radial-gradient(ellipse at 85% 40%,rgba(16,185,129,.05) 0%,transparent 55%);
+  }
+  .m.dark .m-hero-wrap{
+    background:radial-gradient(ellipse at 15% 60%,rgba(99,102,241,.08) 0%,transparent 55%),
+               radial-gradient(ellipse at 85% 40%,rgba(16,185,129,.06) 0%,transparent 55%);
+  }
 `;
 
 /* ── AdSense Unit ────────────────────────────────────────────────────────── */
@@ -217,6 +260,36 @@ function AdUnit({ slot, style={} }) {
       data-full-width-responsive="true"/>
   );
 }
+
+/* ── Tool color map ──────────────────────────────────────────────────────── */
+const TOOL_COLOR = {
+  // Document ↔ Word/HTML → blue
+  "pdf-word":"tc-blue","word-pdf":"tc-blue","html-pdf":"tc-blue",
+  // Excel → green
+  "excel-pdf":"tc-green","pdf-excel":"tc-green",
+  // PowerPoint → orange
+  "pptx-pdf":"tc-orange","pdf-pptx":"tc-orange",
+  // Images → emerald
+  "img-pdf":"tc-emerald","png-jpg":"tc-emerald","jpg-png":"tc-emerald","pdf-img":"tc-emerald",
+  // Core PDF ops → red
+  "merge":"tc-red","split":"tc-red","compress":"tc-red","rotate":"tc-red",
+  "organize-pdf":"tc-red","delete-pages":"tc-red","repair-pdf":"tc-red","flatten-pdf":"tc-red",
+  // Edit / annotate → amber
+  "watermark-pdf":"tc-amber","number-pages":"tc-amber","crop-pdf":"tc-amber",
+  "sign-pdf":"tc-amber","annotate-pdf":"tc-amber","visual-annotate":"tc-amber","redact-pdf":"tc-amber",
+  // Grayscale → gray
+  "grayscale-pdf":"tc-gray",
+  // Security → teal
+  "unlock-pdf":"tc-teal","protect-pdf":"tc-teal",
+  // AI / advanced → purple
+  "ocr-pdf":"tc-purple","ocr-searchable":"tc-purple","chat-pdf":"tc-purple",
+  "summarize-pdf":"tc-purple","compare-pdf":"tc-purple","pdf-markdown":"tc-purple",
+};
+
+const CAT_DOT_COLOR = {
+  cat_conv:"#2563EB", cat_img:"#10B981", cat_ops:"#EF4444",
+  cat_edit:"#D97706", cat_sec:"#0D9488",
+};
 
 /* ── Tool Page (hash routing + SEO) ─────────────────────────────────────── */
 function ToolPage({ tool, showToast, bumpCount, addToHistory, checkLimits, onBack, preloadedFile=null, onGoToTool=null }) {
@@ -276,16 +349,17 @@ function ToolPage({ tool, showToast, bumpCount, addToHistory, checkLimits, onBac
 
 /* ── ToolCard ────────────────────────────────────────────────────────────── */
 function ToolCard({ t, i, goToTool }) {
+  const tc = TOOL_COLOR[t.id] || "tc-gray";
   return (
-    <div className={`card fu fu${(i%6)+1}`}
+    <div className={`card fu fu${(i%6)+1} ${tc}`}
       role="button" tabIndex={0}
       aria-label={t.label}
       style={{opacity:t.comingSoon?.6:1}}
       onClick={()=>goToTool(t)}
       onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();goToTool(t);}}}>
       <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:12}}>
-        <div style={{width:34,height:34,borderRadius:7,background:"#F5F5F3",display:"flex",alignItems:"center",justifyContent:"center"}}>
-          <Ic n={t.icon} s={15} c="var(--t2)"/>
+        <div style={{width:36,height:36,borderRadius:9,background:"var(--ti-bg)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+          <Ic n={t.icon} s={16} c="var(--ti-ic)"/>
         </div>
         <div style={{display:"flex",gap:4,alignItems:"center"}}>
           {t.pro&&<span style={{fontSize:9,fontWeight:700,fontFamily:"'DM Mono',monospace",background:"var(--ac)",color:"#fff",borderRadius:3,padding:"1px 5px",letterSpacing:".04em"}}>PRO</span>}
@@ -293,7 +367,7 @@ function ToolCard({ t, i, goToTool }) {
           <Tag type={t.from}/><span style={{color:"var(--tm)",fontSize:10}}>→</span><Tag type={t.to}/>
         </div>
       </div>
-      <div style={{fontWeight:500,fontSize:13,marginBottom:3}}>{t.label}</div>
+      <div style={{fontWeight:600,fontSize:13,marginBottom:4}}>{t.label}</div>
       <div style={{fontSize:11,color:"var(--t2)",lineHeight:1.5}}>{t.desc}</div>
     </div>
   );
@@ -604,6 +678,7 @@ export default function App() {
           </div>
         </header>
 
+        <div className="m-hero-wrap">
         <div className="m-hero" style={{maxWidth:960,margin:"0 auto",padding:"48px 20px 64px"}}>
           {/* Hero */}
           <div className="fu" style={{textAlign:"center",marginBottom:44}}>
@@ -846,8 +921,11 @@ export default function App() {
                   if (!visible.length) return null;
                   return (
                     <div key={key} style={{marginBottom:22}}>
-                      <div style={{fontSize:10,fontWeight:600,letterSpacing:".07em",textTransform:"uppercase",
-                        color:"var(--tm)",marginBottom:8,paddingLeft:2}}>{T[key]}</div>
+                      <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:10,paddingLeft:2}}>
+                        <span className="cat-dot" style={{background:CAT_DOT_COLOR[key]||"var(--tm)"}}/>
+                        <span style={{fontSize:10,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",
+                          color:"var(--t2)"}}>{T[key]}</span>
+                      </div>
                       <div className="grid">
                         {visible.map((t,i)=>(
                           <ToolCard key={t.id} t={t} i={i} goToTool={goToTool}/>
@@ -879,8 +957,11 @@ export default function App() {
           <div className="m-feat" style={{borderTop:"1px solid var(--bd)",marginTop:48,paddingTop:36,display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:20}}>
             {T.feat.map(([title,desc],i)=>(
               <div key={i} style={{display:"flex",gap:11,alignItems:"flex-start"}}>
-                <div style={{width:28,height:28,borderRadius:6,background:"#F5F5F3",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                  <Ic n={["file","check","download","compress"][i]} s={13} c="var(--t2)"/>
+                <div style={{width:30,height:30,borderRadius:7,
+                  background:["#DBEAFE","#D1FAE5","#ECFDF5","#EDE9FE"][i],
+                  display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                  <Ic n={["file","check","download","compress"][i]} s={14}
+                    c={["#2563EB","#059669","#10B981","#7C3AED"][i]}/>
                 </div>
                 <div>
                   <div style={{fontWeight:500,fontSize:12,marginBottom:1}}>{title}</div>
@@ -890,6 +971,7 @@ export default function App() {
             ))}
           </div>
         </div>
+        </div>{/* /m-hero-wrap */}
 
         {/* Pricing */}
         <div style={{maxWidth:960,margin:"0 auto",padding:"0 20px 48px"}}>
