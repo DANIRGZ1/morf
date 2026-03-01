@@ -347,14 +347,15 @@ describe('conversion counter', () => {
     render(<App />)
     // The number is rendered in multiple places (hero counter + stats grid); 7 → "7"
     expect(screen.getAllByText('7').length).toBeGreaterThan(0)
-    // T.counter = "files converted"
-    expect(screen.getByText(/files converted/i)).toBeInTheDocument()
+    // T.counter = "files converted" — appears in both hero counter and stats grid
+    expect(screen.getAllByText(/files converted/i).length).toBeGreaterThan(0)
   })
 
-  it('does not show the counter area when count is 0', () => {
+  it('does not show the hero counter when count is 0', () => {
     render(<App />)
-    // "files converted" label is only rendered when count > 0
-    expect(screen.queryByText('files converted')).not.toBeInTheDocument()
+    // The stats grid always shows "files converted"; the hero counter only when count > 0.
+    // When count is 0 the stats grid shows "1000+" (not "0"), so the number "0" is absent.
+    expect(screen.queryByText('0')).not.toBeInTheDocument()
   })
 })
 
