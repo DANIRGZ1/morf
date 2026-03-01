@@ -5,8 +5,8 @@
  * Heavy convert utilities and AI sub-components are mocked so the suite
  * stays fast and purely unit-level.
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 // ── mock all heavy convert utilities ─────────────────────────────
@@ -200,18 +200,6 @@ describe('Panel — tool variety', () => {
 // ─────────────────────────────────────────────────────────────────
 describe('Panel — file interaction', () => {
   afterEach(() => vi.restoreAllMocks())
-
-  const dropFile = (container, file) => {
-    // Find drop zone — Panel uses onDrop on the outer div
-    const dropZone = container.querySelector('[class*="drop"]') ||
-                     container.firstChild
-    fireEvent.drop(dropZone, {
-      dataTransfer: {
-        files: [file],
-        items: [{ kind: 'file', getAsFile: () => file }],
-      },
-    })
-  }
 
   it('clicking Convertir with no files does not crash', async () => {
     const user = userEvent.setup()
