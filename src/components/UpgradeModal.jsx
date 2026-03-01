@@ -95,7 +95,7 @@ function UpgradeModal({ reason, billingYear, setBillingYear, onClose, T }) {
               <div style={{fontWeight:600,fontSize:13,marginBottom:2,color:"var(--ac)"}}>{T.plan_pro}</div>
               <div style={{fontSize:11,color:"var(--tm)",marginBottom:12}}>{T.plan_pro_desc}</div>
               <div style={{fontSize:22,fontWeight:700,marginBottom:2,color:"var(--ac)"}}>€{price}</div>
-              <div style={{fontSize:10,color:"var(--tm)",marginBottom:10}}>{billingYear ? T.plan_monthly : T.plan_monthly}</div>
+              <div style={{fontSize:10,color:"var(--tm)",marginBottom:10}}>{billingYear ? T.plan_yearly : T.plan_monthly}</div>
               {[T.feat_unlimited, T.feat_size_pro, T.feat_tools, T.feat_noad, T.feat_priority].map((f,i)=>(
                 <div key={i} style={{display:"flex",gap:6,alignItems:"flex-start",fontSize:12,color:"var(--t1)",marginBottom:6}}>
                   <Ic n="check" s={12} c="var(--ok)"/>{f}
