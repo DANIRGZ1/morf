@@ -7,6 +7,36 @@ const makeFile = (sizeBytes) => ({ name: 'test.pdf', size: sizeBytes })
 
 beforeEach(() => localStorage.clear())
 
+describe('useFreemium — PRO_ONLY_TOOLS', () => {
+  it('blocks a pro-only tool on the free plan and sets upgradeReason to "pro"', () => {
+    const { result } = renderHook(() => useFreemium())
+    let allowed
+    act(() => { allowed = result.current.checkLimits([makeFile(MB)], 'ocr-pdf') })
+    expect(allowed).toBe(false)
+    expect(result.current.showUpgrade).toBe(true)
+    expect(result.current.upgradeReason).toBe('pro')
+  })
+
+  it('allows a pro-only tool when the user is on the pro plan', () => {
+    localStorage.setItem('morf_pro', 'true')
+    const { result } = renderHook(() => useFreemium())
+    expect(result.current.checkLimits([makeFile(MB)], 'ocr-pdf')).toBe(true)
+  })
+
+  it('upgradeReason is "batch" when blocked by batch limit', () => {
+    const { result } = renderHook(() => useFreemium())
+    const files = [makeFile(MB), makeFile(MB), makeFile(MB)]
+    act(() => { result.current.checkLimits(files, 'merge') })
+    expect(result.current.upgradeReason).toBe('batch')
+  })
+
+  it('upgradeReason is "size" when blocked by file size', () => {
+    const { result } = renderHook(() => useFreemium())
+    act(() => { result.current.checkLimits([makeFile(11 * MB)], 'compress') })
+    expect(result.current.upgradeReason).toBe('size')
+  })
+})
+
 describe('useFreemium — free plan', () => {
   it('allows a file within the 10 MB limit', () => {
     const { result } = renderHook(() => useFreemium())
