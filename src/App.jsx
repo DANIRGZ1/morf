@@ -700,10 +700,10 @@ export default function App() {
         {/* Header */}
         <header style={{borderBottom:"1px solid var(--bd)",background:"var(--sf)",position:"sticky",top:0,zIndex:100}}>
           <div className="m-header-inner" style={{maxWidth:960,margin:"0 auto",padding:"0 20px",height:52,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-            <div style={{display:"flex",alignItems:"center",gap:9}}>
+            <button onClick={backHome}
+              style={{background:"none",border:"none",padding:0,cursor:"pointer",display:"flex",alignItems:"center"}}>
               <span className="m-logo-text" style={{fontWeight:700,fontSize:15,letterSpacing:"-.03em",color:"var(--t1)"}}>morf<span style={{fontWeight:300,color:"var(--ac)"}}>.</span><span style={{fontWeight:400,color:"var(--ac)"}}>pdf</span></span>
-              <span style={{fontSize:9,fontFamily:"'DM Mono',monospace",background:"var(--al)",color:"var(--ac)",padding:"2px 6px",borderRadius:3,fontWeight:500}}>BETA</span>
-            </div>
+            </button>
             <nav aria-label="Menú principal" style={{display:"flex",gap:8,alignItems:"center"}}>
               {/* Todas las herramientas */}
               <button onClick={()=>setShowToolsMenu(true)}
