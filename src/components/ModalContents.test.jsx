@@ -3,7 +3,7 @@
  * Each component consumes LangCtx, so we wrap them in a provider.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor, act } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Privacy, Terms, Contact, API } from './ModalContents'
 import { LangCtx, LANGS } from '../contexts/LangContext'

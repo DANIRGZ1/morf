@@ -100,7 +100,7 @@ Respond in English.`,
     // Simple markdown-like rendering
     return text.split("\n").map((line, i) => {
       if (line.startsWith("## ") || line.startsWith("**") && line.endsWith("**")) {
-        const clean = line.replace(/^\#{1,3}\s*/, "").replace(/\*\*/g, "");
+        const clean = line.replace(/^#{1,3}\s*/, "").replace(/\*\*/g, "");
         return <div key={i} style={{ fontWeight: 700, fontSize: 14, color: "var(--t1)", marginTop: 14, marginBottom: 4 }}>{clean}</div>;
       }
       if (line.startsWith("- ") || line.startsWith("• ")) {
