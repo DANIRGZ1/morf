@@ -1,17 +1,22 @@
 {
-  "name": "morf.pdf",
+  "name": "morf.pdf — Convertir y editar PDF",
   "short_name": "morf",
-  "description": "Convierte, comprime y edita PDFs en tu navegador",
+  "description": "Convierte, comprime y edita PDFs gratis en tu navegador. Sin registro, sin marcas de agua.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#6366f1",
+  "background_color": "#F9F9F8",
+  "theme_color": "#1C3042",
   "orientation": "any",
   "lang": "es",
   "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
     { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
     { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
   ],
   "categories": ["utilities", "productivity"],
-  "screenshots": []
+  "shortcuts": [
+    { "name": "Convertir PDF a Word", "short_name": "PDF→Word", "url": "/pdf-word", "description": "Convierte un PDF a documento Word editable" },
+    { "name": "Comprimir PDF",         "short_name": "Comprimir", "url": "/compress",  "description": "Reduce el tamaño de un PDF" },
+    { "name": "Unir PDFs",             "short_name": "Unir",      "url": "/merge",     "description": "Combina varios PDFs en uno" }
+  ]
 }

@@ -14,7 +14,9 @@ function UpgradeModal({ reason, billingYear, setBillingYear, onClose, T }) {
   const [emailErr, setEmailErr] = useState('');
 
   const startCheckout = async () => {
-    if (!email || !email.includes('@')) { setEmailErr('Introduce un email válido'); return; }
+    if (!email || !email.includes('@') || !email.includes('.')) {
+      setEmailErr('Introduce un email válido'); return;
+    }
     setEmailErr('');
     setLoading(true);
     try {
@@ -37,96 +39,146 @@ function UpgradeModal({ reason, billingYear, setBillingYear, onClose, T }) {
     }
   };
 
+  const proFeatures = [
+    { icon:"upload",   text: T.feat_size_pro  },
+    { icon:"merge",    text: T.feat_unlimited },
+    { icon:"eye",      text: T.feat_noad      },
+    { icon:"zap",      text: T.feat_priority  },
+    { icon:"grid",     text: T.feat_tools     },
+  ];
+
   return (
     <div className="ov" onClick={onClose}>
-      <div className="sh" style={{maxWidth:480}} onClick={e=>e.stopPropagation()}>
-        <div className="sh-head">
-          <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <Ic n="zap" s={16} c="var(--ac)"/>
-            <span style={{fontWeight:600,fontSize:14}}>{T.upgrade_cta}</span>
-          </div>
-          <button style={{background:"none",border:"none",cursor:"pointer",padding:4}} onClick={onClose}>
+      <div className="sh" style={{maxWidth:460}} onClick={e=>e.stopPropagation()}>
+
+        {/* ── Botón cerrar ── */}
+        <div style={{display:"flex",justifyContent:"flex-end",padding:"14px 18px 0",flexShrink:0}}>
+          <button style={{background:"none",border:"none",cursor:"pointer",padding:6,
+            borderRadius:6,display:"flex",color:"var(--tm)"}} onClick={onClose}
+            aria-label="Cerrar">
             <Ic n="x" s={16} c="var(--tm)"/>
           </button>
         </div>
-        <div className="sh-body">
-          {/* Reason */}
-          <div style={{background:"#FEF9EC",border:"1px solid #FCD34D",borderRadius:8,padding:"10px 14px",
-            fontSize:13,color:"#92400E",marginBottom:20,display:"flex",gap:8,alignItems:"flex-start"}}>
-            <Ic n="zap" s={14} c="#F59E0B" style={{flexShrink:0,marginTop:1}}/>
-            <span>{reason==='batch' ? T.free_batch : T.free_size}</span>
-          </div>
 
-          {/* Billing toggle */}
-          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,marginBottom:20}}>
-            <span style={{fontSize:13,color:!billingYear?"var(--t1)":"var(--tm)",fontWeight:!billingYear?500:400}}>Mensual</span>
-            <button onClick={()=>setBillingYear(y=>!y)}
-              style={{width:40,height:22,borderRadius:11,border:"none",cursor:"pointer",
-                background:billingYear?"var(--ac)":"var(--bd)",transition:"background .2s",position:"relative",padding:0}}>
-              <span style={{position:"absolute",top:3,left:billingYear?20:3,width:16,height:16,
-                borderRadius:"50%",background:"#fff",transition:"left .2s",display:"block"}}/>
-            </button>
-            <span style={{fontSize:13,color:billingYear?"var(--t1)":"var(--tm)",fontWeight:billingYear?500:400}}>
-              Anual <span style={{fontSize:10,background:"#DCFCE7",color:"#15803D",padding:"1px 5px",borderRadius:3,fontWeight:600}}>{T.plan_save}</span>
-            </span>
-          </div>
+        <div className="sh-body" style={{paddingTop:0}}>
 
-          {/* Plans */}
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:20}}>
-            {/* Free */}
-            <div style={{border:"1px solid var(--bd)",borderRadius:10,padding:"16px 14px"}}>
-              <div style={{fontWeight:600,fontSize:13,marginBottom:2}}>{T.plan_free}</div>
-              <div style={{fontSize:11,color:"var(--tm)",marginBottom:12}}>{T.plan_free_desc}</div>
-              <div style={{fontSize:22,fontWeight:700,marginBottom:12}}>€0</div>
-              {[T.feat_batch, T.feat_size_free, T.feat_tools].map((f,i)=>(
-                <div key={i} style={{display:"flex",gap:6,alignItems:"flex-start",fontSize:12,color:"var(--t2)",marginBottom:6}}>
-                  <Ic n="check" s={12} c="var(--tm)"/>{f}
+          {/* ── Hero card ── */}
+          <div style={{
+            background:"linear-gradient(135deg,var(--ac) 0%,var(--ah) 100%)",
+            borderRadius:14,padding:"24px 22px 22px",marginBottom:20,position:"relative",overflow:"hidden"
+          }}>
+            {/* Glow sutil */}
+            <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse at 80% 20%,rgba(255,255,255,.07) 0%,transparent 60%)",pointerEvents:"none"}}/>
+
+            {/* Cabecera */}
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <div style={{width:32,height:32,borderRadius:8,background:"rgba(255,255,255,.15)",
+                  display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  <Ic n="zap" s={15} c="#fff"/>
                 </div>
-              ))}
-              <button className="bg" style={{width:"100%",marginTop:12,fontSize:12,padding:"7px 0",textAlign:"center"}} onClick={onClose}>
-                {T.plan_current}
+                <span style={{fontWeight:700,fontSize:16,color:"#fff",letterSpacing:"-.01em"}}>morf Pro</span>
+              </div>
+              {/* Toggle facturación */}
+              <button onClick={()=>setBillingYear(y=>!y)}
+                style={{display:"flex",alignItems:"center",gap:6,background:"rgba(255,255,255,.12)",
+                  border:"1px solid rgba(255,255,255,.2)",borderRadius:20,padding:"4px 10px",
+                  cursor:"pointer",fontSize:11,color:"#fff",fontFamily:"'DM Sans',sans-serif"}}>
+                <span style={{opacity:!billingYear?1:.5}}>Mes</span>
+                <div style={{width:28,height:16,borderRadius:8,background:"rgba(255,255,255,.25)",position:"relative"}}>
+                  <span style={{position:"absolute",top:2,left:billingYear?13:2,width:12,height:12,
+                    borderRadius:"50%",background:"#fff",transition:"left .2s",display:"block"}}/>
+                </div>
+                <span style={{opacity:billingYear?1:.5}}>Año</span>
+                {billingYear&&<span style={{background:"#4ADE80",color:"#14532D",fontSize:9,fontWeight:700,
+                  padding:"1px 5px",borderRadius:8,fontFamily:"'DM Mono',monospace"}}>-25%</span>}
               </button>
             </div>
-            {/* Pro */}
-            <div style={{border:"2px solid var(--ac)",borderRadius:10,padding:"16px 14px",background:"var(--al)",position:"relative"}}>
-              <div style={{position:"absolute",top:-10,left:"50%",transform:"translateX(-50%)",
-                background:"var(--ac)",color:"#fff",fontSize:9,fontWeight:600,padding:"2px 8px",borderRadius:10,
-                fontFamily:"'DM Mono',monospace",letterSpacing:".05em",whiteSpace:"nowrap"}}>MÁS POPULAR</div>
-              <div style={{fontWeight:600,fontSize:13,marginBottom:2,color:"var(--ac)"}}>{T.plan_pro}</div>
-              <div style={{fontSize:11,color:"var(--tm)",marginBottom:12}}>{T.plan_pro_desc}</div>
-              <div style={{fontSize:22,fontWeight:700,marginBottom:2,color:"var(--ac)"}}>€{price}</div>
-              <div style={{fontSize:10,color:"var(--tm)",marginBottom:10}}>{billingYear ? T.plan_yearly : T.plan_monthly}</div>
-              {[T.feat_unlimited, T.feat_size_pro, T.feat_tools, T.feat_noad, T.feat_priority].map((f,i)=>(
-                <div key={i} style={{display:"flex",gap:6,alignItems:"flex-start",fontSize:12,color:"var(--t1)",marginBottom:6}}>
-                  <Ic n="check" s={12} c="var(--ok)"/>{f}
+
+            {/* Precio */}
+            <div style={{marginBottom:18}}>
+              <div style={{display:"flex",alignItems:"baseline",gap:4}}>
+                <span style={{fontSize:38,fontWeight:800,color:"#fff",letterSpacing:"-.03em",lineHeight:1}}>
+                  €{price}
+                </span>
+                <span style={{fontSize:13,color:"rgba(255,255,255,.65)",fontWeight:400}}>
+                  /{billingYear ? T.plan_yearly?.replace('/','') || 'mes' : T.plan_monthly?.replace('/','') || 'mes'}
+                </span>
+              </div>
+              {billingYear&&(
+                <div style={{fontSize:11,color:"rgba(255,255,255,.55)",marginTop:3}}>
+                  €{(yearly*12).toFixed(2)} al año · ahorra €{((monthly-Number(yearly))*12).toFixed(2)}
+                </div>
+              )}
+            </div>
+
+            {/* Features checklist */}
+            <div style={{display:"flex",flexDirection:"column",gap:9}}>
+              {proFeatures.map((f,i)=>(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:10}}>
+                  <div style={{width:20,height:20,borderRadius:"50%",background:"rgba(74,222,128,.25)",
+                    display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                    <Ic n="check" s={11} c="#4ADE80" sw={3}/>
+                  </div>
+                  <span style={{fontSize:13,color:"rgba(255,255,255,.9)",lineHeight:1.3}}>{f.text}</span>
                 </div>
               ))}
-              <div style={{marginTop:12}}>
-                <input
-                  type="email"
-                  placeholder="tu@email.com"
-                  value={email}
-                  onChange={e=>{setEmail(e.target.value);setEmailErr('');}}
-                  style={{width:"100%",padding:"8px 10px",border:`1px solid ${emailErr?"#F87171":"var(--bd)"}`,
-                    borderRadius:6,fontSize:12,background:"var(--bg)",color:"var(--t1)",
-                    fontFamily:"'DM Sans',sans-serif",marginBottom:6,outline:"none"}}
-                />
-                {emailErr&&<div style={{fontSize:10,color:"#EF4444",marginBottom:6}}>{emailErr}</div>}
-                <button className="bp" style={{width:"100%",fontSize:12,padding:"8px 0",justifyContent:"center",
-                  opacity:loading?0.7:1,pointerEvents:loading?"none":"auto"}}
-                  onClick={startCheckout}>
-                  {loading ? <><div className="spn"/></> : T.plan_cta_pro}
-                </button>
-              </div>
             </div>
           </div>
-          <div style={{textAlign:"center",fontSize:11,color:"var(--tm)"}}>{T.pricing_sub}</div>
-          <div style={{textAlign:"center",marginTop:10}}>
-            <a href="mailto:hola@morf.app?subject=Quiero%20contratar%20el%20plan%20Pro&body=Hola%2C%20me%20interesa%20el%20plan%20Pro%20de%20morf.%20Mi%20email%20es%3A%20"
-              style={{fontSize:10,color:"var(--tm)",textDecoration:"underline",textDecorationColor:"var(--bd)"}}>
+
+          {/* ── Razón del bloqueo ── */}
+          {reason&&(
+            <div style={{background:"var(--al)",border:"1px solid var(--bd)",borderRadius:8,
+              padding:"9px 13px",fontSize:12,color:"var(--t2)",marginBottom:16,
+              display:"flex",gap:8,alignItems:"center"}}>
+              <Ic n="lock" s={13} c="var(--ac)" style={{flexShrink:0}}/>
+              <span>{reason==='batch' ? T.free_batch : T.free_size}</span>
+            </div>
+          )}
+
+          {/* ── Email + CTA ── */}
+          <div>
+            <input
+              type="email"
+              placeholder="tu@email.com"
+              value={email}
+              onChange={e=>{setEmail(e.target.value);setEmailErr('');}}
+              style={{width:"100%",padding:"11px 13px",
+                border:`1.5px solid ${emailErr?"#F87171":"var(--bd)"}`,
+                borderRadius:8,fontSize:14,background:"var(--bg)",color:"var(--t1)",
+                fontFamily:"'DM Sans',sans-serif",marginBottom:8,outline:"none",
+                boxSizing:"border-box",transition:"border-color .15s"}}
+              onFocus={e=>e.target.style.borderColor="var(--ac)"}
+              onBlur={e=>e.target.style.borderColor=emailErr?"#F87171":"var(--bd)"}
+            />
+            {emailErr&&<div style={{fontSize:11,color:"#EF4444",marginBottom:8}}>{emailErr}</div>}
+            <button className="bp" style={{width:"100%",fontSize:14,padding:"12px 0",
+              justifyContent:"center",borderRadius:9,fontWeight:600,
+              opacity:loading?.7:1,pointerEvents:loading?"none":"auto"}}
+              onClick={startCheckout}>
+              {loading
+                ? <><div className="spn"/><span style={{marginLeft:8}}>Redirigiendo…</span></>
+                : <><Ic n="zap" s={15} c="#fff"/>{T.plan_cta_pro}</>
+              }
+            </button>
+          </div>
+
+          {/* ── Footer ── */}
+          <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:6,marginTop:14}}>
+            <div style={{display:"flex",gap:16}}>
+              {["lock","check","rotate"].map((ic,i)=>(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:"var(--tm)"}}>
+                  <Ic n={ic} s={11} c="var(--tm)"/>
+                  {["Pago seguro","Sin compromiso","Cancela cuando quieras"][i]}
+                </div>
+              ))}
+            </div>
+            <a href="mailto:hola@morf.app?subject=Plan%20Pro"
+              style={{fontSize:11,color:"var(--tm)",textDecoration:"underline",textDecorationColor:"var(--bd)"}}>
               ¿Problemas con el pago? Escríbenos
             </a>
           </div>
+
         </div>
       </div>
     </div>
