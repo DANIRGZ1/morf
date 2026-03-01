@@ -39,11 +39,27 @@ const ic = {
   search:   <><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></>,
   grid:     <><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></>,
 };
-export const Ic = ({ n, s=17, c="currentColor", sw=1.5 }) => (
-  <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
-    {ic[n]||ic.file}
-  </svg>
-);
+/**
+ * Ic — icono unificado
+ *
+ * Uso con icono propio (como siempre):
+ *   <Ic n="upload" s={16} c="var(--ac)" />
+ *
+ * Uso con icono de Lucide React:
+ *   import { FolderOpen } from 'lucide-react'
+ *   <Ic icon={FolderOpen} s={16} c="var(--ac)" />
+ */
+export const Ic = ({ n, icon: LucideIcon, s=17, c="currentColor", sw=1.5, style, className }) => {
+  if (LucideIcon) {
+    return <LucideIcon size={s} color={c} strokeWidth={sw} style={style} className={className}/>;
+  }
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth={sw}
+      strokeLinecap="round" strokeLinejoin="round" style={style} className={className}>
+      {ic[n]||ic.file}
+    </svg>
+  );
+};
 export const Tag = ({ type }) => {
   const m = { pdf:["tpdf","PDF"], docx:["tdocx","DOCX"], img:["timg","IMG"] };
   const [cls,lbl] = m[type]||["tpdf","PDF"];
