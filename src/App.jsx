@@ -340,18 +340,28 @@ const css = `
   .card.tc-amber:hover {border-color:#D97706;box-shadow:0 2px 12px rgba(217,119,6,.12)}
   .card.tc-teal:hover  {border-color:#0D9488;box-shadow:0 2px 12px rgba(13,148,136,.12)}
   .card.tc-purple:hover{border-color:#7C3AED;box-shadow:0 2px 12px rgba(124,58,237,.12)}
+  /* Color wash: card gets its tool color as tinted background on hover */
+  .card[class*="tc-"]:hover{background:var(--ti-bg)}
 
   /* category header color dots */
   .cat-dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0}
 
-  /* hero subtle gradient */
+  /* hero: graph-paper grid + radial gradients */
   .m-hero-wrap{
-    background:radial-gradient(ellipse at 15% 60%,rgba(99,102,241,.05) 0%,transparent 55%),
-               radial-gradient(ellipse at 85% 40%,rgba(16,185,129,.05) 0%,transparent 55%);
+    background:
+      linear-gradient(rgba(0,0,0,.028) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(0,0,0,.028) 1px,transparent 1px),
+      radial-gradient(ellipse at 15% 60%,rgba(99,102,241,.06) 0%,transparent 55%),
+      radial-gradient(ellipse at 85% 40%,rgba(16,185,129,.06) 0%,transparent 55%);
+    background-size:40px 40px,40px 40px,auto,auto;
   }
   .m.dark .m-hero-wrap{
-    background:radial-gradient(ellipse at 15% 60%,rgba(99,102,241,.08) 0%,transparent 55%),
-               radial-gradient(ellipse at 85% 40%,rgba(16,185,129,.06) 0%,transparent 55%);
+    background:
+      linear-gradient(rgba(255,255,255,.028) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(255,255,255,.028) 1px,transparent 1px),
+      radial-gradient(ellipse at 15% 60%,rgba(99,102,241,.09) 0%,transparent 55%),
+      radial-gradient(ellipse at 85% 40%,rgba(16,185,129,.07) 0%,transparent 55%);
+    background-size:40px 40px,40px 40px,auto,auto;
   }
 
   /* ── Stat cards: hover lift ──────────────────────────────────────────── */
@@ -380,9 +390,25 @@ const css = `
   .feat-icon{box-shadow:0 2px 10px rgba(0,0,0,.07);transition:transform .22s cubic-bezier(.34,1.56,.64,1)}
   .rv-item:hover .feat-icon{transform:scale(1.1)}
 
-  /* ── Pro pricing card: soft glow ─────────────────────────────────────── */
-  .pro-card{box-shadow:0 6px 32px rgba(28,48,66,.13)!important}
-  .m.dark .pro-card{box-shadow:0 6px 32px rgba(123,167,196,.14)!important}
+  /* ── Pro pricing card: premium glow ──────────────────────────────────── */
+  .pro-card{box-shadow:0 0 0 1px rgba(28,48,66,.12),0 8px 32px rgba(28,48,66,.18)!important;
+    transition:box-shadow .3s,transform .3s!important}
+  .pro-card:hover{box-shadow:0 0 0 1px rgba(28,48,66,.2),0 14px 44px rgba(28,48,66,.28)!important;
+    transform:translateY(-3px)!important}
+  .m.dark .pro-card{box-shadow:0 0 0 1px rgba(123,167,196,.2),0 8px 32px rgba(123,167,196,.18)!important}
+  .m.dark .pro-card:hover{box-shadow:0 0 0 1px rgba(123,167,196,.3),0 14px 44px rgba(123,167,196,.26)!important;
+    transform:translateY(-3px)!important}
+
+  /* ── Dropzone: bounce icon on hover/drag ─────────────────────────────── */
+  @keyframes dz-bounce{0%,100%{transform:translateY(0)} 40%{transform:translateY(-6px)} 70%{transform:translateY(-3px)}}
+  .dz{border-width:2px!important;border-radius:12px!important;transition:all .22s!important}
+  .dz:hover,.dz.ov{box-shadow:0 0 0 3px var(--al)!important}
+  .dz:hover .dz-icon,.dz.ov .dz-icon{animation:dz-bounce .75s ease-in-out infinite}
+
+  /* ── Toast types ──────────────────────────────────────────────────────── */
+  .toast{padding-left:14px!important}
+  .toast-ok{border-left:3px solid #22C55E}
+  .toast-err{border-left:3px solid #EF4444}
 `;
 
 /* ── AdSense Unit ────────────────────────────────────────────────────────── */
@@ -435,6 +461,46 @@ const CAT_DOT_COLOR = {
   cat_conv:"#2563EB", cat_img:"#10B981", cat_ops:"#EF4444",
   cat_edit:"#D97706", cat_sec:"#0D9488",
 };
+
+/* ── StatCard — card de estadística con contador roll-up ─────────────────── */
+function StatCard({ value, label, parentRef }) {
+  const str = String(value);
+  const m   = str.match(/^(\d[\d,]*)/);
+  const tgt = m ? parseInt(m[1].replace(/,/g,"")) : 0;
+  const sfx = m ? str.slice(m[0].length) : "";
+  // null = mostrar valor crudo (pre-animación / tests); número = animando
+  const [n, setN] = useState(null);
+  const ran = useRef(false);
+  useEffect(() => {
+    if (!m) return;
+    const el = parentRef.current;
+    if (!el) return;
+    const run = () => {
+      if (ran.current) return;
+      ran.current = true;
+      const t0 = performance.now();
+      const tick = now => {
+        const p = Math.min((now - t0) / 900, 1);
+        setN(Math.round((1 - (1-p)**3) * tgt));
+        if (p < 1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    };
+    if (el.classList.contains("on")) { run(); return; }
+    const obs = new MutationObserver(() => { if (el.classList.contains("on")) run(); });
+    obs.observe(el, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, [parentRef, tgt]); // eslint-disable-line react-hooks/exhaustive-deps
+  const display = n === null ? str : n.toLocaleString() + sfx;
+  return (
+    <div className="rv-item stat-card" style={{textAlign:"center",padding:"16px 12px",background:"var(--sf)",
+      border:"1px solid var(--bd)",borderRadius:10}}>
+      <div style={{fontSize:22,fontWeight:700,color:"var(--ac)",
+        fontFamily:"'DM Mono',monospace",marginBottom:4,letterSpacing:"-.02em"}}>{display}</div>
+      <div style={{fontSize:11,color:"var(--tm)",lineHeight:1.4}}>{label}</div>
+    </div>
+  );
+}
 
 /* ── useReveal — anima sección al entrar en viewport ────────────────────── */
 function useReveal(threshold=0.12) {
@@ -1249,16 +1315,11 @@ export default function App() {
           <div ref={rvStats} className="rv-wrap m-stats" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:48}}>
             {[
               {value:TOOLS.filter(t=>!t.comingSoon).length+"",  label:T.tools_count},
-              {value:count>0?count.toLocaleString():"1000+",    label:T.stat_files},
+              {value:count>0?count:"1000+",                      label:T.stat_files},
               {value:"<3s",                                      label:T.stat_speed},
               {value:"100%",                                     label:T.stat_priv},
             ].map((s,i)=>(
-              <div key={i} className="rv-item stat-card" style={{textAlign:"center",padding:"16px 12px",background:"var(--sf)",
-                border:"1px solid var(--bd)",borderRadius:10}}>
-                <div style={{fontSize:22,fontWeight:700,color:"var(--ac)",
-                  fontFamily:"'DM Mono',monospace",marginBottom:4,letterSpacing:"-.02em"}}>{s.value}</div>
-                <div style={{fontSize:11,color:"var(--tm)",lineHeight:1.4}}>{s.label}</div>
-              </div>
+              <StatCard key={i} value={s.value} label={s.label} parentRef={rvStats}/>
             ))}
           </div>
 
@@ -1494,9 +1555,10 @@ export default function App() {
         </div>
         </div>{/* /m-hero-wrap */}
 
-        {/* Pricing */}
-        <div ref={rvPricing} className="rv" style={{maxWidth:960,margin:"0 auto",padding:"0 20px 48px"}}>
-          <div style={{borderTop:"1px solid var(--bd)",paddingTop:36}}>
+        {/* Pricing — banda de fondo */}
+        <div style={{background:"var(--sf)",borderTop:"1px solid var(--bd)",borderBottom:"1px solid var(--bd)"}}>
+        <div ref={rvPricing} className="rv" style={{maxWidth:960,margin:"0 auto",padding:"36px 20px 48px"}}>
+          <div>
             <h2 style={{fontSize:18,fontWeight:600,letterSpacing:"-.02em",marginBottom:6,textAlign:"center"}}>{T.pricing_title}</h2>
             <p style={{fontSize:13,color:"var(--tm)",textAlign:"center",marginBottom:24}}>{T.pricing_sub}</p>
 
@@ -1556,6 +1618,7 @@ export default function App() {
             </div>
           </div>
         </div>
+        </div>{/* /pricing band */}
 
         {/* FAQ */}
         <div ref={rvFaq} className="rv" style={{maxWidth:960,margin:"0 auto",padding:"0 20px 48px"}}>
