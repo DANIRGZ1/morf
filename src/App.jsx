@@ -18,7 +18,7 @@ import { Privacy, Terms, Contact, API } from "./components/ModalContents";
 /* ── CSS ──────────────────────────────────────────────────────────────────── */
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
-  html,body,#root{margin:0;padding:0;min-height:100vh;background:inherit;overflow-x:hidden}
+  html,body,#root{margin:0;padding:0;min-height:100vh;background:inherit;overflow-x:hidden;scroll-behavior:smooth}
   .m*{box-sizing:border-box;margin:0;padding:0}
   .m{
     --bg:#F9F9F8;--sf:#FFF;--bd:#E3E3E0;--bh:#C4C4C0;
@@ -110,9 +110,10 @@ const css = `
     /* Stats: 2 columns on mobile */
     .m-stats{grid-template-columns:1fr 1fr!important}
 
-    /* How-it-works: full rounded + hide arrows when stacked */
+    /* How-it-works: full rounded + hide arrows when stacked + add gap */
     .m-how-step{border-radius:10px!important}
     .m-how-arrow{display:none!important}
+    .m-how-grid{gap:8px!important}
 
     /* Panel */
     .m-panel{margin:0 -14px!important;border-radius:0!important;border-left:none!important;border-right:none!important}
@@ -120,8 +121,8 @@ const css = `
     /* Features */
     .m-feat{grid-template-columns:1fr 1fr!important}
 
-    /* Buttons */
-    .bp,.bg{font-size:12px!important;padding:8px 14px!important}
+    /* Buttons: bigger tap targets */
+    .bp,.bg{font-size:12px!important;padding:10px 14px!important;min-height:44px!important}
 
     /* Modal */
     .sh{max-height:92vh!important}
@@ -135,10 +136,36 @@ const css = `
 
     /* Footer grid: stack on mobile */
     .m-footer-grid{grid-template-columns:1fr!important;gap:20px!important}
+
+    /* Hide Ctrl+K keyboard shortcut badge on touch screens */
+    .m-ctrl-k{display:none!important}
+
+    /* Search input: remove extra right padding when badge is hidden */
+    .m-search-inp{padding-right:9px!important}
+
+    /* Before/After history: stack vertically on mobile */
+    .m-hist-item{grid-template-columns:1fr!important;gap:6px!important}
+    .m-hist-arrow{display:none!important}
+
+    /* Tools overlay: hide logo + icon-only close button */
+    .m-overlay-logo{display:none!important}
+    .m-overlay-close-text{display:none!important}
+    .m-overlay-header{padding:0 12px!important;gap:8px!important}
+
+    /* iOS: prevent input zoom (inputs must be ≥16px font-size on mobile) */
+    input,textarea,select{font-size:16px!important}
   }
 
   @media(max-width:400px){
     .grid{grid-template-columns:1fr 1fr!important}
+  }
+
+  /* ── Touch active states (no hover on touch) ── */
+  @media(hover:none){
+    .card:active{transform:scale(.97)!important;transition:transform .1s!important}
+    .bp:active{opacity:.85!important;transform:scale(.98)!important}
+    .bg:active{opacity:.7!important}
+    .bp:hover,.bg:hover,.card:hover{transform:none;box-shadow:none}
   }
 
   /* lang picker */
@@ -418,9 +445,9 @@ function ToolsMenuOverlay({ TOOLS, goToTool, T, onClose }) {
     <div style={{position:"fixed",inset:0,zIndex:500,background:"var(--bg)",
       display:"flex",flexDirection:"column",animation:"fo .18s ease both"}}>
       {/* Header */}
-      <div style={{borderBottom:"1px solid var(--bd)",background:"var(--sf)",flexShrink:0,
+      <div className="m-overlay-header" style={{borderBottom:"1px solid var(--bd)",background:"var(--sf)",flexShrink:0,
         padding:"0 20px",height:56,display:"flex",alignItems:"center",gap:12}}>
-        <span style={{fontWeight:700,fontSize:15,letterSpacing:"-.03em",color:"var(--t1)",flexShrink:0}}>
+        <span className="m-overlay-logo" style={{fontWeight:700,fontSize:15,letterSpacing:"-.03em",color:"var(--t1)",flexShrink:0}}>
           morf<span style={{fontWeight:300,color:"var(--ac)"}}>.</span><span style={{fontWeight:400,color:"var(--ac)"}}>pdf</span>
         </span>
         <div style={{flex:1,position:"relative",maxWidth:440}}>
@@ -447,7 +474,7 @@ function ToolsMenuOverlay({ TOOLS, goToTool, T, onClose }) {
           onMouseEnter={e=>{e.currentTarget.style.background="var(--al)";e.currentTarget.style.borderColor="var(--ac)"}}
           onMouseLeave={e=>{e.currentTarget.style.background="transparent";e.currentTarget.style.borderColor="var(--bd)"}}>
           <Ic n="x" s={14} c="var(--t2)"/>
-          Cerrar
+          <span className="m-overlay-close-text">Cerrar</span>
         </button>
       </div>
       {/* Body */}
@@ -880,7 +907,7 @@ export default function App() {
               <h2 style={{fontSize:17,fontWeight:600,letterSpacing:"-.02em",marginBottom:6}}>{T.how_title}</h2>
               <p style={{fontSize:13,color:"var(--tm)",maxWidth:440,margin:"0 auto"}}>{T.how_sub}</p>
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:2,position:"relative"}}>
+            <div className="m-how-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:2,position:"relative"}}>
               {T.how_steps.map(([title,desc],i)=>(
                 <div key={i} className="m-how-step" style={{display:"flex",flexDirection:"column",alignItems:"center",textAlign:"center",
                   padding:"24px 20px",background:"var(--sf)",border:"1px solid var(--bd)",
@@ -921,7 +948,7 @@ export default function App() {
                   const outExt = tool ? (extMap[tool.to]||"") : "";
                   const outName = h.filename.replace(/\.[^.]+$/,"") + outExt;
                   return (
-                    <div key={i} style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",gap:10,alignItems:"center"}}>
+                    <div key={i} className="m-hist-item" style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",gap:10,alignItems:"center"}}>
                       <div style={{padding:"11px 13px",background:"var(--sf)",border:"1px solid var(--bd)",
                         borderRadius:8,display:"flex",alignItems:"center",gap:9,minWidth:0,overflow:"hidden"}}>
                         <Ic n="file" s={15} c="var(--tm)" style={{flexShrink:0}}/>
@@ -931,7 +958,7 @@ export default function App() {
                           <div style={{fontSize:10,color:"var(--tm)",fontFamily:"'DM Mono',monospace"}}>{h.tool}</div>
                         </div>
                       </div>
-                      <div style={{display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                      <div className="m-hist-arrow" style={{display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                         <Ic n="arrow" s={18} c="var(--ac)" sw={1.6}/>
                       </div>
                       <div style={{padding:"11px 13px",background:"var(--sf)",border:"1px solid var(--ok)",
@@ -962,6 +989,7 @@ export default function App() {
                   value={toolSearch}
                   onChange={e=>setToolSearch(e.target.value)}
                   placeholder={T.search_ph}
+                  className="m-search-inp"
                   style={{width:"100%",padding:"7px 52px 7px 28px",border:"1px solid var(--bd)",borderRadius:7,
                     background:"var(--sf)",fontSize:12,color:"var(--t1)",outline:"none",
                     fontFamily:"'DM Sans',sans-serif",transition:"border-color .15s"}}
@@ -974,7 +1002,7 @@ export default function App() {
                     <Ic n="x" s={12} c="var(--tm)"/>
                   </button>
                 ) : (
-                  <span style={{position:"absolute",right:7,top:"50%",transform:"translateY(-50%)",
+                  <span className="m-ctrl-k" style={{position:"absolute",right:7,top:"50%",transform:"translateY(-50%)",
                     fontSize:9,fontFamily:"'DM Mono',monospace",color:"var(--tm)",background:"var(--bd)",
                     padding:"2px 4px",borderRadius:3,pointerEvents:"none"}}>
                     Ctrl K
