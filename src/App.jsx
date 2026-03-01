@@ -153,9 +153,9 @@ const css = `
     .m-hist-item{grid-template-columns:1fr!important;gap:6px!important}
     .m-hist-arrow{display:none!important}
 
-    /* Tools overlay: hide logo + icon-only close button */
+    /* Tools overlay: ocultar logo en móvil, mostrar título */
     .m-overlay-logo{display:none!important}
-    .m-overlay-close-text{display:none!important}
+    .m-overlay-title{display:inline!important}
     .m-overlay-header{padding:0 12px!important;gap:8px!important}
 
     /* iOS: prevent input zoom (inputs must be ≥16px font-size on mobile) */
@@ -173,6 +173,9 @@ const css = `
     /* Hide date in history items when screen is very narrow */
     .m-hist-date{display:none!important}
   }
+
+  /* Overlay: el título sólo se muestra en móvil (logo visible en desktop) */
+  .m-overlay-title{display:none}
 
   /* ── Touch active states (no hover on touch) ── */
   @media(hover:none){
@@ -480,8 +483,12 @@ function ToolsMenuOverlay({ TOOLS, goToTool, T, onClose }) {
       {/* Header */}
       <div className="m-overlay-header" style={{borderBottom:"1px solid var(--bd)",background:"var(--sf)",flexShrink:0,
         padding:"0 20px",height:56,display:"flex",alignItems:"center",gap:12}}>
+        {/* Logo (desktop) / Título (mobile) */}
         <span className="m-overlay-logo" style={{fontWeight:700,fontSize:15,letterSpacing:"-.03em",color:"var(--t1)",flexShrink:0}}>
           morf<span style={{fontWeight:300,color:"var(--ac)"}}>.</span><span style={{fontWeight:400,color:"var(--ac)"}}>pdf</span>
+        </span>
+        <span className="m-overlay-title" style={{fontWeight:600,fontSize:14,color:"var(--t1)",flexShrink:0}}>
+          {T.tools_title}
         </span>
         <div style={{flex:1,position:"relative",maxWidth:440}}>
           <Ic n="search" s={13} c="var(--tm)"
@@ -499,14 +506,15 @@ function ToolsMenuOverlay({ TOOLS, goToTool, T, onClose }) {
             <Ic n="x" s={12} c="var(--tm)"/>
           </button>}
         </div>
-        <button onClick={onClose}
-          style={{display:"inline-flex",alignItems:"center",gap:6,background:"transparent",
-            border:"1px solid var(--bd)",borderRadius:7,padding:"6px 13px",cursor:"pointer",
-            fontSize:12,color:"var(--t2)",fontFamily:"'DM Sans',sans-serif",flexShrink:0,
-            transition:"all .15s"}}
-          onMouseEnter={e=>{e.currentTarget.style.background="var(--al)";e.currentTarget.style.borderColor="var(--ac)"}}
-          onMouseLeave={e=>{e.currentTarget.style.background="transparent";e.currentTarget.style.borderColor="var(--bd)"}}>
-          <Ic n="x" s={14} c="var(--t2)"/>
+        {/* Botón cerrar — siempre visible */}
+        <button onClick={onClose} aria-label="Cerrar"
+          style={{display:"inline-flex",alignItems:"center",gap:6,background:"var(--al)",
+            border:"1px solid var(--bd)",borderRadius:7,padding:"7px 13px",cursor:"pointer",
+            fontSize:12,color:"var(--t1)",fontFamily:"'DM Sans',sans-serif",flexShrink:0,
+            fontWeight:500,transition:"all .15s",minHeight:36}}
+          onMouseEnter={e=>{e.currentTarget.style.background="var(--bd)"}}
+          onMouseLeave={e=>{e.currentTarget.style.background="var(--al)"}}>
+          <Ic n="x" s={14} c="var(--t1)"/>
           <span className="m-overlay-close-text">Cerrar</span>
         </button>
       </div>
