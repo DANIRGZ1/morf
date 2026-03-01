@@ -460,6 +460,26 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
   const progressTimer = useRef(null);
   const convertRef    = useRef(null);
 
+  const isMulti = !!(tool.multi || tool.batch);
+
+  const addFiles = l => {
+    const list = Array.from(l);
+    const hasOdt = list.some(f =>
+      f.name.toLowerCase().endsWith(".odt") ||
+      f.type === "application/vnd.oasis.opendocument.text"
+    );
+    if (hasOdt) { showToast(T.err_odt,"err"); return; }
+    const ok = list.filter(f => {
+      const name = f.name.toLowerCase();
+      const mime = f.type.toLowerCase();
+      const extOk  = (tool.accepts||[]).some(e => name.endsWith(e.replace(".","").toLowerCase()));
+      const mimeOk = (tool.mimeTypes||[]).some(m => mime === m);
+      return extOk || mimeOk;
+    });
+    if (!ok.length){ showToast(T.incompat,"err"); return; }
+    setFiles(p => isMulti ? [...p,...ok] : [ok[0]]);
+  };
+
   // Pre-load file passed from home drag-and-drop
   useEffect(() => {
     if (preloadedFile) addFiles([preloadedFile]);
@@ -500,6 +520,7 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
   }, [files[0]?.name, files[0]?.size]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep convertRef current so the keyboard handler always calls the latest version
+  // eslint-disable-next-line react-hooks/immutability
   useEffect(() => { convertRef.current = convert; });
 
   // Enter key → convert (when not focused on input/button)
@@ -543,27 +564,7 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
       } catch(e) { console.error(e); }
     })();
     return () => { cancelled = true; };
-  }, [tool.id, files]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const isMulti = !!(tool.multi || tool.batch);
-
-  const addFiles = l => {
-    const list = Array.from(l);
-    const hasOdt = list.some(f =>
-      f.name.toLowerCase().endsWith(".odt") ||
-      f.type === "application/vnd.oasis.opendocument.text"
-    );
-    if (hasOdt) { showToast(T.err_odt,"err"); return; }
-    const ok = list.filter(f => {
-      const name = f.name.toLowerCase();
-      const mime = f.type.toLowerCase();
-      const extOk  = (tool.accepts||[]).some(e => name.endsWith(e.replace(".","").toLowerCase()));
-      const mimeOk = (tool.mimeTypes||[]).some(m => mime === m);
-      return extOk || mimeOk;
-    });
-    if (!ok.length){ showToast(T.incompat,"err"); return; }
-    setFiles(p => isMulti ? [...p,...ok] : [ok[0]]);
-  };
+  }, [tool.id, files]);
 
   const getErrMsg = (e) => {
     const msg = (e.message || "").toLowerCase();
