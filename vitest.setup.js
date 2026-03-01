@@ -25,3 +25,6 @@ global.IntersectionObserver = class IntersectionObserver {
   unobserve() {}
   disconnect() {}
 }
+
+// scrollIntoView — not implemented in jsdom
+Element.prototype.scrollIntoView = vi.fn()

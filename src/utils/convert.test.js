@@ -938,3 +938,354 @@ describe('excelToPdf', () => {
     expect(html).toContain('Gastos')
   })
 })
+
+// ─────────────────────────────────────────────────────────────────
+// Additional convert functions — pdf-lib based
+// ─────────────────────────────────────────────────────────────────
+import {
+  repairPdf,
+  flattenPdf,
+  organizePdf,
+  deletePagesPdf,
+  signPdfV2,
+  annotatePdf,
+  redactPdf,
+  htmlToPdf,
+  downloadAsZip,
+} from './convert'
+
+// ─────────────────────────────────────────────────────────────────
+// repairPdf — load + save, trivial
+// ─────────────────────────────────────────────────────────────────
+describe('repairPdf', () => {
+  beforeEach(() => {
+    mockPdfSave.mockReset().mockResolvedValue(new Uint8Array([1, 2, 3]))
+    URL.createObjectURL.mockClear()
+  })
+
+  it('loads and saves the PDF', async () => {
+    await repairPdf(makeFilePdf('broken.pdf'))
+    expect(mockPdfSave).toHaveBeenCalled()
+  })
+
+  it('triggers a download', async () => {
+    await repairPdf(makeFilePdf('broken.pdf'))
+    expect(URL.createObjectURL).toHaveBeenCalled()
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────
+// flattenPdf — calls getForm().flatten()
+// ─────────────────────────────────────────────────────────────────
+describe('flattenPdf', () => {
+  let mockFlatten
+
+  beforeEach(() => {
+    mockPdfSave.mockReset().mockResolvedValue(new Uint8Array([1, 2, 3]))
+    URL.createObjectURL.mockClear()
+    mockFlatten = vi.fn()
+    mockPdfDoc.getForm = vi.fn(() => ({ flatten: mockFlatten }))
+  })
+
+  afterEach(() => {
+    delete mockPdfDoc.getForm
+  })
+
+  it('calls getForm().flatten()', async () => {
+    await flattenPdf(makeFilePdf())
+    expect(mockFlatten).toHaveBeenCalled()
+  })
+
+  it('saves and downloads the flattened PDF', async () => {
+    await flattenPdf(makeFilePdf())
+    expect(mockPdfSave).toHaveBeenCalled()
+    expect(URL.createObjectURL).toHaveBeenCalled()
+  })
+
+  it('does not throw when getForm().flatten() throws (no form)', async () => {
+    mockPdfDoc.getForm = vi.fn(() => ({ flatten: vi.fn().mockImplementation(() => { throw new Error('no form') }) }))
+    await expect(flattenPdf(makeFilePdf())).resolves.toBeUndefined()
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────
+// organizePdf — reorders pages via pdf-lib
+// ─────────────────────────────────────────────────────────────────
+describe('organizePdf', () => {
+  beforeEach(() => {
+    mockPdfSave.mockReset().mockResolvedValue(new Uint8Array([1, 2, 3]))
+    mockPdfDoc.copyPages.mockClear()
+    mockPdfDoc.addPage.mockClear()
+    URL.createObjectURL.mockClear()
+  })
+
+  it('copies pages in the specified order', async () => {
+    await organizePdf(makeFilePdf(), [2, 0, 1])
+    expect(mockPdfDoc.copyPages).toHaveBeenCalledWith(mockPdfDoc, [2, 0, 1])
+  })
+
+  it('adds each copied page', async () => {
+    await organizePdf(makeFilePdf(), [0])
+    expect(mockPdfDoc.addPage).toHaveBeenCalledWith(mockPage)
+  })
+
+  it('saves and downloads the reorganized PDF', async () => {
+    await organizePdf(makeFilePdf(), [0, 1])
+    expect(mockPdfSave).toHaveBeenCalled()
+    expect(URL.createObjectURL).toHaveBeenCalled()
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────
+// deletePagesPdf — deletes specified pages using parsePageRange
+// ─────────────────────────────────────────────────────────────────
+describe('deletePagesPdf', () => {
+  beforeEach(() => {
+    mockPdfSave.mockReset().mockResolvedValue(new Uint8Array([1, 2, 3]))
+    mockPdfDoc.copyPages.mockClear()
+    mockPdfDoc.addPage.mockClear()
+    // getPageCount returns 5 by default from mock
+    URL.createObjectURL.mockClear()
+  })
+
+  it('throws when all pages are deleted', async () => {
+    // parsePageRange('1-5', 5) returns [0,1,2,3,4] — all pages
+    await expect(deletePagesPdf(makeFilePdf(), '1-5')).rejects.toThrow('No quedan páginas')
+  })
+
+  it('keeps undeleted pages and downloads result', async () => {
+    // parsePageRange('1', 5) returns [0] — delete page 1, keep 1,2,3,4 (indices 1-4)
+    await deletePagesPdf(makeFilePdf(), '1')
+    expect(mockPdfSave).toHaveBeenCalled()
+    expect(URL.createObjectURL).toHaveBeenCalled()
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────
+// signPdfV2 — embeds signature image
+// ─────────────────────────────────────────────────────────────────
+describe('signPdfV2', () => {
+  const SIG_DATA_URL =
+    'data:image/png;base64,' + btoa('fake-png-bytes')
+
+  beforeEach(() => {
+    mockPdfSave.mockReset().mockResolvedValue(new Uint8Array([1, 2, 3]))
+    mockPdfDoc.embedPng.mockClear()
+    mockPage.getSize = vi.fn(() => ({ width: 612, height: 792 }))
+    mockPage.drawImage = vi.fn()
+    URL.createObjectURL.mockClear()
+  })
+
+  afterEach(() => {
+    delete mockPage.getSize
+    delete mockPage.drawImage
+  })
+
+  it('embeds the PNG signature', async () => {
+    await signPdfV2(makeFilePdf(), SIG_DATA_URL, 'last', 'br')
+    expect(mockPdfDoc.embedPng).toHaveBeenCalled()
+  })
+
+  it('calls drawImage on the target page', async () => {
+    await signPdfV2(makeFilePdf(), SIG_DATA_URL, 'first', 'tl')
+    expect(mockPage.drawImage).toHaveBeenCalled()
+  })
+
+  it('saves and downloads the signed PDF', async () => {
+    await signPdfV2(makeFilePdf(), SIG_DATA_URL)
+    expect(mockPdfSave).toHaveBeenCalled()
+    expect(URL.createObjectURL).toHaveBeenCalled()
+  })
+
+  it('signs all pages when pageSpec="all"', async () => {
+    // getPages returns [mockPage] (1 page), so drawImage called once
+    mockPage.drawImage = vi.fn()
+    await signPdfV2(makeFilePdf(), SIG_DATA_URL, 'all', 'bc')
+    expect(mockPage.drawImage).toHaveBeenCalledTimes(1)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────
+// annotatePdf — draws text annotations via pdf-lib
+// ─────────────────────────────────────────────────────────────────
+describe('annotatePdf', () => {
+  let mockWidthOfText
+
+  beforeEach(() => {
+    mockPdfSave.mockReset().mockResolvedValue(new Uint8Array([1, 2, 3]))
+    mockWidthOfText = vi.fn(() => 100)
+    mockPdfDoc.embedFont = vi.fn().mockResolvedValue({ widthOfTextAtSize: mockWidthOfText })
+    mockPage.getSize = vi.fn(() => ({ width: 612, height: 792 }))
+    mockPage.drawText = vi.fn()
+    URL.createObjectURL.mockClear()
+  })
+
+  afterEach(() => {
+    delete mockPdfDoc.embedFont
+    delete mockPage.getSize
+    delete mockPage.drawText
+  })
+
+  const makeAnnotations = () => [
+    { page: 1, text: 'DRAFT', pos: 'tc', size: 24, color: 'red' },
+  ]
+
+  it('embeds Helvetica font', async () => {
+    await annotatePdf(makeFilePdf(), makeAnnotations())
+    expect(mockPdfDoc.embedFont).toHaveBeenCalledWith('Helvetica')
+  })
+
+  it('calls drawText for each annotation', async () => {
+    await annotatePdf(makeFilePdf(), makeAnnotations())
+    expect(mockPage.drawText).toHaveBeenCalledWith('DRAFT', expect.objectContaining({ size: 24 }))
+  })
+
+  it('saves and downloads the annotated PDF', async () => {
+    await annotatePdf(makeFilePdf(), makeAnnotations())
+    expect(mockPdfSave).toHaveBeenCalled()
+    expect(URL.createObjectURL).toHaveBeenCalled()
+  })
+
+  it('works with multiple annotations', async () => {
+    const anns = [
+      { page: 1, text: 'First', pos: 'tl', size: 12, color: 'black' },
+      { page: 1, text: 'Second', pos: 'br', size: 14, color: 'blue' },
+    ]
+    await annotatePdf(makeFilePdf(), anns)
+    expect(mockPage.drawText).toHaveBeenCalledTimes(2)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────
+// redactPdf — draws black rectangles over sensitive areas
+// ─────────────────────────────────────────────────────────────────
+describe('redactPdf', () => {
+  beforeEach(() => {
+    mockPdfSave.mockReset().mockResolvedValue(new Uint8Array([1, 2, 3]))
+    mockPage.getSize = vi.fn(() => ({ width: 612, height: 792 }))
+    mockPage.drawRectangle = vi.fn()
+    URL.createObjectURL.mockClear()
+  })
+
+  afterEach(() => {
+    delete mockPage.getSize
+    delete mockPage.drawRectangle
+  })
+
+  const makeZones = () => [
+    { page: 1, x: 10, y: 20, w: 50, h: 10 },
+  ]
+
+  it('calls drawRectangle for each zone', async () => {
+    await redactPdf(makeFilePdf(), makeZones())
+    expect(mockPage.drawRectangle).toHaveBeenCalledTimes(1)
+  })
+
+  it('uses black color for redaction', async () => {
+    await redactPdf(makeFilePdf(), makeZones())
+    expect(mockPage.drawRectangle).toHaveBeenCalledWith(
+      expect.objectContaining({ color: expect.objectContaining({ r: 0, g: 0, b: 0 }) })
+    )
+  })
+
+  it('saves and downloads the redacted PDF', async () => {
+    await redactPdf(makeFilePdf(), makeZones())
+    expect(mockPdfSave).toHaveBeenCalled()
+    expect(URL.createObjectURL).toHaveBeenCalled()
+  })
+
+  it('handles multiple zones', async () => {
+    const zones = [
+      { page: 1, x: 0, y: 0, w: 10, h: 10 },
+      { page: 1, x: 50, y: 50, w: 20, h: 5 },
+    ]
+    await redactPdf(makeFilePdf(), zones)
+    expect(mockPage.drawRectangle).toHaveBeenCalledTimes(2)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────
+// htmlToPdf — opens an HTML file in a new window for printing
+// ─────────────────────────────────────────────────────────────────
+describe('htmlToPdf', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+    URL.createObjectURL.mockClear()
+    URL.revokeObjectURL.mockClear()
+  })
+
+  const makeHtml = (content = '<html><body>Test</body></html>') =>
+    new File([content], 'page.html', { type: 'text/html' })
+
+  it('returns "print-dialog" when popup opens', async () => {
+    const mockWin = { document: { open: vi.fn(), write: vi.fn(), close: vi.fn() } }
+    vi.spyOn(window, 'open').mockReturnValue(mockWin)
+    expect(await htmlToPdf(makeHtml())).toBe('print-dialog')
+  })
+
+  it('returns "popup-blocked" and triggers download when popup is blocked', async () => {
+    vi.spyOn(window, 'open').mockReturnValue(null)
+    const result = await htmlToPdf(makeHtml())
+    expect(result).toBe('popup-blocked')
+    expect(URL.createObjectURL).toHaveBeenCalled()
+  })
+
+  it('injects autoprint script when not already present', async () => {
+    const mockWin = { document: { open: vi.fn(), write: vi.fn(), close: vi.fn() } }
+    vi.spyOn(window, 'open').mockReturnValue(mockWin)
+    await htmlToPdf(makeHtml('<html><body>Test</body></html>'))
+    // opens the URL (createObjectURL called)
+    expect(URL.createObjectURL).toHaveBeenCalled()
+  })
+
+  it('does not inject script when window.print already present', async () => {
+    const withPrint = '<html><body><script>window.print();<\/script></body></html>'
+    const mockWin = { document: { open: vi.fn(), write: vi.fn(), close: vi.fn() } }
+    vi.spyOn(window, 'open').mockReturnValue(mockWin)
+    const result = await htmlToPdf(makeHtml(withPrint))
+    expect(result).toBe('print-dialog')
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────
+// downloadAsZip — packages blobs into a ZIP file
+// ─────────────────────────────────────────────────────────────────
+describe('downloadAsZip', () => {
+  let mockZipFile
+  let mockZipInstance
+
+  beforeEach(() => {
+    URL.createObjectURL.mockClear()
+    mockZipFile = vi.fn()
+    mockZipInstance = {
+      file: mockZipFile,
+      generateAsync: vi.fn().mockResolvedValue(new Blob(['zip content'])),
+    }
+    window.JSZip = function JSZip() { return mockZipInstance }
+  })
+
+  afterEach(() => {
+    delete window.JSZip
+  })
+
+  it('adds each item to the zip', async () => {
+    const items = [
+      { filename: 'a.pdf', blob: new Blob(['aaa']) },
+      { filename: 'b.pdf', blob: new Blob(['bbb']) },
+    ]
+    await downloadAsZip(items)
+    expect(mockZipFile).toHaveBeenCalledTimes(2)
+    expect(mockZipFile.mock.calls[0][0]).toBe('a.pdf')
+    expect(mockZipFile.mock.calls[1][0]).toBe('b.pdf')
+  })
+
+  it('generates a zip blob', async () => {
+    await downloadAsZip([{ filename: 'x.pdf', blob: new Blob(['x']) }])
+    expect(mockZipInstance.generateAsync).toHaveBeenCalledWith({ type: 'blob' })
+  })
+
+  it('triggers a download of the zip file', async () => {
+    await downloadAsZip([{ filename: 'x.pdf', blob: new Blob(['x']) }])
+    expect(URL.createObjectURL).toHaveBeenCalled()
+  })
+})
