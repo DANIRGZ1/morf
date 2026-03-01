@@ -409,6 +409,35 @@ const css = `
   .toast{padding-left:14px!important}
   .toast-ok{border-left:3px solid #22C55E}
   .toast-err{border-left:3px solid #EF4444}
+
+  /* ── Tool page banner: icono hover scale ─────────────────────────────── */
+  .tool-banner-icon{transition:transform .22s cubic-bezier(.34,1.56,.64,1)}
+  .tool-banner-icon:hover{transform:scale(1.07)}
+
+  /* ── Eyebrow bar: barra de acento encima de h2 ───────────────────────── */
+  .eyebrow-bar{width:28px;height:3px;border-radius:2px;background:var(--ac);margin:0 auto 14px}
+
+  /* ── Footer: gradiente de color como separador superior ─────────────── */
+  .m-footer::before{
+    content:"";display:block;height:3px;
+    background:linear-gradient(90deg,var(--ac) 0%,transparent 50%,var(--ok) 100%);
+    margin-bottom:32px}
+
+  /* ── Progress bar: shimmer ───────────────────────────────────────────── */
+  @keyframes bar-shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+  .prog-fill{
+    height:100%;border-radius:3px;
+    background:linear-gradient(90deg,var(--ac) 0%,var(--ah) 45%,var(--ac) 100%);
+    background-size:200% 100%;
+    animation:bar-shimmer 1.4s linear infinite;
+    transition:width .12s linear}
+
+  /* ── Done check: pop de entrada ──────────────────────────────────────── */
+  @keyframes check-pop{
+    0%{transform:scale(0);opacity:0}
+    65%{transform:scale(1.2)}
+    100%{transform:scale(1);opacity:1}}
+  .done-check{animation:check-pop .5s cubic-bezier(.34,1.56,.64,1) both}
 `;
 
 /* ── AdSense Unit ────────────────────────────────────────────────────────── */
@@ -584,22 +613,25 @@ function ToolPage({ tool, showToast, bumpCount, addToHistory, checkLimits, onBac
         </button>
       </div>
 
-      {/* Hero de la herramienta */}
-      <div style={{maxWidth:960,margin:"0 auto",padding:"0 20px 32px",textAlign:"center"}}>
-        <div style={{width:56,height:56,borderRadius:15,background:"var(--al)",
-          display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px",
-          border:"1px solid var(--bd)"}}>
-          <Ic n={tool.icon} s={24} c="var(--ac)"/>
-        </div>
-        <h1 style={{fontSize:"clamp(22px,4vw,36px)",fontWeight:700,letterSpacing:"-.02em",marginBottom:8}}>{tool.label}</h1>
-        <p style={{fontSize:15,color:"var(--t2)",maxWidth:440,margin:"0 auto 14px",lineHeight:1.7}}>{tool.desc}</p>
-        {/* Tags de formato */}
-        <div style={{display:"flex",gap:6,justifyContent:"center",alignItems:"center"}}>
-          <Tag type={tool.from}/>
-          <Ic n="arrow" s={14} c="var(--tm)"/>
-          <Tag type={tool.to}/>
-          {tool.pro&&<span style={{fontSize:9,fontWeight:700,fontFamily:"'DM Mono',monospace",
-            background:"var(--ac)",color:"#fff",borderRadius:3,padding:"2px 6px",letterSpacing:".04em"}}>PRO</span>}
+      {/* Banner de la herramienta — coloreado con su categoría */}
+      <div className={TOOL_COLOR[tool.id]||"tc-gray"}
+        style={{background:"var(--ti-bg)",borderBottom:"1px solid var(--bd)"}}>
+        <div style={{maxWidth:960,margin:"0 auto",padding:"28px 20px 36px",textAlign:"center"}}>
+          <div className="tool-banner-icon" style={{width:66,height:66,borderRadius:18,background:"var(--sf)",
+            display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px",
+            border:"1px solid rgba(0,0,0,.06)",boxShadow:"0 2px 16px rgba(0,0,0,.08)"}}>
+            <Ic n={tool.icon} s={28} c="var(--ti-ic)"/>
+          </div>
+          <h1 style={{fontSize:"clamp(22px,4vw,36px)",fontWeight:700,letterSpacing:"-.02em",marginBottom:8}}>{tool.label}</h1>
+          <p style={{fontSize:15,color:"var(--t2)",maxWidth:440,margin:"0 auto 14px",lineHeight:1.7}}>{tool.desc}</p>
+          {/* Tags de formato */}
+          <div style={{display:"flex",gap:6,justifyContent:"center",alignItems:"center"}}>
+            <Tag type={tool.from}/>
+            <Ic n="arrow" s={14} c="var(--tm)"/>
+            <Tag type={tool.to}/>
+            {tool.pro&&<span style={{fontSize:9,fontWeight:700,fontFamily:"'DM Mono',monospace",
+              background:"var(--ac)",color:"#fff",borderRadius:3,padding:"2px 6px",letterSpacing:".04em"}}>PRO</span>}
+          </div>
         </div>
       </div>
 
@@ -1331,6 +1363,7 @@ export default function App() {
           {/* Cómo funciona */}
           <div style={{marginBottom:48}}>
             <div style={{textAlign:"center",marginBottom:28}}>
+              <div className="eyebrow-bar"/>
               <h2 style={{fontSize:17,fontWeight:600,letterSpacing:"-.02em",marginBottom:6}}>{T.how_title}</h2>
               <p style={{fontSize:13,color:"var(--tm)",maxWidth:440,margin:"0 auto"}}>{T.how_sub}</p>
             </div>
@@ -1503,10 +1536,19 @@ export default function App() {
                   if (!visible.length) return null;
                   return (
                     <div key={key} style={{marginBottom:22}}>
-                      <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:10,paddingLeft:2}}>
-                        <span className="cat-dot" style={{background:CAT_DOT_COLOR[key]||"var(--tm)"}}/>
-                        <span style={{fontSize:10,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",
-                          color:"var(--t2)"}}>{T[key]}</span>
+                      <div style={{marginBottom:10,paddingLeft:2}}>
+                        <span style={{
+                          display:"inline-flex",alignItems:"center",gap:5,
+                          padding:"3px 10px 3px 8px",borderRadius:20,
+                          border:CAT_DOT_COLOR[key]?`1px solid ${CAT_DOT_COLOR[key]}33`:"1px solid var(--bd)",
+                          background:CAT_DOT_COLOR[key]?`${CAT_DOT_COLOR[key]}12`:"transparent",
+                          fontSize:10,fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",
+                          fontFamily:"'DM Mono',monospace",
+                          color:CAT_DOT_COLOR[key]||"var(--tm)"}}>
+                          <span style={{width:5,height:5,borderRadius:"50%",
+                            background:CAT_DOT_COLOR[key]||"var(--tm)",flexShrink:0}}/>
+                          {T[key]}
+                        </span>
                       </div>
                       <div className="grid">
                         {visible.map((t,i)=>(
@@ -1516,15 +1558,11 @@ export default function App() {
                     </div>
                   );
                 })}
-                <button
+                <button className="bg"
                   onClick={()=>setShowAllTools(s=>!s)}
-                  style={{display:"flex",alignItems:"center",gap:5,background:"none",border:"none",
-                    cursor:"pointer",color:"var(--tm)",fontSize:12,padding:"2px 0",marginTop:4,
-                    fontFamily:"'DM Sans',sans-serif",transition:"color .16s"}}
-                  onMouseEnter={e=>e.currentTarget.style.color="var(--t2)"}
-                  onMouseLeave={e=>e.currentTarget.style.color="var(--tm)"}>
+                  style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:12,marginTop:10,padding:"7px 14px"}}>
                   <span style={{display:"inline-flex",transform:showAllTools?"rotate(180deg)":"rotate(0deg)",transition:"transform .2s"}}>
-                    <Ic n="chevron" s={12} c="var(--tm)"/>
+                    <Ic n="chevron" s={12} c="var(--t2)"/>
                   </span>
                   {showAllTools ? T.tools_less : T.tools_more}
                 </button>
@@ -1559,6 +1597,7 @@ export default function App() {
         <div style={{background:"var(--sf)",borderTop:"1px solid var(--bd)",borderBottom:"1px solid var(--bd)"}}>
         <div ref={rvPricing} className="rv" style={{maxWidth:960,margin:"0 auto",padding:"36px 20px 48px"}}>
           <div>
+            <div className="eyebrow-bar"/>
             <h2 style={{fontSize:18,fontWeight:600,letterSpacing:"-.02em",marginBottom:6,textAlign:"center"}}>{T.pricing_title}</h2>
             <p style={{fontSize:13,color:"var(--tm)",textAlign:"center",marginBottom:24}}>{T.pricing_sub}</p>
 
@@ -1645,8 +1684,8 @@ export default function App() {
         </div>{/* /Main app */}
 
         {/* Footer */}
-        <footer style={{display:fullToolPage?'none':'block',borderTop:"1px solid var(--bd)",background:"var(--sf)"}}>
-          <div style={{maxWidth:960,margin:"0 auto",padding:"32px 20px 20px"}}>
+        <footer className="m-footer" style={{display:fullToolPage?'none':'block',background:"var(--sf)"}}>
+          <div style={{maxWidth:960,margin:"0 auto",padding:"0 20px 20px"}}>
             {/* Top row: brand + columns */}
             <div className="m-footer-grid" style={{display:"grid",gridTemplateColumns:"1fr auto auto",gap:32,marginBottom:28}}>
               {/* Brand */}
