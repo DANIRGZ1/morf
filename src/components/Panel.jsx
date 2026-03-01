@@ -269,8 +269,9 @@ function FileRow({ file, onRemove, onPreview=null, showHandle=false, index=0 }) 
   return (
     <div className="fr" style={{gap:8}}>
       {showHandle&&(
-        <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
-          <svg width="10" height="14" viewBox="0 0 10 14" fill="none" style={{opacity:.35,cursor:"grab"}}>
+        <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0,
+          minWidth:44,minHeight:44,justifyContent:"center",cursor:"grab"}}>
+          <svg width="10" height="14" viewBox="0 0 10 14" fill="none" style={{opacity:.35,pointerEvents:"none"}}>
             <circle cx="3" cy="2.5" r="1.2" fill="currentColor"/>
             <circle cx="7" cy="2.5" r="1.2" fill="currentColor"/>
             <circle cx="3" cy="7"   r="1.2" fill="currentColor"/>

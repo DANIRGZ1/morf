@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, memo } from "react";
 import { useHistory }   from "./hooks/useHistory";
 import { useFreemium }  from "./hooks/useFreemium";
 import { useCounter }   from "./hooks/useCounter";
@@ -22,7 +22,7 @@ const css = `
   .m*{box-sizing:border-box;margin:0;padding:0}
   .m{
     --bg:#F9F9F8;--sf:#FFF;--bd:#E3E3E0;--bh:#C4C4C0;
-    --t1:#111110;--t2:#6B6B68;--tm:#9B9B98;
+    --t1:#111110;--t2:#6B6B68;--tm:#9B9B98;--tf:#111110;
     --ac:#1C3042;--al:#E8EDF2;--ah:#142435;--ok:#1B6640;
     font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--t1);
     font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;min-height:100vh;
@@ -30,7 +30,7 @@ const css = `
   }
   .m.dark{
     --bg:#0F1117;--sf:#1A1D27;--bd:#2A2D3A;--bh:#3A3D4A;
-    --t1:#F0F0EE;--t2:#9A9AA8;--tm:#6A6A78;
+    --t1:#F0F0EE;--t2:#9A9AA8;--tm:#6A6A78;--tf:#F0F0EE;
     --ac:#7BA7C4;--al:#1A2535;--ah:#8FB8D5;--ok:#4ADE80;
   }
   .m.dark .fr{background:#1E2130}
@@ -60,10 +60,15 @@ const css = `
     font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;
     display:inline-flex;align-items:center;gap:7px;transition:background .16s,transform .16s}
   .bp:hover{background:var(--ah)}.bp:disabled{opacity:.4;cursor:not-allowed}
+  .bp:focus-visible{outline:2px solid var(--ac);outline-offset:3px}
 
   .bg{background:transparent;color:var(--t2);border:1px solid var(--bd);border-radius:6px;
     padding:8px 16px;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:all .16s}
   .bg:hover{border-color:var(--bh);color:var(--t1);background:#F5F5F3}
+  .bg:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+
+  .nl:focus-visible,.fl:focus-visible{outline:2px solid var(--ac);outline-offset:2px;border-radius:2px}
+  .card:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
 
   .dz{border:1.5px dashed var(--bd);border-radius:10px;background:var(--sf);transition:all .16s;cursor:pointer}
   .dz:hover,.dz.ov{border-color:var(--ac);background:var(--al)}
@@ -124,8 +129,8 @@ const css = `
     /* Buttons: bigger tap targets */
     .bp,.bg{font-size:12px!important;padding:10px 14px!important;min-height:44px!important}
 
-    /* Modal */
-    .sh{max-height:92vh!important}
+    /* Modal: limit height so keyboard doesn't cover inputs */
+    .sh{max-height:80vh!important}
     .sh-body{padding:16px!important}
 
     /* Toast */
@@ -134,8 +139,9 @@ const css = `
     /* Steps UI */
     .m-steps{padding:12px!important}
 
-    /* Footer grid: stack on mobile */
+    /* Footer grid: brand full-width, tools+company side by side below */
     .m-footer-grid{grid-template-columns:1fr!important;gap:20px!important}
+    .m-footer-cols{display:grid!important;grid-template-columns:1fr 1fr;gap:16px}
 
     /* Hide Ctrl+K keyboard shortcut badge on touch screens */
     .m-ctrl-k{display:none!important}
@@ -408,7 +414,7 @@ function ToolPage({ tool, showToast, bumpCount, addToHistory, checkLimits, onBac
 }
 
 /* ── ToolCard ────────────────────────────────────────────────────────────── */
-function ToolCard({ t, i, goToTool }) {
+const ToolCard = memo(function ToolCard({ t, i, goToTool }) {
   const tc = TOOL_COLOR[t.id] || "tc-gray";
   return (
     <div className={`card fu fu${(i%6)+1} ${tc}`}
@@ -431,7 +437,7 @@ function ToolCard({ t, i, goToTool }) {
       <div className="m-card-desc" style={{fontSize:11,color:"var(--t2)",lineHeight:1.5}}>{t.desc}</div>
     </div>
   );
-}
+});
 
 /* ── Tools Menu Overlay (pantalla completa) ─────────────────────────────── */
 const MENU_CATS = [
@@ -548,6 +554,77 @@ function ToolsMenuOverlay({ TOOLS, goToTool, T, onClose }) {
   );
 }
 
+/* ── History Section ────────────────────────────────────────────────────── */
+function HistorySection({ history, clearHistory, T, goToTool, TOOLS }) {
+  const [filter, setFilter] = useState(null); // null = todos
+  const locale = T.code==="en"?"en-GB":T.code==="de"?"de-DE":T.code==="fr"?"fr-FR":T.code==="pt"?"pt-PT":"es-ES";
+
+  // Herramientas únicas que aparecen en el historial
+  const tools = [...new Set(history.map(h=>h.tool))];
+
+  const visible = filter ? history.filter(h=>h.tool===filter) : history;
+
+  return (
+    <div style={{maxWidth:960,margin:"0 auto",padding:"0 20px 48px"}}>
+      <div style={{borderTop:"1px solid var(--bd)",paddingTop:32}}>
+        {/* Header */}
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8}}>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <Ic n="download" s={14} c="var(--t2)"/>
+            <span style={{fontWeight:600,fontSize:13}}>{T.hist_title}</span>
+          </div>
+          <button className="nl" style={{fontSize:11,color:"var(--tm)"}} onClick={clearHistory}>{T.hist_clear}</button>
+        </div>
+        {/* Filtros por herramienta */}
+        {tools.length > 1 && (
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
+            <button onClick={()=>setFilter(null)}
+              style={{fontSize:10,padding:"3px 9px",borderRadius:20,border:"1px solid",cursor:"pointer",fontFamily:"'DM Mono',monospace",
+                background:!filter?"var(--ac)":"transparent",
+                color:!filter?"#fff":"var(--tm)",
+                borderColor:!filter?"var(--ac)":"var(--bd)"}}>
+              Todo
+            </button>
+            {tools.map(tool=>(
+              <button key={tool} onClick={()=>setFilter(f=>f===tool?null:tool)}
+                style={{fontSize:10,padding:"3px 9px",borderRadius:20,border:"1px solid",cursor:"pointer",fontFamily:"'DM Mono',monospace",
+                  background:filter===tool?"var(--ac)":"transparent",
+                  color:filter===tool?"#fff":"var(--tm)",
+                  borderColor:filter===tool?"var(--ac)":"var(--bd)"}}>
+                {tool}
+              </button>
+            ))}
+          </div>
+        )}
+        {/* Lista */}
+        <div style={{display:"flex",flexDirection:"column",gap:6}}>
+          {visible.map((h,i)=>{
+            const d = new Date(h.date);
+            const dateStr = d.toLocaleDateString(locale,{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});
+            const tool = TOOLS?.find(x=>x.id===h.toolId);
+            return (
+              <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",
+                background:"var(--sf)",border:"1px solid var(--bd)",borderRadius:8,
+                animation:`fu .2s ease ${i*0.04}s both`,cursor:tool?"pointer":"default"}}
+                onClick={()=>tool&&goToTool(tool)}
+                role={tool?"button":undefined}
+                title={tool?"Abrir herramienta":undefined}>
+                <Ic n="file" s={13} c="var(--tm)" style={{flexShrink:0}}/>
+                <span style={{flex:1,fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:"var(--t1)"}}>{h.filename}</span>
+                <span style={{fontSize:11,color:"var(--ac)",fontWeight:500,flexShrink:0,
+                  background:"var(--al)",padding:"2px 7px",borderRadius:4,fontFamily:"'DM Mono',monospace"}}>
+                  {h.tool}
+                </span>
+                <span className="m-hist-date" style={{fontSize:10,color:"var(--tm)",flexShrink:0}}>{dateStr}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Scroll-to-top FAB ──────────────────────────────────────────────────── */
 function ScrollTop() {
   const [show, setShow] = useState(false);
@@ -579,7 +656,11 @@ export default function App() {
   const [modal, setModal]     = useState(null);
   const [toast, setToast]     = useState(null);
   const [globalDrag, setGlobalDrag] = useState(false);
-  const [dark, setDark] = useState(() => window.matchMedia?.('(prefers-color-scheme: dark)').matches);
+  const [dark, setDark] = useState(() => {
+    const saved = localStorage.getItem('morf-dark');
+    if (saved !== null) return saved === '1';
+    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
+  });
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
 
@@ -814,7 +895,7 @@ export default function App() {
               </div>
 
               {/* Icon buttons */}
-              <button onClick={()=>setDark(d=>!d)}
+              <button onClick={()=>setDark(d=>{ const n=!d; localStorage.setItem('morf-dark',n?'1':'0'); return n; })}
                 aria-label={dark?"Modo claro":"Modo oscuro"}
                 aria-pressed={dark}
                 title={dark?"Modo claro":"Modo oscuro"}
@@ -1257,37 +1338,7 @@ export default function App() {
 
         {/* Historial */}
         {history.length > 0 && (
-          <div style={{maxWidth:960,margin:"0 auto",padding:"0 20px 48px"}}>
-            <div style={{borderTop:"1px solid var(--bd)",paddingTop:32}}>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
-                <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <Ic n="download" s={14} c="var(--t2)"/>
-                  <span style={{fontWeight:600,fontSize:13}}>{T.hist_title}</span>
-                </div>
-                <button className="nl" style={{fontSize:11,color:"var(--tm)"}} onClick={clearHistory}>{T.hist_clear}</button>
-              </div>
-              <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                {history.map((h,i)=>{
-                  const d = new Date(h.date);
-                  const dateStr = d.toLocaleDateString(T.code==="en"?"en-GB":T.code==="de"?"de-DE":T.code==="fr"?"fr-FR":T.code==="pt"?"pt-PT":"es-ES",
-                    {day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});
-                  return (
-                    <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",
-                      background:"var(--sf)",border:"1px solid var(--bd)",borderRadius:8,
-                      animation:`fu .2s ease ${i*0.04}s both`}}>
-                      <Ic n="file" s={13} c="var(--tm)"/>
-                      <span style={{flex:1,fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:"var(--t1)"}}>{h.filename}</span>
-                      <span style={{fontSize:11,color:"var(--ac)",fontWeight:500,flexShrink:0,
-                        background:"var(--al)",padding:"2px 7px",borderRadius:4,fontFamily:"'DM Mono',monospace"}}>
-                        {h.tool}
-                      </span>
-                      <span className="m-hist-date" style={{fontSize:10,color:"var(--tm)",flexShrink:0}}>{dateStr}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
+          <HistorySection history={history} clearHistory={clearHistory} T={T} goToTool={goToTool} TOOLS={TOOLS}/>
         )}
 
         </div>{/* /Main app */}
@@ -1306,27 +1357,30 @@ export default function App() {
                   {T.hero_sub?.split(".")[0]}.
                 </p>
               </div>
-              {/* Tools column */}
-              <div>
-                <div style={{fontSize:11,fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",color:"var(--tm)",marginBottom:10}}>{T.footer_tools}</div>
-                <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                  {["merge","compress","pdf-word","word-pdf","split"].map(id=>{
-                    const t = TOOLS.find(x=>x.id===id);
-                    return t ? (
-                      <button key={id} className="fl" style={{textAlign:"left",fontSize:12}}
-                        onClick={()=>goToTool(t)}>{t.label}</button>
-                    ) : null;
-                  })}
+              {/* Tools + Company columns — wrapped so mobile CSS can target them as a pair */}
+              <div className="m-footer-cols" style={{display:"contents"}}>
+                {/* Tools column */}
+                <div>
+                  <div style={{fontSize:11,fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",color:"var(--tm)",marginBottom:10}}>{T.footer_tools}</div>
+                  <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                    {["merge","compress","pdf-word","word-pdf","split"].map(id=>{
+                      const t = TOOLS.find(x=>x.id===id);
+                      return t ? (
+                        <button key={id} className="fl" style={{textAlign:"left",fontSize:12}}
+                          onClick={()=>goToTool(t)}>{t.label}</button>
+                      ) : null;
+                    })}
+                  </div>
                 </div>
-              </div>
-              {/* Company column */}
-              <div>
-                <div style={{fontSize:11,fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",color:"var(--tm)",marginBottom:10}}>{T.footer_company}</div>
-                <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                  <button className="fl" style={{textAlign:"left",fontSize:12}} onClick={()=>setModal("privacy")}>{T.modal_privacy}</button>
-                  <button className="fl" style={{textAlign:"left",fontSize:12}} onClick={()=>setModal("terms")}>{T.modal_terms}</button>
-                  <button className="fl" style={{textAlign:"left",fontSize:12}} onClick={()=>setModal("contact")}>{T.modal_contact}</button>
-                  <button className="fl" style={{textAlign:"left",fontSize:12}} onClick={()=>setModal("api")}>{T.modal_api}</button>
+                {/* Company column */}
+                <div>
+                  <div style={{fontSize:11,fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",color:"var(--tm)",marginBottom:10}}>{T.footer_company}</div>
+                  <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                    <button className="fl" style={{textAlign:"left",fontSize:12}} onClick={()=>setModal("privacy")}>{T.modal_privacy}</button>
+                    <button className="fl" style={{textAlign:"left",fontSize:12}} onClick={()=>setModal("terms")}>{T.modal_terms}</button>
+                    <button className="fl" style={{textAlign:"left",fontSize:12}} onClick={()=>setModal("contact")}>{T.modal_contact}</button>
+                    <button className="fl" style={{textAlign:"left",fontSize:12}} onClick={()=>setModal("api")}>{T.modal_api}</button>
+                  </div>
                 </div>
               </div>
             </div>
