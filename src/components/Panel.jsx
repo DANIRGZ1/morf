@@ -896,7 +896,7 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
                   onDrop={e=>{e.preventDefault();setDrag(false);addFiles(e.dataTransfer.files)}}
                   onClick={()=>ref.current?.click()}
                   onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();ref.current?.click();}}}>
-                  <div style={{display:"flex",justifyContent:"center",marginBottom:8}}>
+                  <div className="dz-icon" style={{display:"flex",justifyContent:"center",marginBottom:8}}>
                     <Ic n="upload" s={22} c={drag?"var(--ac)":"var(--tm)"}/>
                   </div>
                   <div style={{fontWeight:500,fontSize:13,marginBottom:2,color:drag?"var(--ac)":"var(--t1)"}}>
