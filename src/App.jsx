@@ -41,15 +41,46 @@ const css = `
   .m.dark .tdocx{background:#1A2540;color:#93C5FD}
   .m.dark .timg{background:#142515;color:#4ADE80}
   @keyframes fu{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes rv{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes tp{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:translateX(0)}}
   @keyframes sp{to{transform:rotate(360deg)}}
   @keyframes pr{from{width:0}to{width:100%}}
   @keyframes fo{from{opacity:0}to{opacity:1}}
   @keyframes mu{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
   @keyframes ld{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+  @keyframes nb{0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)}}
 
   .fu{animation:fu .32s ease both}
   .fu1{animation-delay:.04s}.fu2{animation-delay:.08s}.fu3{animation-delay:.12s}
   .fu4{animation-delay:.16s}.fu5{animation-delay:.20s}.fu6{animation-delay:.24s}
+
+  /* Scroll-reveal: oculto por defecto, animado cuando se añade la clase .on */
+  .rv{opacity:0}
+  .rv.on{animation:rv .55s cubic-bezier(.25,.46,.45,.94) both}
+  /* Stagger para hijos de .rv-wrap cuando el padre recibe .on */
+  .rv-wrap .rv-item{opacity:0;transition:none}
+  .rv-wrap.on .rv-item{animation:rv .5s cubic-bezier(.25,.46,.45,.94) both}
+  .rv-wrap.on .rv-item:nth-child(1){animation-delay:0s}
+  .rv-wrap.on .rv-item:nth-child(2){animation-delay:.1s}
+  .rv-wrap.on .rv-item:nth-child(3){animation-delay:.2s}
+  .rv-wrap.on .rv-item:nth-child(4){animation-delay:.3s}
+  .rv-wrap.on .rv-item:nth-child(5){animation-delay:.4s}
+  .rv-wrap.on .rv-item:nth-child(6){animation-delay:.5s}
+
+  /* Hero stagger — cada hijo directo del bloque hero anima secuencialmente */
+  .hero-seq > *{opacity:0;animation:fu .45s ease both}
+  .hero-seq > *:nth-child(1){animation-delay:.05s}
+  .hero-seq > *:nth-child(2){animation-delay:.18s}
+  .hero-seq > *:nth-child(3){animation-delay:.30s}
+  .hero-seq > *:nth-child(4){animation-delay:.42s}
+  .hero-seq > *:nth-child(5){animation-delay:.54s}
+
+  /* ToolPage slide-in */
+  .tool-page-enter{animation:tp .3s cubic-bezier(.25,.46,.45,.94) both}
+
+  /* Icono de card: escala suave en hover */
+  .card-icon{transition:transform .22s cubic-bezier(.34,1.56,.64,1)}
+  .card:hover .card-icon{transform:scale(1.15)}
 
   .card{background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:18px;cursor:pointer;
     transition:border-color .16s,box-shadow .16s,transform .16s}
@@ -360,6 +391,24 @@ const CAT_DOT_COLOR = {
   cat_edit:"#D97706", cat_sec:"#0D9488",
 };
 
+/* ── useReveal — anima sección al entrar en viewport ────────────────────── */
+function useReveal(threshold=0.12) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (window.matchMedia('(prefers-reduced-motion:reduce)').matches) {
+      el.classList.add('on'); return;
+    }
+    const obs = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) { el.classList.add('on'); obs.disconnect(); }
+    }, { threshold });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [threshold]);
+  return ref;
+}
+
 /* ── Tool Page (hash routing + SEO) ─────────────────────────────────────── */
 function ToolPage({ tool, showToast, bumpCount, addToHistory, checkLimits, onBack, preloadedFile=null, onGoToTool=null }) {
   useEffect(() => {
@@ -387,7 +436,7 @@ function ToolPage({ tool, showToast, bumpCount, addToHistory, checkLimits, onBac
     return () => { document.title = 'morf'; document.getElementById('ld-tool')?.remove(); };
   }, [tool.id, tool.label, tool.desc, tool.pro]);
   return (
-    <div style={{minHeight:"100vh"}}>
+    <div className="tool-page-enter" style={{minHeight:"100vh"}}>
       <div style={{maxWidth:960,margin:"0 auto",padding:"16px 20px"}}>
         <button onClick={onBack} className="nl"
           style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:13,color:"var(--t2)",minHeight:44,padding:"0 4px"}}>
@@ -427,7 +476,7 @@ const ToolCard = memo(function ToolCard({ t, i, goToTool }) {
       onClick={()=>goToTool(t)}
       onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();goToTool(t);}}}>
       <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:12}}>
-        <div style={{width:36,height:36,borderRadius:9,background:"var(--ti-bg)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+        <div className="card-icon" style={{width:36,height:36,borderRadius:9,background:"var(--ti-bg)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
           <Ic n={t.icon} s={16} c="var(--ti-ic)"/>
         </div>
         <div style={{display:"flex",gap:4,alignItems:"center"}}>
@@ -694,6 +743,13 @@ export default function App() {
   const [preloadedFile, setPreloadedFile] = useState(null);
   const [dropCandidates, setDropCandidates] = useState(null); // {file, tools[]}
   const searchInputRef = useRef(null);
+  // Scroll-reveal refs para las secciones de la landing
+  const rvStats    = useReveal(0.1);
+  const rvHow      = useReveal(0.1);
+  const rvFeatures = useReveal(0.08);
+  const rvPricing  = useReveal(0.08);
+  const rvFaq      = useReveal(0.08);
+
   useEffect(() => {
     document.body.style.background = dark ? '#0F1117' : '#F9F9F8';
   }, [dark]);
@@ -971,7 +1027,7 @@ export default function App() {
         <div className="m-hero-wrap">
         <div className="m-hero" style={{maxWidth:960,margin:"0 auto",padding:"48px 20px 64px"}}>
           {/* Hero */}
-          <div className="fu" style={{textAlign:"center",marginBottom:44}}>
+          <div className="hero-seq" style={{textAlign:"center",marginBottom:44}}>
             {/* Badge */}
             <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"var(--sf)",border:"1px solid var(--bd)",borderRadius:20,padding:"3px 11px 3px 7px",fontSize:11,color:"var(--tm)",marginBottom:24,fontFamily:"'DM Mono',monospace"}}>
               <span style={{width:6,height:6,borderRadius:"50%",background:"#22C55E",display:"inline-block"}}/>
@@ -1016,14 +1072,14 @@ export default function App() {
           </div>
 
           {/* Stats grid */}
-          <div className="m-stats" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:48}}>
+          <div ref={rvStats} className="rv-wrap m-stats" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:48}}>
             {[
               {value:TOOLS.filter(t=>!t.comingSoon).length+"",  label:T.tools_count},
               {value:count>0?count.toLocaleString():"1000+",    label:T.stat_files},
               {value:"<3s",                                      label:T.stat_speed},
               {value:"100%",                                     label:T.stat_priv},
             ].map((s,i)=>(
-              <div key={i} style={{textAlign:"center",padding:"16px 12px",background:"var(--sf)",
+              <div key={i} className="rv-item" style={{textAlign:"center",padding:"16px 12px",background:"var(--sf)",
                 border:"1px solid var(--bd)",borderRadius:10}}>
                 <div style={{fontSize:22,fontWeight:700,color:"var(--ac)",
                   fontFamily:"'DM Mono',monospace",marginBottom:4,letterSpacing:"-.02em"}}>{s.value}</div>
@@ -1043,9 +1099,9 @@ export default function App() {
               <h2 style={{fontSize:17,fontWeight:600,letterSpacing:"-.02em",marginBottom:6}}>{T.how_title}</h2>
               <p style={{fontSize:13,color:"var(--tm)",maxWidth:440,margin:"0 auto"}}>{T.how_sub}</p>
             </div>
-            <div className="m-how-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:2,position:"relative"}}>
+            <div ref={rvHow} className="m-how-grid rv-wrap" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:2,position:"relative"}}>
               {T.how_steps.map(([title,desc],i)=>(
-                <div key={i} className="m-how-step" style={{display:"flex",flexDirection:"column",alignItems:"center",textAlign:"center",
+                <div key={i} className="m-how-step rv-item" style={{display:"flex",flexDirection:"column",alignItems:"center",textAlign:"center",
                   padding:"24px 20px",background:"var(--sf)",border:"1px solid var(--bd)",
                   borderRadius:i===0?"10px 0 0 10px":i===2?"0 10px 10px 0":"0",
                   position:"relative"}}>
@@ -1245,9 +1301,9 @@ export default function App() {
           <AdUnit slot="4442528333" style={{marginTop:32,minHeight:90}}/>
 
           {/* Features */}
-          <div className="m-feat" style={{borderTop:"1px solid var(--bd)",marginTop:48,paddingTop:36,display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:20}}>
+          <div ref={rvFeatures} className="rv-wrap m-feat" style={{borderTop:"1px solid var(--bd)",marginTop:48,paddingTop:36,display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:20}}>
             {T.feat.map(([title,desc],i)=>(
-              <div key={i} style={{display:"flex",gap:11,alignItems:"flex-start"}}>
+              <div key={i} className="rv-item" style={{display:"flex",gap:11,alignItems:"flex-start"}}>
                 <div style={{width:30,height:30,borderRadius:7,
                   background:["#DBEAFE","#D1FAE5","#ECFDF5","#EDE9FE"][i],
                   display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
@@ -1265,7 +1321,7 @@ export default function App() {
         </div>{/* /m-hero-wrap */}
 
         {/* Pricing */}
-        <div style={{maxWidth:960,margin:"0 auto",padding:"0 20px 48px"}}>
+        <div ref={rvPricing} className="rv" style={{maxWidth:960,margin:"0 auto",padding:"0 20px 48px"}}>
           <div style={{borderTop:"1px solid var(--bd)",paddingTop:36}}>
             <h2 style={{fontSize:18,fontWeight:600,letterSpacing:"-.02em",marginBottom:6,textAlign:"center"}}>{T.pricing_title}</h2>
             <p style={{fontSize:13,color:"var(--tm)",textAlign:"center",marginBottom:24}}>{T.pricing_sub}</p>
@@ -1328,7 +1384,7 @@ export default function App() {
         </div>
 
         {/* FAQ */}
-        <div style={{maxWidth:960,margin:"0 auto",padding:"0 20px 48px"}}>
+        <div ref={rvFaq} className="rv" style={{maxWidth:960,margin:"0 auto",padding:"0 20px 48px"}}>
           <div style={{borderTop:"1px solid var(--bd)",paddingTop:36}}>
             <h2 style={{fontSize:18,fontWeight:600,letterSpacing:"-.02em",marginBottom:24,textAlign:"center"}}>{T.faq_title}</h2>
             <div style={{maxWidth:680,margin:"0 auto",display:"flex",flexDirection:"column",gap:2}}>
