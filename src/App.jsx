@@ -12,7 +12,6 @@ import Modal from "./components/Modal";
 import UpgradeModal from "./components/UpgradeModal";
 import AuthModal from "./components/AuthModal";
 import Toast from "./components/Toast";
-import Dashboard from "./components/Dashboard";
 import Panel, { TOOL_BASE } from "./components/Panel";
 import { Privacy, Terms, Contact, API } from "./components/ModalContents";
 
@@ -518,7 +517,6 @@ export default function App() {
   const [showAuth, setShowAuth]                        = useState(false);
   const [billingYear, setBillingYear] = useState(true);
   const [showAllTools, setShowAllTools] = useState(false);
-  const [showDashboard, setShowDashboard] = useState(false);
   const [showToolsMenu, setShowToolsMenu] = useState(false);
   const [toolSearch, setToolSearch] = useState("");
   const [preloadedFile, setPreloadedFile] = useState(null);
@@ -696,18 +694,8 @@ export default function App() {
             onBack={backHome} preloadedFile={preloadedFile} onGoToTool={goToTool}/>
         )}
 
-        {/* Dashboard page */}
-        {showDashboard && !fullToolPage && (
-          <Dashboard
-            history={history}
-            count={count}
-            lang={lang}
-            onBack={() => setShowDashboard(false)}
-          />
-        )}
-
-        {/* Main app — hidden (not unmounted) when tool page or dashboard is active */}
-        <div style={{display:(fullToolPage||showDashboard)?'none':'block'}}>
+        {/* Main app — hidden (not unmounted) when tool page is active */}
+        <div style={{display:fullToolPage?'none':'block'}}>
 
         {/* Header */}
         <header style={{borderBottom:"1px solid var(--bd)",background:"var(--sf)",position:"sticky",top:0,zIndex:100}}>
@@ -716,38 +704,41 @@ export default function App() {
               <span className="m-logo-text" style={{fontWeight:700,fontSize:15,letterSpacing:"-.03em",color:"var(--t1)"}}>morf<span style={{fontWeight:300,color:"var(--ac)"}}>.</span><span style={{fontWeight:400,color:"var(--ac)"}}>pdf</span></span>
               <span style={{fontSize:9,fontFamily:"'DM Mono',monospace",background:"var(--al)",color:"var(--ac)",padding:"2px 6px",borderRadius:3,fontWeight:500}}>BETA</span>
             </div>
-            <nav aria-label="Menú principal" style={{display:"flex",gap:16,alignItems:"center"}}>
-              {/* Todas las herramientas — hamburguer */}
+            <nav aria-label="Menú principal" style={{display:"flex",gap:8,alignItems:"center"}}>
+              {/* Todas las herramientas */}
               <button onClick={()=>setShowToolsMenu(true)}
                 aria-label="Ver todas las herramientas"
-                style={{display:"inline-flex",alignItems:"center",gap:6,
+                style={{display:"inline-flex",alignItems:"center",gap:6,height:32,
                   background:"var(--al)",border:"1px solid var(--bd)",
-                  borderRadius:7,padding:"5px 11px",cursor:"pointer",
+                  borderRadius:7,padding:"0 11px",cursor:"pointer",
                   fontSize:12,color:"var(--ac)",fontFamily:"'DM Sans',sans-serif",
-                  fontWeight:500,transition:"all .16s"}}
-                onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--ac)";e.currentTarget.style.background="var(--al)"}}
-                onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--bd)";e.currentTarget.style.background="var(--al)"}}>
+                  fontWeight:500,transition:"border-color .16s"}}
+                onMouseEnter={e=>e.currentTarget.style.borderColor="var(--ac)"}
+                onMouseLeave={e=>e.currentTarget.style.borderColor="var(--bd)"}>
                 <Ic n="grid" s={13} c="var(--ac)"/>
                 <span className="m-nav-labels">Herramientas</span>
               </button>
-              {history.length > 0 && (
-                <button className="nl m-nav-labels" onClick={()=>setShowDashboard(true)}
-                  style={{display:"inline-flex",alignItems:"center",gap:4}}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-                  Dashboard
-                </button>
-              )}
-              <button className="nl m-nav-privacy" onClick={()=>setModal("privacy")}>{T.nav_privacy}</button>
-              <button className="nl m-nav-labels" onClick={()=>setModal("api")}>{T.nav_api}</button>
-              <button className="nl m-nav-labels" onClick={()=>setModal("contact")}>{T.nav_help}</button>
 
+              {/* Text links — hidden on mobile */}
+              <div className="m-nav-labels" style={{display:"flex",gap:4,alignItems:"center"}}>
+                <button className="nl" style={{height:32,padding:"0 8px",display:"flex",alignItems:"center"}}
+                  onClick={()=>setModal("privacy")}>{T.nav_privacy}</button>
+                <button className="nl" style={{height:32,padding:"0 8px",display:"flex",alignItems:"center"}}
+                  onClick={()=>setModal("api")}>{T.nav_api}</button>
+                <button className="nl" style={{height:32,padding:"0 8px",display:"flex",alignItems:"center"}}
+                  onClick={()=>setModal("contact")}>{T.nav_help}</button>
+              </div>
+
+              {/* Icon buttons */}
               <button onClick={()=>setDark(d=>!d)}
                 aria-label={dark?"Modo claro":"Modo oscuro"}
                 aria-pressed={dark}
                 title={dark?"Modo claro":"Modo oscuro"}
                 style={{background:"transparent",border:"1px solid var(--bd)",borderRadius:6,
-                  padding:"5px 8px",cursor:"pointer",color:"var(--t2)",display:"flex",
-                  alignItems:"center",transition:"all .16s"}}>
+                  width:32,height:32,cursor:"pointer",color:"var(--t2)",display:"flex",
+                  alignItems:"center",justifyContent:"center",transition:"border-color .16s",flexShrink:0}}
+                onMouseEnter={e=>e.currentTarget.style.borderColor="var(--bh)"}
+                onMouseLeave={e=>e.currentTarget.style.borderColor="var(--bd)"}>
                 <Ic n={dark?"sun":"moon"} s={14} c="var(--t2)" aria-hidden="true"/>
               </button>
               <LangPicker lang={lang} setLang={setLang}/>
@@ -756,9 +747,9 @@ export default function App() {
                   <button
                     onClick={()=>setUserMenuOpen(o=>!o)}
                     title={user.email}
-                    style={{display:"inline-flex",alignItems:"center",gap:5,
+                    style={{display:"inline-flex",alignItems:"center",gap:5,height:32,
                       background:"var(--al)",border:"1px solid var(--ac)",
-                      borderRadius:6,padding:"4px 9px",cursor:"pointer",
+                      borderRadius:6,padding:"0 9px",cursor:"pointer",
                       fontSize:11,color:"var(--ac)",fontFamily:"'DM Sans',sans-serif"}}>
                     <Ic n="user" s={13} c="var(--ac)" aria-hidden="true"/>
                     <span className="m-nav-labels">{user.email?.split("@")[0]}</span>
@@ -789,9 +780,9 @@ export default function App() {
               ) : (
                 <button
                   onClick={()=>setShowAuth(true)}
-                  style={{display:"inline-flex",alignItems:"center",gap:5,
+                  style={{display:"inline-flex",alignItems:"center",gap:5,height:32,
                     background:"transparent",border:"1px solid var(--bd)",
-                    borderRadius:6,padding:"4px 9px",cursor:"pointer",
+                    borderRadius:6,padding:"0 9px",cursor:"pointer",
                     fontSize:11,color:"var(--t2)",fontFamily:"'DM Sans',sans-serif",
                     transition:"border-color .16s"}}
                   onMouseEnter={e=>e.currentTarget.style.borderColor="var(--ac)"}
