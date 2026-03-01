@@ -154,10 +154,18 @@ const css = `
 
     /* iOS: prevent input zoom (inputs must be ≥16px font-size on mobile) */
     input,textarea,select{font-size:16px!important}
+
+    /* Hero CTA: full-width on mobile */
+    .m-hero-cta{width:100%!important;justify-content:center!important;padding:14px 20px!important}
+
+    /* Card description: slightly larger on mobile */
+    .m-card-desc{font-size:12px!important}
   }
 
   @media(max-width:400px){
     .grid{grid-template-columns:1fr 1fr!important}
+    /* Hide date in history items when screen is very narrow */
+    .m-hist-date{display:none!important}
   }
 
   /* ── Touch active states (no hover on touch) ── */
@@ -167,6 +175,22 @@ const css = `
     .bg:active{opacity:.7!important}
     .bp:hover,.bg:hover,.card:hover{transform:none;box-shadow:none}
   }
+
+  /* ── Respect user's reduced-motion preference ── */
+  @media(prefers-reduced-motion:reduce){
+    *,*::before,*::after{
+      animation-duration:.01ms!important;animation-iteration-count:1!important;
+      transition-duration:.01ms!important;scroll-behavior:auto!important
+    }
+  }
+
+  /* ── Scroll-to-top FAB ── */
+  .scroll-top{position:fixed;bottom:72px;right:16px;width:40px;height:40px;border-radius:50%;
+    background:var(--ac);color:#fff;border:none;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 2px 12px rgba(0,0,0,.18);z-index:90;
+    animation:ld .2s ease both;transition:opacity .2s,background .16s}
+  .scroll-top:hover{background:var(--ah)}
 
   /* lang picker */
   .lang-wrap{position:relative}
@@ -357,7 +381,7 @@ function ToolPage({ tool, showToast, bumpCount, addToHistory, checkLimits, onBac
     <div style={{minHeight:"100vh"}}>
       <div style={{maxWidth:960,margin:"0 auto",padding:"16px 20px"}}>
         <button onClick={onBack} className="nl"
-          style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:13,color:"var(--t2)"}}>
+          style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:13,color:"var(--t2)",minHeight:44,padding:"0 4px"}}>
           <span style={{display:"inline-flex",transform:"rotate(90deg)"}}><Ic n="chevron" s={14} c="var(--t2)"/></span>
           morf
         </button>
@@ -404,7 +428,7 @@ function ToolCard({ t, i, goToTool }) {
         </div>
       </div>
       <div style={{fontWeight:600,fontSize:13,marginBottom:4}}>{t.label}</div>
-      <div style={{fontSize:11,color:"var(--t2)",lineHeight:1.5}}>{t.desc}</div>
+      <div className="m-card-desc" style={{fontSize:11,color:"var(--t2)",lineHeight:1.5}}>{t.desc}</div>
     </div>
   );
 }
@@ -422,7 +446,10 @@ function ToolsMenuOverlay({ TOOLS, goToTool, T, onClose }) {
   const [search, setSearch] = useState("");
   const inputRef = useRef(null);
 
-  useEffect(() => { setTimeout(() => inputRef.current?.focus(), 120); }, []);
+  useEffect(() => {
+    if (window.matchMedia('(hover:none)').matches) return; // no auto-focus on touch (evita teclado intrusivo)
+    setTimeout(() => inputRef.current?.focus(), 120);
+  }, []);
   useEffect(() => {
     const h = e => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", h);
@@ -518,6 +545,25 @@ function ToolsMenuOverlay({ TOOLS, goToTool, T, onClose }) {
         </div>
       </div>
     </div>
+  );
+}
+
+/* ── Scroll-to-top FAB ──────────────────────────────────────────────────── */
+function ScrollTop() {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    const h = () => setShow(window.scrollY > 400);
+    window.addEventListener('scroll', h, {passive:true});
+    return () => window.removeEventListener('scroll', h);
+  }, []);
+  if (!show) return null;
+  return (
+    <button className="scroll-top" onClick={()=>window.scrollTo({top:0,behavior:'smooth'})}
+      aria-label="Volver arriba">
+      <div style={{display:'flex',transform:'rotate(180deg)'}}>
+        <Ic n="chevron" s={16} c="#fff"/>
+      </div>
+    </button>
   );
 }
 
@@ -721,7 +767,8 @@ export default function App() {
       <div className={`m${dark?" dark":""}${globalDrag?" global-drag":""}`}
         onDragOver={e=>{e.preventDefault();setGlobalDrag(true)}}
         onDragLeave={e=>{if(!e.currentTarget.contains(e.relatedTarget))setGlobalDrag(false)}}
-        onDrop={heroDrop}>
+        onDrop={heroDrop}
+        onTouchStart={()=>{}}>
         <style>{css}</style>
 
         {/* Tool page (hash routing) */}
@@ -856,7 +903,7 @@ export default function App() {
             </p>
 
             {/* CTA */}
-            <button className="bp" onClick={()=>document.getElementById("tools")?.scrollIntoView({behavior:"smooth"})}
+            <button className="bp m-hero-cta" onClick={()=>document.getElementById("tools")?.scrollIntoView({behavior:"smooth"})}
               style={{fontSize:14,padding:"12px 28px",borderRadius:8,gap:8,marginBottom:20}}>
               <Ic n="zap" s={15} c="#fff"/>
               {T.hero_cta}
@@ -1149,7 +1196,7 @@ export default function App() {
             </div>
 
             {/* Plan cards */}
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:16,maxWidth:560,margin:"0 auto"}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:16,maxWidth:560,margin:"0 auto",overflow:"visible"}}>
               {/* Free */}
               <div style={{border:"1px solid var(--bd)",borderRadius:12,padding:"24px 20px",background:"var(--sf)"}}>
                 <div style={{fontWeight:600,fontSize:15,marginBottom:2}}>{T.plan_free}</div>
@@ -1166,7 +1213,7 @@ export default function App() {
                 </button>
               </div>
               {/* Pro */}
-              <div style={{border:"2px solid var(--ac)",borderRadius:12,padding:"24px 20px",background:"var(--al)",position:"relative"}}>
+              <div style={{border:"2px solid var(--ac)",borderRadius:12,padding:"24px 20px",background:"var(--al)",position:"relative",marginTop:12}}>
                 <div style={{position:"absolute",top:-12,left:"50%",transform:"translateX(-50%)",
                   background:"var(--ac)",color:"#fff",fontSize:10,fontWeight:600,padding:"3px 10px",borderRadius:10,
                   fontFamily:"'DM Mono',monospace",letterSpacing:".05em",whiteSpace:"nowrap"}}>MÁS POPULAR</div>
@@ -1234,7 +1281,7 @@ export default function App() {
                         background:"var(--al)",padding:"2px 7px",borderRadius:4,fontFamily:"'DM Mono',monospace"}}>
                         {h.tool}
                       </span>
-                      <span style={{fontSize:10,color:"var(--tm)",flexShrink:0}}>{dateStr}</span>
+                      <span className="m-hist-date" style={{fontSize:10,color:"var(--tm)",flexShrink:0}}>{dateStr}</span>
                     </div>
                   );
                 })}
@@ -1311,6 +1358,7 @@ export default function App() {
         )}
 
         {toast&&<Toast message={toast.msg} type={toast.type} onClose={()=>setToast(null)}/>}
+        <ScrollTop/>
 
         {/* Tools full-screen menu */}
         {showToolsMenu&&(
