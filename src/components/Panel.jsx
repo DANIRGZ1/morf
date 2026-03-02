@@ -25,43 +25,7 @@ import ComparePdf from "./ComparePdf";
 
 /* ── Tools ───────────────────────────────────────────────────────────────── */
 // eslint-disable-next-line react-refresh/only-export-components
-export const TOOL_BASE = [
-  {id:"pdf-word",  icon:"word",     accepts:[".pdf"],                        from:"pdf",  to:"docx", popular:true},
-  {id:"word-pdf",  icon:"pdf",      accepts:[".doc",".docx"], mimeTypes:["application/msword","application/vnd.openxmlformats-officedocument.wordprocessingml.document"], from:"docx", to:"pdf", popular:true},
-  {id:"img-pdf",   icon:"img",      accepts:[".jpg",".jpeg",".png",".webp"], from:"img",  to:"pdf", multi:true},
-  {id:"merge",     icon:"merge",    accepts:[".pdf"],                        from:"pdf",  to:"pdf", multi:true, popular:true},
-  {id:"split",     icon:"split",    accepts:[".pdf"],                        from:"pdf",  to:"pdf"},
-  {id:"compress",  icon:"compress", accepts:[".pdf"],                        from:"pdf",  to:"pdf", popular:true, batch:true},
-  {id:"png-jpg",   icon:"img",      accepts:[".png"],                        from:"png",  to:"jpg", batch:true},
-  {id:"jpg-png",   icon:"img",      accepts:[".jpg",".jpeg"],                from:"jpg",  to:"png", batch:true},
-  {id:"rotate",    icon:"rotate",   accepts:[".pdf"],                        from:"pdf",  to:"pdf", batch:true},
-  {id:"excel-pdf",     icon:"excel",     accepts:[".xlsx",".xls"], mimeTypes:["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","application/vnd.ms-excel"], from:"xlsx", to:"pdf"},
-  {id:"pdf-pptx",      icon:"pptx",      accepts:[".pdf"],                        from:"pdf",  to:"pptx"},
-  {id:"pdf-excel",     icon:"excel",     accepts:[".pdf"],                        from:"pdf",  to:"xlsx"},
-  {id:"watermark-pdf", icon:"watermark", accepts:[".pdf"],                        from:"pdf",  to:"pdf", batch:true},
-  {id:"number-pages",  icon:"number",    accepts:[".pdf"],                        from:"pdf",  to:"pdf", batch:true},
-  {id:"crop-pdf",      icon:"crop",      accepts:[".pdf"],                        from:"pdf",  to:"pdf", batch:true},
-  {id:"grayscale-pdf", icon:"grayscale", accepts:[".pdf"],                        from:"pdf",  to:"pdf", batch:true},
-  {id:"unlock-pdf",    icon:"unlock",    accepts:[".pdf"],                        from:"pdf",  to:"pdf", batch:true},
-  {id:"sign-pdf",      icon:"sign",      accepts:[".pdf"],                        from:"pdf",  to:"pdf"},
-  {id:"ocr-pdf",       icon:"ocr",       accepts:[".pdf"],                        from:"pdf",  to:"txt",  pro:true},
-  {id:"protect-pdf",   icon:"protect",   accepts:[".pdf"],                        from:"pdf",  to:"pdf",  comingSoon:true},
-  {id:"pptx-pdf",      icon:"pptx",      accepts:[".pptx",".ppt"], mimeTypes:["application/vnd.openxmlformats-officedocument.presentationml.presentation","application/vnd.ms-powerpoint"], from:"pptx", to:"pdf"},
-  {id:"pdf-img",       icon:"img",       accepts:[".pdf"],                        from:"pdf",  to:"png"},
-  {id:"organize-pdf",  icon:"split",     accepts:[".pdf"],                        from:"pdf",  to:"pdf"},
-  {id:"delete-pages",  icon:"x",         accepts:[".pdf"],                        from:"pdf",  to:"pdf"},
-  {id:"repair-pdf",    icon:"file",      accepts:[".pdf"],                        from:"pdf",  to:"pdf"},
-  {id:"html-pdf",      icon:"pdf",       accepts:[".html",".htm"],                from:"html", to:"pdf"},
-  {id:"flatten-pdf",   icon:"compress",  accepts:[".pdf"],                        from:"pdf",  to:"pdf", batch:true},
-  {id:"annotate-pdf",    icon:"edit",      accepts:[".pdf"],  from:"pdf",  to:"pdf"},
-  {id:"redact-pdf",      icon:"x",         accepts:[".pdf"],  from:"pdf",  to:"pdf"},
-  {id:"ocr-searchable",  icon:"file",      accepts:[".pdf"],  from:"pdf",  to:"pdf"},
-  {id:"chat-pdf",        icon:"pdf",       accepts:[".pdf"],  from:"pdf",  to:"chat"},
-  {id:"visual-annotate", icon:"edit",      accepts:[".pdf"],  from:"pdf",  to:"pdf"},
-  {id:"pdf-markdown",    icon:"file",      accepts:[".pdf"],  from:"pdf",  to:"md"},
-  {id:"summarize-pdf",   icon:"pdf",       accepts:[".pdf"],  from:"pdf",  to:"ai"},
-  {id:"compare-pdf",     icon:"split",     accepts:[".pdf"],  from:"pdf",  to:"pdf"},
-];
+export { TOOL_BASE } from "../utils/tools";
 
 /* ── Preview modal ───────────────────────────────────────────────────────── */
 function FilePreviewModal({ file, onClose }) {
@@ -380,42 +344,7 @@ function SignaturePad({ onChange }) {
 /* ── Panel ───────────────────────────────────────────────────────────────── */
 const BATCH_TOOL_IDS = new Set(["merge","compress","png-jpg","jpg-png","rotate","watermark-pdf","number-pages","crop-pdf","grayscale-pdf","unlock-pdf","flatten-pdf"]);
 
-const NEXT_TOOLS = {
-  "pdf-word":      ["compress","merge","split"],
-  "word-pdf":      ["compress","merge","pdf-word"],
-  "compress":      ["merge","pdf-word","split"],
-  "merge":         ["compress","split","pdf-word"],
-  "split":         ["merge","compress","pdf-word"],
-  "img-pdf":       ["merge","compress"],
-  "jpg-png":       ["png-jpg","img-pdf"],
-  "png-jpg":       ["jpg-png","img-pdf"],
-  "rotate":        ["compress","merge"],
-  "excel-pdf":     ["pdf-excel","compress"],
-  "pdf-excel":     ["excel-pdf","compress"],
-  "pptx-pdf":      ["pdf-pptx","compress"],
-  "pdf-pptx":      ["pptx-pdf","compress"],
-  "watermark-pdf": ["compress","merge"],
-  "number-pages":  ["compress","merge"],
-  "crop-pdf":      ["compress","rotate"],
-  "grayscale-pdf": ["compress","merge"],
-  "unlock-pdf":    ["compress","pdf-word"],
-  "sign-pdf":      ["compress","merge"],
-  "ocr-pdf":       ["pdf-word","compress"],
-  "pdf-img":       ["img-pdf","compress"],
-  "organize-pdf":  ["compress","merge"],
-  "delete-pages":  ["compress","merge"],
-  "repair-pdf":    ["compress","pdf-word","merge"],
-  "html-pdf":      ["compress","merge","pdf-word"],
-  "flatten-pdf":   ["compress","unlock-pdf","merge"],
-  "annotate-pdf":    ["compress","merge","sign-pdf"],
-  "redact-pdf":      ["compress","annotate-pdf","merge"],
-  "ocr-searchable":  ["pdf-word","compress","ocr-pdf"],
-  "chat-pdf":        ["ocr-pdf","pdf-word","compress"],
-  "visual-annotate": ["annotate-pdf","redact-pdf","compress"],
-  "pdf-markdown":    ["ocr-pdf","pdf-word","compress"],
-  "summarize-pdf":   ["chat-pdf","ocr-pdf","compress"],
-  "compare-pdf":     ["merge","split","annotate-pdf"],
-};
+import { NEXT_TOOLS } from "../utils/tools";
 
 function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}, checkLimits=()=>true, preloadedFile=null, onGoToTool=null }) {
   const T = useLang();
@@ -877,12 +806,16 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
           ):(
             <>
               {tool.comingSoon ? (
-                <div style={{textAlign:"center",padding:"28px 0"}}>
-                  <div style={{width:46,height:46,borderRadius:"50%",background:"var(--al)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px"}}>
-                    <Ic n={tool.icon} s={22} c="var(--ac)"/>
+                <div style={{textAlign:"center",padding:"36px 0 28px"}}>
+                  <div className="cs-icon" style={{width:64,height:64,borderRadius:18,
+                    background:"linear-gradient(135deg,var(--al),var(--sf))",
+                    border:"2px dashed var(--bh)",
+                    display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px",
+                    boxShadow:"0 4px 20px rgba(0,0,0,.07)"}}>
+                    <Ic n={tool.icon} s={26} c="var(--ac)"/>
                   </div>
-                  <div style={{fontWeight:600,fontSize:14,marginBottom:6,color:"var(--ac)"}}>Próximamente</div>
-                  <div style={{fontSize:13,color:"var(--t2)",maxWidth:300,margin:"0 auto 18px",lineHeight:1.6}}>{T.coming_soon_desc||"Estamos trabajando en esta herramienta. Disponible muy pronto."}</div>
+                  <div style={{fontWeight:600,fontSize:15,marginBottom:8,color:"var(--ac)"}}>Próximamente</div>
+                  <div style={{fontSize:13,color:"var(--t2)",maxWidth:300,margin:"0 auto 22px",lineHeight:1.7}}>{T.coming_soon_desc||"Estamos trabajando en esta herramienta. Estará disponible muy pronto."}</div>
                   <button className="bg" onClick={onClose}>{T.cancel}</button>
                 </div>
               ) : (<>
