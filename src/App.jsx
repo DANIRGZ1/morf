@@ -12,12 +12,12 @@ import Modal from "./components/Modal";
 import UpgradeModal from "./components/UpgradeModal";
 import AuthModal from "./components/AuthModal";
 import Toast from "./components/Toast";
-import Panel, { TOOL_BASE } from "./components/Panel";
+import Panel from "./components/Panel";
+import { TOOL_BASE } from "./utils/tools";
 import { Privacy, Terms, Contact, API } from "./components/ModalContents";
 
 /* ── CSS ──────────────────────────────────────────────────────────────────── */
 const css = `
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
   html,body,#root{margin:0;padding:0;min-height:100vh;background:inherit;overflow-x:hidden;scroll-behavior:smooth}
   .m*{box-sizing:border-box;margin:0;padding:0}
   .m{
@@ -453,6 +453,42 @@ const css = `
   /* ── FAQ: hover en botón de pregunta ─────────────────────────────────── */
   .faq-q{transition:color .15s}
   .faq-q:hover{color:var(--ac)!important}
+
+  /* ── Search highlight ────────────────────────────────────────────────── */
+  .srch-hl{background:#FEF08A;color:#78350F;border-radius:2px;padding:0 1px}
+  .m.dark .srch-hl{background:#713F12;color:#FEF9C3}
+
+  /* ── Floating hero format pills ──────────────────────────────────────── */
+  @keyframes float-pill{
+    0%,100%{transform:translateY(0px) rotate(var(--rot,0deg))}
+    50%{transform:translateY(-12px) rotate(var(--rot,0deg))}
+  }
+  .hero-pill{
+    position:absolute;pointer-events:none;user-select:none;
+    padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700;
+    fontFamily:"'DM Mono',monospace";letter-spacing:.08em;
+    border:1px solid;animation:float-pill var(--dur,4s) ease-in-out infinite;
+    animation-delay:var(--delay,0s);opacity:.65;
+  }
+
+  /* ── Dark mode icon: flip animation ─────────────────────────────────── */
+  @keyframes icon-flip{
+    0%{opacity:0;transform:rotate(-90deg) scale(.7)}
+    100%{opacity:1;transform:rotate(0deg) scale(1)}
+  }
+  .dark-icon{animation:icon-flip .3s ease both}
+
+  /* ── Pricing: segmented control ──────────────────────────────────────── */
+  .seg-ctrl{display:inline-flex;background:var(--bd);border-radius:8px;padding:3px;gap:2px}
+  .seg-btn{border:none;border-radius:6px;padding:5px 14px;font-size:12px;font-weight:500;
+    cursor:pointer;transition:background .18s,color .18s,box-shadow .18s;
+    fontFamily:"'DM Sans',sans-serif";color:var(--t2);background:transparent}
+  .seg-btn.active{background:var(--sf);color:var(--t1);font-weight:600;
+    box-shadow:0 1px 4px rgba(0,0,0,.12)}
+
+  /* ── Coming soon: improved state ─────────────────────────────────────── */
+  @keyframes cs-drift{0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)}}
+  .cs-icon{animation:cs-drift 3s ease-in-out infinite}
 `;
 
 /* ── AdSense Unit ────────────────────────────────────────────────────────── */
@@ -681,8 +717,16 @@ function ToolPage({ tool, showToast, bumpCount, addToHistory, checkLimits, onBac
   );
 }
 
+/* ── Highlight matching text in search results ───────────────────────────── */
+function Highlight({ text, query }) {
+  if (!query) return text;
+  const idx = text.toLowerCase().indexOf(query.toLowerCase());
+  if (idx === -1) return text;
+  return <>{text.slice(0, idx)}<mark className="srch-hl">{text.slice(idx, idx + query.length)}</mark>{text.slice(idx + query.length)}</>;
+}
+
 /* ── ToolCard ────────────────────────────────────────────────────────────── */
-const ToolCard = memo(function ToolCard({ t, i, goToTool }) {
+const ToolCard = memo(function ToolCard({ t, i, goToTool, query="" }) {
   const tc = TOOL_COLOR[t.id] || "tc-gray";
   return (
     <div className={`card fu fu${(i%6)+1} ${tc}`}
@@ -701,8 +745,8 @@ const ToolCard = memo(function ToolCard({ t, i, goToTool }) {
           <Tag type={t.from}/><span style={{color:"var(--tm)",fontSize:10}}>→</span><Tag type={t.to}/>
         </div>
       </div>
-      <div style={{fontWeight:600,fontSize:13,marginBottom:4}}>{t.label}</div>
-      <div className="m-card-desc" style={{fontSize:11,color:"var(--t2)",lineHeight:1.5}}>{t.desc}</div>
+      <div style={{fontWeight:600,fontSize:13,marginBottom:4}}><Highlight text={t.label} query={query}/></div>
+      <div className="m-card-desc" style={{fontSize:11,color:"var(--t2)",lineHeight:1.5}}><Highlight text={t.desc} query={query}/></div>
     </div>
   );
 });
@@ -1240,7 +1284,9 @@ export default function App() {
                   alignItems:"center",justifyContent:"center",transition:"border-color .16s",flexShrink:0}}
                 onMouseEnter={e=>e.currentTarget.style.borderColor="var(--bh)"}
                 onMouseLeave={e=>e.currentTarget.style.borderColor="var(--bd)"}>
-                <Ic n={dark?"sun":"moon"} s={14} c="var(--t2)" aria-hidden="true"/>
+                <span key={dark} className="dark-icon" style={{display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  <Ic n={dark?"sun":"moon"} s={14} c="var(--t2)" aria-hidden="true"/>
+                </span>
               </button>
               <LangPicker lang={lang} setLang={setLang}/>
               {(supabase && user) ? (
@@ -1296,7 +1342,21 @@ export default function App() {
           </div>
         </header>
 
-        <div className="m-hero-wrap">
+        <div className="m-hero-wrap" style={{position:"relative",overflow:"hidden"}}>
+          {/* Floating format pills */}
+          {[
+            {label:"PDF",  bg:"#FEE2E2", color:"#991B1B", bd:"#FECACA", x:"7%",  y:"18%", dur:"4.8s", delay:"0s",   rot:"-6deg"},
+            {label:"DOCX", bg:"#DBEAFE", color:"#1E40AF", bd:"#BFDBFE", x:"89%", y:"14%", dur:"5.2s", delay:".7s",  rot:"5deg"},
+            {label:"JPG",  bg:"#D1FAE5", color:"#065F46", bd:"#A7F3D0", x:"4%",  y:"65%", dur:"4.4s", delay:"1.1s", rot:"-4deg"},
+            {label:"XLSX", bg:"#D1FAE5", color:"#14532D", bd:"#6EE7B7", x:"92%", y:"60%", dur:"5.6s", delay:".3s",  rot:"7deg"},
+            {label:"PNG",  bg:"#EDE9FE", color:"#5B21B6", bd:"#DDD6FE", x:"13%", y:"82%", dur:"4.1s", delay:"1.6s", rot:"-8deg"},
+            {label:"PPTX", bg:"#FFEDD5", color:"#9A3412", bd:"#FED7AA", x:"83%", y:"80%", dur:"5.0s", delay:".5s",  rot:"4deg"},
+          ].map(p=>(
+            <div key={p.label} className="hero-pill" style={{
+              left:p.x, top:p.y, background:p.bg, color:p.color, borderColor:p.bd,
+              "--dur":p.dur, "--delay":p.delay, "--rot":p.rot,
+            }}>{p.label}</div>
+          ))}
         <div className="m-hero" style={{maxWidth:960,margin:"0 auto",padding:"48px 20px 64px"}}>
           {/* Hero */}
           <div className="hero-seq" style={{textAlign:"center",marginBottom:44}}>
@@ -1537,7 +1597,7 @@ export default function App() {
                 return hits.length > 0 ? (
                   <div className="grid fu" style={{marginBottom:14}}>
                     {hits.map((t,i)=>(
-                      <ToolCard key={t.id} t={t} i={i} goToTool={goToTool}/>
+                      <ToolCard key={t.id} t={t} i={i} goToTool={goToTool} query={toolSearch.trim()}/>
                     ))}
                   </div>
                 ) : (
@@ -1627,18 +1687,18 @@ export default function App() {
             <h2 style={{fontSize:18,fontWeight:600,letterSpacing:"-.02em",marginBottom:6,textAlign:"center"}}>{T.pricing_title}</h2>
             <p style={{fontSize:13,color:"var(--tm)",textAlign:"center",marginBottom:24}}>{T.pricing_sub}</p>
 
-            {/* Billing toggle */}
-            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,marginBottom:28}}>
-              <span style={{fontSize:13,color:!billingYear?"var(--t1)":"var(--tm)",fontWeight:!billingYear?500:400}}>Mensual</span>
-              <button onClick={()=>setBillingYear(y=>!y)}
-                style={{width:40,height:22,borderRadius:11,border:"none",cursor:"pointer",
-                  background:billingYear?"var(--ac)":"var(--bd)",transition:"background .2s",position:"relative",padding:0}}>
-                <span style={{position:"absolute",top:3,left:billingYear?20:3,width:16,height:16,
-                  borderRadius:"50%",background:"#fff",transition:"left .2s",display:"block"}}/>
-              </button>
-              <span style={{fontSize:13,color:billingYear?"var(--t1)":"var(--tm)",fontWeight:billingYear?500:400}}>
-                Anual <span style={{fontSize:10,background:"#DCFCE7",color:"#15803D",padding:"1px 5px",borderRadius:3,fontWeight:600}}>{T.plan_save}</span>
-              </span>
+            {/* Billing segmented control */}
+            <div style={{display:"flex",justifyContent:"center",marginBottom:28}}>
+              <div className="seg-ctrl">
+                <button className={`seg-btn${!billingYear?" active":""}`}
+                  onClick={()=>setBillingYear(false)}>
+                  Mensual
+                </button>
+                <button className={`seg-btn${billingYear?" active":""}`}
+                  onClick={()=>setBillingYear(true)}>
+                  Anual&nbsp;<span style={{fontSize:9,background:"#DCFCE7",color:"#15803D",padding:"1px 5px",borderRadius:3,fontWeight:700,verticalAlign:"middle"}}>{T.plan_save}</span>
+                </button>
+              </div>
             </div>
 
             {/* Plan cards */}
