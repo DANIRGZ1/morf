@@ -438,6 +438,21 @@ const css = `
     65%{transform:scale(1.2)}
     100%{transform:scale(1);opacity:1}}
   .done-check{animation:check-pop .5s cubic-bezier(.34,1.56,.64,1) both}
+
+  /* ── How-it-works steps: hover lift ──────────────────────────────────── */
+  .m-how-step{transition:transform .2s,box-shadow .2s,border-color .2s}
+  .m-how-step:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.08);border-color:var(--bh)}
+
+  /* ── Error state: shake animation ────────────────────────────────────── */
+  @keyframes err-shake{
+    0%,100%{transform:translateX(0)}
+    20%,60%{transform:translateX(-5px)}
+    40%,80%{transform:translateX(5px)}}
+  .err-icon{animation:err-shake .45s ease .05s both}
+
+  /* ── FAQ: hover en botón de pregunta ─────────────────────────────────── */
+  .faq-q{transition:color .15s}
+  .faq-q:hover{color:var(--ac)!important}
 `;
 
 /* ── AdSense Unit ────────────────────────────────────────────────────────── */
@@ -938,6 +953,13 @@ export default function App() {
   });
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const h = () => setScrolled(window.scrollY > 8);
+    window.addEventListener('scroll', h, {passive:true});
+    return () => window.removeEventListener('scroll', h);
+  }, []);
 
   useEffect(() => {
     if (!userMenuOpen) return;
@@ -1160,10 +1182,13 @@ export default function App() {
         <div style={{display:fullToolPage?'none':'block'}}>
 
         {/* Header */}
-        <header style={{borderBottom:"1px solid var(--bd)",
+        <header style={{
+          borderBottom:"1px solid var(--bd)",
           background:dark?"rgba(15,17,23,.88)":"rgba(255,255,255,.88)",
           backdropFilter:"blur(16px)",WebkitBackdropFilter:"blur(16px)",
-          position:"sticky",top:0,zIndex:100}}>
+          position:"sticky",top:0,zIndex:100,
+          boxShadow:scrolled?"0 2px 20px rgba(0,0,0,.07)":"none",
+          transition:"box-shadow .25s"}}>
           <div className="m-header-inner" style={{maxWidth:960,margin:"0 auto",padding:"0 20px",height:52,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
             {/* Hamburger — solo visible en móvil, a la izquierda */}
             <button className="m-hamburger" onClick={()=>setShowToolsMenu(true)}
@@ -1398,6 +1423,7 @@ export default function App() {
           {history.length > 0 && (
             <div style={{marginBottom:48}}>
               <div style={{textAlign:"center",marginBottom:20}}>
+                <div className="eyebrow-bar"/>
                 <h2 style={{fontSize:17,fontWeight:600,letterSpacing:"-.02em",marginBottom:4}}>Tus últimas conversiones</h2>
                 <p style={{fontSize:13,color:"var(--tm)"}}>Solo visible para ti en este dispositivo</p>
               </div>

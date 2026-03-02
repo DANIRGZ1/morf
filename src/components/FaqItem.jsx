@@ -8,6 +8,7 @@ function FaqItem({ q, a }) {
     <div style={{borderBottom:"1px solid var(--bd)"}}>
       <button onClick={()=>setOpen(o=>!o)}
         aria-expanded={open}
+        className="faq-q"
         style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",
           padding:"14px 0",background:"transparent",border:"none",cursor:"pointer",
           fontFamily:"'DM Sans',sans-serif",fontSize:14,fontWeight:500,color:"var(--t1)",

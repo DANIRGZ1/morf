@@ -860,8 +860,11 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
             </div>
           ):status==="error"?(
             <div style={{textAlign:"center",padding:"24px 0"}}>
-              <div style={{width:46,height:46,borderRadius:"50%",background:"#FEF2F2",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px"}}>
-                <Ic n="x" s={20} c="#B91C1C"/>
+              <div className="err-icon" style={{width:52,height:52,borderRadius:"50%",
+                background:"linear-gradient(135deg,#FEE2E2,#FEF2F2)",
+                border:"2px solid #EF4444",boxShadow:"0 0 0 6px rgba(239,68,68,.1)",
+                display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px"}}>
+                <Ic n="x" s={22} c="#B91C1C"/>
               </div>
               <div style={{fontWeight:600,marginBottom:10,color:"#B91C1C",fontSize:14}}>{T.err_title}</div>
               <div style={{fontSize:13,color:"var(--t2)",marginBottom:6,maxWidth:340,margin:"0 auto 8px",lineHeight:1.6}}>{errMsg}</div>
