@@ -578,14 +578,14 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
   const startProgress = () => {
     setProgress(0);
     const totalKB   = files.reduce((s, f) => s + f.size, 0) / 1024;
-    const duration  = Math.max(1200, Math.min(totalKB * 0.5, 10000));
+    const duration  = Math.max(2200, Math.min(totalKB * 0.7, 14000));
     const startTime = Date.now();
     if (progressTimer.current) clearInterval(progressTimer.current);
     progressTimer.current = setInterval(() => {
       const elapsed = Date.now() - startTime;
-      const pct = Math.min(88, Math.round((elapsed / duration) * 88));
+      const pct = Math.min(91, Math.round((elapsed / duration) * 91));
       setProgress(pct);
-      if (pct >= 88) clearInterval(progressTimer.current);
+      if (pct >= 91) clearInterval(progressTimer.current);
     }, 50);
   };
 
@@ -778,12 +778,16 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
         </div>
         <div style={{padding:18}}>
           {status==="done"?(
-            <div style={{textAlign:"center",padding:"24px 0"}}>
-              <div style={{width:46,height:46,borderRadius:"50%",background:"#F0FDF4",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px"}}>
-                <Ic n="check" s={20} c="var(--ok)"/>
+            <div style={{textAlign:"center",padding:"28px 0 20px"}}>
+              <div className="done-check" style={{width:56,height:56,borderRadius:"50%",
+                background:"linear-gradient(135deg,#D1FAE5,#ECFDF5)",
+                border:"2px solid #22C55E",
+                boxShadow:"0 0 0 6px rgba(34,197,94,.1)",
+                display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px"}}>
+                <Ic n="check" s={24} c="#15803D"/>
               </div>
-              <div style={{fontWeight:500,marginBottom:4}}>{T.conv_done}</div>
-              <div style={{fontSize:12,color:"var(--tm)",marginBottom:compressResult?8:18}}>
+              <div style={{fontWeight:600,fontSize:15,marginBottom:4}}>{T.conv_done}</div>
+              <div style={{fontSize:12,color:"var(--tm)",marginBottom:compressResult?8:20}}>
                 {files.length} {files.length===1?T.done_sub_s:T.done_sub_p}
               </div>
               {compressResult&&(()=>{
@@ -856,8 +860,11 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
             </div>
           ):status==="error"?(
             <div style={{textAlign:"center",padding:"24px 0"}}>
-              <div style={{width:46,height:46,borderRadius:"50%",background:"#FEF2F2",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px"}}>
-                <Ic n="x" s={20} c="#B91C1C"/>
+              <div className="err-icon" style={{width:52,height:52,borderRadius:"50%",
+                background:"linear-gradient(135deg,#FEE2E2,#FEF2F2)",
+                border:"2px solid #EF4444",boxShadow:"0 0 0 6px rgba(239,68,68,.1)",
+                display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px"}}>
+                <Ic n="x" s={22} c="#B91C1C"/>
               </div>
               <div style={{fontWeight:600,marginBottom:10,color:"#B91C1C",fontSize:14}}>{T.err_title}</div>
               <div style={{fontSize:13,color:"var(--t2)",marginBottom:6,maxWidth:340,margin:"0 auto 8px",lineHeight:1.6}}>{errMsg}</div>
@@ -1318,16 +1325,18 @@ function Panel({ tool, onClose, showToast, bumpCount=()=>{}, addToHistory=()=>{}
                 </div>
               )}
               {status==="proc"&&(
-                <div style={{marginBottom:16,padding:"14px 16px",background:"var(--al)",borderRadius:10}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-                    <span style={{fontSize:11,color:"var(--tm)"}}>
+                <div style={{marginBottom:16,padding:"16px 18px",background:"var(--al)",borderRadius:12,
+                  border:"1px solid var(--bd)"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                    <span style={{fontSize:11,color:"var(--t2)",display:"flex",alignItems:"center",gap:5}}>
+                      <div className="spn" style={{width:10,height:10,borderTopColor:"var(--ac)"}}/>
                       {files.length} {files.length===1?"archivo":"archivos"} · {(files.reduce((s,f)=>s+f.size,0)/1048576).toFixed(1)} MB
                       {tool.batch && files.length > 1 && " → ZIP"}
                     </span>
-                    <span style={{fontSize:12,fontWeight:700,color:"var(--ac)",fontFamily:"'DM Mono',monospace"}}>{progress}%</span>
+                    <span style={{fontSize:13,fontWeight:700,color:"var(--ac)",fontFamily:"'DM Mono',monospace"}}>{progress}%</span>
                   </div>
-                  <div style={{height:4,background:"var(--bd)",borderRadius:2,overflow:"hidden"}}>
-                    <div style={{height:"100%",width:`${progress}%`,background:"var(--ac)",borderRadius:2,transition:"width .08s linear"}}/>
+                  <div style={{height:6,background:"var(--bd)",borderRadius:3,overflow:"hidden"}}>
+                    <div className="prog-fill" style={{width:`${progress}%`}}/>
                   </div>
                 </div>
               )}
